@@ -531,10 +531,6 @@ strong { font-weight: 600; }
   <div class="sb" id="gtab-cont"></div>
 </div>
 
-<!-- ══ MODAL: MI NOMBRE ══ -->
-<div class="modal-bg" id="m-myname">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
     <div class="sheet-title">👋 ¿Cómo te llamas?</div>
     <p class="sheet-sub">Solo se guarda en tu dispositivo. Lo usamos para mostrarte tu saldo personal.</p>
     <div class="field"><label>Tu nombre</label><input id="mn-inp" type="text" placeholder="Ej: Javier, Ana, Carlos…" autocomplete="off" autocapitalize="words"></div>
@@ -848,17 +844,6 @@ function closeModal(id) {
 }
 function closeOut(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
-// ════════════════════════════════════════════
-// MI NOMBRE
-// ════════════════════════════════════════════
-function saveName() {
-  const n = document.getElementById('mn-inp').value.trim();
-  if (!n) { toast('⚠️ Escribe tu nombre'); return; }
-  setName(n);
-  closeModal('m-myname');
-  renderAll();
-  toast('👋 Bienvenido/a, '+n+'!');
-}
 
 // ════════════════════════════════════════════
 // RENDER ALL
@@ -1374,7 +1359,6 @@ async function init() {
   // Mostrar app ya (con datos locales si los hay)
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  if (!myName()) openModal('m-myname');
   renderAll();
 
   // Luego sincronizar con JSONBin
