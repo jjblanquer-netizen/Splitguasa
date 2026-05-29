@@ -623,13 +623,13 @@ strong { font-weight: 600; }
 
 <script>
 // ════════════════════════════════════════════
-// GITHUB CONFIG
+// JSONBIN — base de datos compartida en tiempo real
 // ════════════════════════════════════════════
-const GH = {
-  owner:'jjblanquer-netizen', repo:'Splitguasa',
-  file:'data.json', branch:'main',
-  token:'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',
-  get api(){ return `https://api.github.com/repos/${this.owner}/${this.repo}/contents/${this.file}`; }
+const JB = {
+  binId    : '6a1a18a121f9ee59d29be0d4',
+  masterKey: '$2a$10$/smk2ghrTT68v8ZIpED3Guf.cuJLbgTvD1XMA29ufn3VuSaJm8dNK',
+  get readUrl (){ return `https://api.jsonbin.io/v3/b/${this.binId}/latest`; },
+  get writeUrl(){ return `https://api.jsonbin.io/v3/b/${this.binId}`; }
 };
 
 // ════════════════════════════════════════════
@@ -655,7 +655,6 @@ const EMOJIS = ['🏖️','🏔️','🍕','🍺','🏠','🚗','✈️','🎉',
 // STATE
 // ════════════════════════════════════════════
 let DB    = { groups:[], v:0 };
-let ghSha = null;
 let busy  = false;
 let retry = false;
 
@@ -691,7 +690,7 @@ function toast(msg, ms=2800) {
 }
 
 // ════════════════════════════════════════════
-// SYNC STATUS
+// SYNC STATUS BAR
 // ════════════════════════════════════════════
 function ss(st, msg) {
   const bar = document.getElementById('sbar');
@@ -703,93 +702,97 @@ function ss(st, msg) {
 }
 
 // ════════════════════════════════════════════
-// GITHUB READ
+// JSONBIN READ
 // ════════════════════════════════════════════
-async function ghRead() {
-  const res = await fetch(GH.api+'?ref='+GH.branch+'&_='+Date.now(), {
-    headers:{ Authorization:'Bearer '+GH.token, Accept:'application/vnd.github+json', 'Cache-Control':'no-cache' }
+async function jbRead() {
+  const res = await fetch(JB.readUrl + '?_=' + Date.now(), {
+    headers: {
+      'X-Master-Key': JB.masterKey,
+      'Cache-Control': 'no-cache'
+    }
   });
-  if (res.status===404) { ghSha=null; return null; }
-  if (!res.ok) throw new Error('HTTP '+res.status);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
   const j = await res.json();
-  ghSha = j.sha;
-  return JSON.parse(atob(j.content.replace(/\n/g,'')));
+  // JSONBin v3 devuelve { record: {...}, metadata: {...} }
+  return j.record || j;
 }
 
 // ════════════════════════════════════════════
-// GITHUB WRITE
+// JSONBIN WRITE
 // ════════════════════════════════════════════
-async function ghWrite() {
-  if (busy) { retry=true; return; }
-  busy=true; retry=false;
-  ss('syn','Guardando…');
+async function jbWrite() {
+  if (busy) { retry = true; return; }
+  busy = true; retry = false;
+  ss('syn', 'Guardando…');
   try {
-    DB.v = (DB.v||0)+1;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(DB,null,2))));
-    const body = { message:`v${DB.v}`, content, branch:GH.branch, ...(ghSha?{sha:ghSha}:{}) };
-    const res = await fetch(GH.api, {
-      method:'PUT',
-      headers:{ Authorization:'Bearer '+GH.token, Accept:'application/vnd.github+json', 'Content-Type':'application/json' },
-      body: JSON.stringify(body)
+    DB.v = (DB.v || 0) + 1;
+    DB.ts = Date.now();
+    const res = await fetch(JB.writeUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': JB.masterKey
+      },
+      body: JSON.stringify(DB)
     });
-    if (res.status===409) {
-      busy=false;
-      ss('syn','Conflicto · Re-sincronizando…');
-      const remote = await ghRead();
-      if (remote) { DB=remote; if(!DB.groups)DB.groups=[]; }
-      await ghWrite(); return;
-    }
-    if (!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
-    ghSha = data.content.sha;
-    try{ localStorage.setItem('sg_bk',JSON.stringify(DB)); }catch(e){}
-    const now = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-    ss('ok','✓ Guardado · '+now);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+    const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+    ss('ok', '✓ Guardado · ' + now);
   } catch(e) {
-    ss('err','Error al guardar · Reintentando…');
-    setTimeout(ghWrite, 5000);
+    ss('err', 'Error al guardar · Reintentando…');
+    console.error('jbWrite error:', e);
+    setTimeout(jbWrite, 4000);
   } finally {
-    busy=false;
-    if (retry) ghWrite();
+    busy = false;
+    if (retry) jbWrite();
   }
 }
 
 // ════════════════════════════════════════════
-// SYNC (leer GitHub → actualizar UI)
+// SYNC (leer JSONBin → actualizar UI)
 // ════════════════════════════════════════════
-async function sync(silent=false) {
-  if (!silent) ss('syn','Sincronizando…');
+async function sync(silent = false) {
+  if (!silent) ss('syn', 'Sincronizando…');
   try {
-    const remote = await ghRead();
-    if (remote) {
-      const prevV = DB.v||0;
-      DB = remote;
-      if (!DB.groups) DB.groups=[];
-      try{ localStorage.setItem('sg_bk',JSON.stringify(DB)); }catch(e){}
-      const now = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-      ss('ok','✓ Sync · '+now);
-      if (!silent && (remote.v||0)>prevV+1) toast('🔄 Actualizado por otro miembro');
+    const remote = await jbRead();
+    if (remote && remote.groups) {
+      const prevV = DB.v || 0;
+      // Solo actualizar si el remoto es más nuevo
+      if ((remote.v || 0) >= (DB.v || 0)) {
+        DB = remote;
+        try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+      }
+      const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+      ss('ok', '✓ Sync · ' + now);
+      if (!silent && (remote.v || 0) > prevV + 1) {
+        toast('🔄 Actualizado por otro miembro');
+      }
     } else {
-      ss('ok','Listo · Sin datos aún');
+      ss('ok', 'Conectado · Listo');
     }
     renderAll();
   } catch(e) {
-    ss('err','Sin conexión · Datos locales');
+    console.error('sync error:', e);
+    ss('err', 'Sin conexión · Datos locales');
   }
 }
 
-async function manualSync() { await sync(false); toast('✓ Sincronizado'); }
+async function manualSync() {
+  await sync(false);
+  toast('✓ Sincronizado con JSONBin');
+}
 
-// Autopoll cada 20s
-setInterval(()=>{ if(document.visibilityState==='visible') sync(true); }, 20000);
-document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') sync(true); });
+// Autopoll cada 15s
+setInterval(() => { if (document.visibilityState === 'visible') sync(true); }, 15000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(true); });
 
 // ════════════════════════════════════════════
-// SAVE
+// SAVE — guarda local + sube a JSONBin
 // ════════════════════════════════════════════
 function save() {
-  try{ localStorage.setItem('sg_bk',JSON.stringify(DB)); }catch(e){}
-  ghWrite();
+  try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+  jbWrite();
 }
 
 // ════════════════════════════════════════════
@@ -1261,32 +1264,40 @@ function renderReport() {
 // INIT
 // ════════════════════════════════════════════
 async function init() {
-  document.getElementById('load-msg').textContent = 'Conectando con GitHub…';
-  try {
-    const remote = await ghRead();
-    if (remote) {
-      DB = remote;
-      if (!DB.groups) DB.groups = [];
-      try{ localStorage.setItem('sg_bk',JSON.stringify(DB)); }catch(e){}
-    } else {
-      // Repo vacío — empezar limpio
-      DB = { groups: [], v: 0 };
-    }
-    const now = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-    ss('ok','✓ Conectado · '+now);
-  } catch(e) {
-    ss('err','Sin conexión · Datos locales');
-    try { const bk=localStorage.getItem('sg_bk'); if(bk){const p=JSON.parse(bk);if(p?.groups)DB=p;} } catch(ex){}
-  }
+  document.getElementById('load-msg').textContent = 'Conectando con JSONBin…';
 
-  // Mostrar app
+  // Cargar backup local primero para respuesta inmediata
+  try {
+    const bk = localStorage.getItem('sg_bk');
+    if (bk) { const p = JSON.parse(bk); if (p?.groups) DB = p; }
+  } catch(e) {}
+
+  // Mostrar app ya (con datos locales si los hay)
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-
-  // Pedir nombre si no hay
   if (!myName()) openModal('m-myname');
-
   renderAll();
+
+  // Luego sincronizar con JSONBin
+  try {
+    ss('syn', 'Conectando…');
+    const remote = await jbRead();
+    if (remote && remote.groups) {
+      DB = remote;
+      if (!DB.groups) DB.groups = [];
+      try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+      const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+      ss('ok', '✓ Conectado · ' + now);
+      renderAll();
+    } else {
+      // Bin vacío — inicializar
+      DB = { groups: [], v: 0 };
+      await jbWrite();
+    }
+  } catch(e) {
+    console.error('init sync error:', e);
+    ss('err', 'Sin conexión · Datos locales');
+  }
 }
 
 init();
