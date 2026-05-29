@@ -532,7 +532,7 @@ strong { font-weight: 600; }
 </div>
 
 <!-- ══ MODAL: MI NOMBRE ══ -->
-<div class="modal-bg on" id="m-myname">
+<div class="modal-bg" id="m-myname">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">👋 ¿Cómo te llamas?</div>
@@ -836,9 +836,17 @@ function closeGroup() { goTab('home'); curGid=null; }
 // ════════════════════════════════════════════
 // MODALS
 // ════════════════════════════════════════════
-// openModal — ver sección EDITAR MIEMBROS
-function closeModal(id) { document.getElementById(id).classList.remove('on'); document.body.style.overflow=''; }
-function closeOut(e,id) { if(e.target===e.currentTarget) closeModal(id); }
+function openModal(id) {
+  if (id === 'm-newgrp')       initNewGrp();
+  if (id === 'm-edit-members') initEditMembers();
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('on'); document.body.style.overflow = 'hidden'; }
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('on'); document.body.style.overflow = ''; }
+}
+function closeOut(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
 // ════════════════════════════════════════════
 // MI NOMBRE
@@ -1205,13 +1213,6 @@ function confirmDel() {
 // ════════════════════════════════════════════
 // EDITAR MIEMBROS
 // ════════════════════════════════════════════
-function openModal(id) {
-  if (id === 'm-newgrp')       initNewGrp();
-  if (id === 'm-edit-members') initEditMembers();
-  document.getElementById(id).classList.add('on');
-  document.body.style.overflow = 'hidden';
-}
-
 function initEditMembers() {
   const g = grp(); if (!g) return;
   renderEmChips(g.members.slice()); // copia
