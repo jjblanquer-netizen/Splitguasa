@@ -531,14 +531,6 @@ strong { font-weight: 600; }
   <div class="sb" id="gtab-cont"></div>
 </div>
 
-    <div class="sheet-title">👋 ¿Cómo te llamas?</div>
-    <p class="sheet-sub">Solo se guarda en tu dispositivo. Lo usamos para mostrarte tu saldo personal.</p>
-    <div class="field"><label>Tu nombre</label><input id="mn-inp" type="text" placeholder="Ej: Javier, Ana, Carlos…" autocomplete="off" autocapitalize="words"></div>
-    <div style="height:8px"></div>
-    <button class="btn-primary" onclick="saveName()">Entrar a SplitGuasa</button>
-    <div class="pb"></div>
-  </div>
-</div>
 
 <!-- ══ MODAL: NUEVO GRUPO ══ -->
 <div class="modal-bg" id="m-newgrp" onclick="closeOut(event,'m-newgrp')">
@@ -684,8 +676,8 @@ let curGid = null, curTab = 'gastos';
 let pSettle = null, pDelId = null, pDelGid = null;
 let selCat = 'otros', splits = {};
 
-const myName  = () => localStorage.getItem('sg_name') || '';
-const setName = n  => localStorage.setItem('sg_name', n);
+const myName  = () => '';
+const setName = n  => {};
 
 // ════════════════════════════════════════════
 // HELPERS
