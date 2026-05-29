@@ -518,7 +518,10 @@ strong { font-weight: 600; }
   <div class="grp-hdr">
     <div class="grp-emoji" id="g-emoji">🏖️</div>
     <div class="grp-title" id="g-name">Grupo</div>
-    <div class="grp-members-line" id="g-mems"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
+      <div class="grp-members-line" id="g-mems"></div>
+      <button onclick="openModal('m-edit-members')" style="background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.25);color:var(--acc);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">+ Editar</button>
+    </div>
   </div>
   <div class="grp-tabs">
     <button class="btn-secondary" id="tab-gastos"   onclick="switchTab('gastos')">Gastos</button>
@@ -618,6 +621,29 @@ strong { font-weight: 600; }
   </div>
 </div>
 
+
+<!-- ══ MODAL: EDITAR MIEMBROS ══ -->
+<div class="modal-bg" id="m-edit-members" onclick="closeOut(event,'m-edit-members')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">👥 Miembros del grupo</div>
+    <p class="sheet-sub">Añade o elimina personas. Los gastos existentes no se modifican.</p>
+    <div class="field">
+      <label>Miembros actuales</label>
+      <div id="em-chips"></div>
+    </div>
+    <div class="field">
+      <label>Añadir persona</label>
+      <div class="chip-row">
+        <input id="em-inp" type="text" placeholder="Nombre de la persona…" autocomplete="off" autocapitalize="words" onkeydown="emKd(event)">
+        <button class="chip-add" onclick="emAdd()">+</button>
+      </div>
+    </div>
+    <div style="height:8px"></div>
+    <button class="btn-primary" onclick="saveMembers()">Guardar cambios</button>
+    <div class="pb"></div>
+  </div>
+</div>
 <div id="toast"></div>
 </div><!-- /app -->
 
@@ -810,11 +836,7 @@ function closeGroup() { goTab('home'); curGid=null; }
 // ════════════════════════════════════════════
 // MODALS
 // ════════════════════════════════════════════
-function openModal(id) {
-  if (id==='m-newgrp') initNewGrp();
-  document.getElementById(id).classList.add('on');
-  document.body.style.overflow='hidden';
-}
+// openModal — ver sección EDITAR MIEMBROS
 function closeModal(id) { document.getElementById(id).classList.remove('on'); document.body.style.overflow=''; }
 function closeOut(e,id) { if(e.target===e.currentTarget) closeModal(id); }
 
@@ -1178,6 +1200,82 @@ function confirmDel() {
   pDelId=null; save(); closeModal('m-del');
   toast('🗑️ Gasto eliminado');
   renderGTab(); renderHome();
+}
+
+// ════════════════════════════════════════════
+// EDITAR MIEMBROS
+// ════════════════════════════════════════════
+function openModal(id) {
+  if (id === 'm-newgrp')       initNewGrp();
+  if (id === 'm-edit-members') initEditMembers();
+  document.getElementById(id).classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+
+function initEditMembers() {
+  const g = grp(); if (!g) return;
+  renderEmChips(g.members.slice()); // copia
+  document.getElementById('em-inp').value = '';
+}
+
+// Guardar estado temporal de miembros en edición
+let emMembers = [];
+
+function renderEmChips(members) {
+  emMembers = members;
+  const c = document.getElementById('em-chips');
+  c.innerHTML = '';
+  emMembers.forEach((m, i) => {
+    const ch = document.createElement('div');
+    ch.className = 'chip';
+    // No permitir borrar si tiene gastos asociados
+    const g = grp();
+    const hasExpenses = g && g.expenses.some(e =>
+      e.paidBy === m || e.splitAmong.includes(m)
+    );
+    const removeBtn = hasExpenses
+      ? `<span style="font-size:10px;color:var(--muted);margin-left:4px" title="Tiene gastos">🔒</span>`
+      : `<button class="chip-rm" onclick="emRemove(${i})">×</button>`;
+    ch.innerHTML = `<span>${esc(m)}</span>${removeBtn}`;
+    c.appendChild(ch);
+  });
+}
+
+function emRemove(i) {
+  emMembers.splice(i, 1);
+  renderEmChips(emMembers);
+}
+
+function emAdd() {
+  const inp = document.getElementById('em-inp');
+  const v = inp.value.trim();
+  if (!v) return;
+  if (!emMembers.includes(v)) {
+    emMembers.push(v);
+    renderEmChips(emMembers);
+  } else {
+    toast('⚠️ ' + v + ' ya está en el grupo');
+  }
+  inp.value = '';
+}
+
+function emKd(e) {
+  if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); emAdd(); }
+}
+
+function saveMembers() {
+  const g = grp(); if (!g) return;
+  if (emMembers.length < 2) { toast('⚠️ El grupo necesita al menos 2 personas'); return; }
+  const added = emMembers.filter(m => !g.members.includes(m));
+  g.members = emMembers.slice();
+  save();
+  closeModal('m-edit-members');
+  // Actualizar cabecera del grupo
+  document.getElementById('g-mems').textContent = g.members.join(' · ');
+  renderGTab();
+  renderHome();
+  if (added.length) toast('✅ Añadido/s: ' + added.join(', '));
+  else toast('✅ Miembros actualizados');
 }
 
 function askDelGrp() {
