@@ -503,15 +503,7 @@ strong { font-weight: 600; }
     </div>
     <span id="sbtn-sync" onclick="manualSync()">↻ Sync</span>
   </div>
-  <div id="yo-banner" class="yo-soy-banner" onclick="openModal('m-yo-soy')">
-    <div class="yo-av" id="yo-av" style="background:var(--s3);color:var(--muted)">?</div>
-    <div class="yo-info">
-      <div class="yo-name" id="yo-name">¿Quién eres tú?</div>
-      <div class="yo-sub" id="yo-sub">Pulsa para identificarte y ver tu saldo</div>
-    </div>
-    <div class="yo-arr">›</div>
-  </div>
-  <div class="banner" id="totals-banner" style="display:none">
+  <div class="banner">
     <div class="ban-item"><div class="ban-lbl">Debes</div><div class="ban-val" id="b-deb" style="color:var(--acc3)">0,00 €</div></div>
     <div class="ban-item"><div class="ban-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
     <div class="ban-item"><div class="ban-lbl">Grupos</div><div class="ban-val" id="b-grp">0</div></div>
@@ -1513,31 +1505,9 @@ function getAllPersons() {
 
 function updateYoBanner() {
   const me = myName();
-  const banner = document.getElementById('yo-banner');
-  const totals = document.getElementById('totals-banner');
   const navLbl = document.getElementById('nav-yo-lbl');
-  if (!banner) return;
-
-  if (me) {
-    const col = avc(me);
-    document.getElementById('yo-av').style.background = col + '28';
-    document.getElementById('yo-av').style.color = col;
-    document.getElementById('yo-av').textContent = ini(me);
-    document.getElementById('yo-name').textContent = me;
-    document.getElementById('yo-sub').textContent = 'Tú · Pulsa para cambiar';
-    banner.classList.add('set');
-    if (totals) totals.style.display = 'flex';
-    if (navLbl) navLbl.textContent = ini(me);
-  } else {
-    document.getElementById('yo-av').textContent = '?';
-    document.getElementById('yo-av').style.background = 'var(--s3)';
-    document.getElementById('yo-av').style.color = 'var(--muted)';
-    document.getElementById('yo-name').textContent = '¿Quién eres tú?';
-    document.getElementById('yo-sub').textContent = 'Pulsa para identificarte y ver tu saldo';
-    banner.classList.remove('set');
-    if (totals) totals.style.display = 'none';
-    if (navLbl) navLbl.textContent = 'Yo soy';
-  }
+  // Solo actualizar el label del nav
+  if (navLbl) navLbl.textContent = me ? ini(me) : 'Yo soy';
 }
 
 function renderYoModal() {
