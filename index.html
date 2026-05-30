@@ -1506,7 +1506,7 @@ function updateYoBanner() {
   const me = myName();
   const navLbl = document.getElementById('nav-yo-lbl');
   // Solo actualizar el label del nav
-  if (navLbl) navLbl.textContent = me ? ini(me) : 'Yo soy';
+  if (navLbl) navLbl.textContent = me ? me.slice(0, 7) : 'Yo soy';
 }
 
 function renderYoModal() {
