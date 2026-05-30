@@ -1424,9 +1424,22 @@ function renderReport() {
     bals.forEach(b=>{
       const col=avc(b.name); const me=myName();
       const tag=Math.abs(b.net)<0.005?'<span class="tag tag-ok">✓</span>':b.net>0?`<span style="color:var(--acc);font-family:var(--ff-head);font-weight:700;font-size:13px">+${fmt(b.net)}</span>`:`<span style="color:var(--acc3);font-family:var(--ff-head);font-weight:700;font-size:13px">-${fmt(Math.abs(b.net))}</span>`;
-      h+=`<div class="bal-row"><div class="avatar" style="background:${col}22;color:${col}">${ini(b.name)}</div><div class="bal-info"><div class="bal-name">${esc(b.name)}${b.name===me?' (tú)':''}</div><div class="bal-sub">Pagó ${fmt(b.paid)}</div></div>${tag}</div>`;
+      const isMeR = me && b.name.trim().toLowerCase()===me.trim().toLowerCase();
+      h+=`<div class="bal-row"><div class="avatar" style="background:${col}22;color:${col}">${ini(b.name)}</div><div class="bal-info"><div class="bal-name">${esc(b.name)}${isMeR?' (tú)':''}</div><div class="bal-sub">Pagó ${fmt(b.paid)}</div></div>${tag}</div>`;
     });
-    if (txs.length) { h+='<hr><div class="sec-lbl">Deudas pendientes</div>'; txs.forEach(t=>{h+=`<div class="debt-row"><span style="color:var(--acc2)">→</span><div class="debt-txt"><strong>${esc(t.from)}</strong> paga a <strong>${esc(t.to)}</strong></div><div class="debt-amt">${fmt(t.amount)}</div></div>`;}); }
+    if (txs.length) {
+      const totalDebt = txs.reduce((s,t)=>s+t.amount,0);
+      h+='<hr><div class="sec-lbl">Deudas pendientes</div>';
+      txs.forEach(t=>{
+        const isMe = me && t.from.trim().toLowerCase()===me.trim().toLowerCase();
+        h+=`<div class="debt-row" style="border-color:${isMe?'rgba(251,113,133,.2)':'var(--border)'}">
+          <span style="color:var(--acc2)">→</span>
+          <div class="debt-txt"><strong>${esc(t.from)}</strong> paga a <strong>${esc(t.to)}</strong></div>
+          <div class="debt-amt">${fmt(t.amount)}</div>
+        </div>`;
+      });
+      h+=`<div style="text-align:right;font-size:12px;color:var(--muted2);margin-top:6px">Total pendiente: <strong style="color:var(--acc2)">${fmt(totalDebt)}</strong></div>`;
+    }
     else if (g.expenses.length) h+='<hr><div class="info-box">🎉 ¡Sin deudas pendientes!</div>';
     h+='</div>';
   });
