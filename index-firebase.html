@@ -495,7 +495,7 @@ strong { font-weight: 600; }
 
 <!-- ══ HOME ══ -->
 <div class="scr on" id="scr-home">
-  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Gastos compartidos del grupo</p></div><div style="display:flex;gap:6px;margin-top:4px;flex-shrink:0"><span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;">v1.1f</span><span onclick="openModal('m-about')" style="font-size:13px;font-weight:700;color:var(--acc4);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:4px 10px;border-radius:8px;cursor:pointer;letter-spacing:.2px;">About</span></div></div>
+  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><div style="display:flex;gap:6px;margin-top:4px;flex-shrink:0"><span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;">v1.1f</span><span onclick="openModal('m-about')" style="font-size:13px;font-weight:700;color:var(--acc4);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:4px 10px;border-radius:8px;cursor:pointer;letter-spacing:.2px;">About</span></div></div>
   <div id="sbar" class="ok">
     <div style="display:flex;align-items:center;gap:8px">
       <div class="sdot" id="sdot"></div>
@@ -580,6 +580,7 @@ strong { font-weight: 600; }
     <p class="sheet-sub">Todos los miembros verán este grupo automáticamente al abrir la app.</p>
     <div class="field"><label>Nombre del grupo</label><input id="ng-name" type="text" placeholder="Viaje Asturias, Piso, Cena…" autocomplete="off"></div>
     <div class="field"><label>Icono</label><div class="emoji-grid" id="emoji-grid"></div></div>
+    <div id="ng-suggestions" style="margin-bottom:12px;display:none"></div>
     <div class="field">
       <label>Miembros</label>
       <div class="chips" id="ng-chips"></div>
@@ -599,14 +600,16 @@ strong { font-weight: 600; }
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Añadir Gasto</div>
+    <div class="field"><label>Descripción</label><input id="ae-desc" type="text" placeholder="¿En qué se gastó?" autocomplete="off"></div>
     <div class="field"><label>Importe (€)</label><input id="ae-amt" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="0.00" autocomplete="off"></div>
     <div class="field"><label>Categoría</label><div class="cat-grid" id="cat-grid"></div></div>
-    <div class="field"><label>Descripción</label><input id="ae-desc" type="text" placeholder="¿En qué se gastó?" autocomplete="off"></div>
     <div class="field"><label>Pagado por</label><select id="ae-pby"></select></div>
     <div class="field"><label>Dividir entre</label><div class="split-list" id="ae-split"></div></div>
     <div class="field"><label>Fecha</label><input id="ae-date" type="date"></div>
     <div style="height:8px"></div>
     <button class="btn-primary" onclick="saveExpense()">Guardar Gasto</button>
+    <div style="height:8px"></div>
+    <button class="btn-secondary" style="width:100%;color:var(--acc3);border-color:rgba(251,113,133,.3)" onclick="closeModal('m-exp')">Cancelar</button>
     <div class="pb"></div>
   </div>
 </div>
@@ -846,30 +849,49 @@ async function sync(silent = false) {
   if (!silent) ss('syn', 'Sincronizando…');
   try {
     const remote = await fbRead();
-    if (remote && remote.groups) {
-      const prevV = DB.v || 0;
-      if ((remote.v || 0) >= (DB.v || 0)) {
-        DB = remote;
-        try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
-      }
-      const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
-      ss('ok', '✓ Sync · ' + now);
-      if (!silent && (remote.v || 0) > prevV + 1) {
-        toast('🔄 Actualizado por otro miembro');
-      }
-    } else {
-      ss('ok', 'Conectado · Listo');
+    const prevV = DB.v || 0;
+    if (remote && typeof remote === 'object') {
+      DB = remote;
+      if (!Array.isArray(DB.groups)) DB.groups = [];
+      DB.groups.forEach(g => {
+        if (!Array.isArray(g.expenses))    g.expenses    = [];
+        if (!Array.isArray(g.members))     g.members     = [];
+        if (!Array.isArray(g.settlements)) g.settlements = [];
+      });
+      try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
+      if (!silent && (remote.v||0) > prevV + 1) toast('🔄 Actualizado por otro miembro');
     }
+    const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+    ss('ok', '✓ Conectado · ' + now);
     renderAll();
   } catch(e) {
     console.error('sync error:', e);
-    ss('err', 'Sin conexión · Datos locales');
+    ss('err', '⚠️ Sin conexión · Datos locales');
   }
 }
 
 async function manualSync() {
-  await sync(false);
-  toast('✓ Sincronizado con Firebase');
+  ss('syn', 'Sincronizando…');
+  try {
+    const remote = await fbRead();
+    if (remote && typeof remote === 'object') {
+      DB = remote;
+      if (!Array.isArray(DB.groups)) DB.groups = [];
+      DB.groups.forEach(g => {
+        if (!Array.isArray(g.expenses))    g.expenses    = [];
+        if (!Array.isArray(g.members))     g.members     = [];
+        if (!Array.isArray(g.settlements)) g.settlements = [];
+      });
+      try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
+    }
+    const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+    ss('ok', '✓ Conectado · ' + now);
+    renderAll();
+    toast('✓ Sincronizado · ' + now);
+  } catch(e) {
+    ss('err', '⚠️ Sin conexión');
+    toast('⚠️ Error: ' + (e.message||'sin conexión'));
+  }
 }
 
 // Firebase soporta polling más frecuente — cada 10s
@@ -984,12 +1006,44 @@ function initNewGrp() {
   document.getElementById('ng-name').value = '';
   document.getElementById('ng-minp').value = '';
   renderChips();
+  renderNgSuggestions();
   const eg = document.getElementById('emoji-grid'); eg.innerHTML='';
   EMOJIS.forEach(e=>{
     const d=document.createElement('div'); d.className='emoji-opt'+(e===ngEmoji?' sel':''); d.textContent=e;
     d.addEventListener('click',()=>{ ngEmoji=e; document.querySelectorAll('.emoji-opt').forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); });
     eg.appendChild(d);
   });
+}
+
+function renderNgSuggestions() {
+  const cont = document.getElementById('ng-suggestions');
+  if (!cont) return;
+  // Recoger todos los amigos existentes en otros grupos
+  const existing = new Set();
+  DB.groups.forEach(g => g.members.forEach(m => existing.add(m)));
+  if (myName()) existing.delete(myName()); // no sugerir a uno mismo
+  ngMem.forEach(m => existing.delete(m)); // no sugerir ya añadidos
+  const suggestions = [...existing].sort();
+  if (!suggestions.length) { cont.style.display='none'; return; }
+  cont.style.display='block';
+  cont.innerHTML = '<div class="sec-lbl" style="margin-bottom:6px">Añadir de otros grupos</div>';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-wrap:wrap;gap:7px;';
+  suggestions.forEach(name => {
+    const col = avc(name);
+    const btn = document.createElement('div');
+    btn.style.cssText = `display:flex;align-items:center;gap:5px;background:${col}18;border:1px solid ${col}40;border-radius:20px;padding:5px 11px;cursor:pointer;font-size:13px;font-weight:500;color:var(--txt2);`;
+    btn.innerHTML = `<span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:${col}">${ini(name)}</span> ${esc(name)}`;
+    btn.addEventListener('click', () => {
+      if (!ngMem.includes(name)) {
+        ngMem.push(name);
+        renderChips();
+        renderNgSuggestions();
+      }
+    });
+    wrap.appendChild(btn);
+  });
+  cont.appendChild(wrap);
 }
 function renderChips() {
   const c=document.getElementById('ng-chips'); c.innerHTML='';
@@ -1233,13 +1287,13 @@ function openAddExpense() {
   const pb=document.getElementById('ae-pby'); pb.innerHTML='';
   const me=myName();
   g.members.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; if(m===me)o.selected=true; pb.appendChild(o); });
-  document.getElementById('ae-amt').value='';
   document.getElementById('ae-desc').value='';
+  document.getElementById('ae-amt').value='';
   document.getElementById('ae-date').value=tod();
   buildCatGrid(); buildSplitList(g);
   document.getElementById('ae-amt').oninput=updShares;
   openModal('m-exp');
-  setTimeout(()=>document.getElementById('ae-amt').focus(),350);
+  setTimeout(()=>document.getElementById('ae-desc').focus(),350);
 }
 function saveExpense() {
   const g=grp(); if(!g) return;
@@ -1250,9 +1304,16 @@ function saveExpense() {
   const date=document.getElementById('ae-date').value||tod();
   const splitAmong=Object.entries(splits).filter(([,v])=>v).map(([k])=>k);
   if (!splitAmong.length) { toast('⚠️ Selecciona al menos una persona'); return; }
-  g.expenses.push({id:uid(),desc:desc||'Gasto',amount,paidBy,category:selCat,date,splitAmong,addedBy:myName(),addedAt:new Date().toISOString()});
-  save(); closeModal('m-exp');
-  toast('💾 Gasto guardado · Todos lo verán al sincronizar');
+  // Guardar el id del grupo antes de cerrar el modal (curGid no cambia pero por seguridad)
+  const gid = g.id;
+  const expense = {id:uid(),desc:desc||'Gasto',amount,paidBy,category:selCat,date,splitAmong,addedBy:myName(),addedAt:new Date().toISOString()};
+  const targetGrp = DB.groups.find(x=>x.id===gid);
+  if (!targetGrp) { toast('⚠️ Error: grupo no encontrado'); return; }
+  if (!Array.isArray(targetGrp.expenses)) targetGrp.expenses = [];
+  targetGrp.expenses.push(expense);
+  closeModal('m-exp');
+  save();
+  toast('💾 Gasto guardado');
   renderGTab(); renderHome();
 }
 function askDel(id) { pDelId=id; openModal('m-del'); }
@@ -1267,51 +1328,58 @@ function confirmDel() {
 // ════════════════════════════════════════════
 // EDITAR MIEMBROS
 // ════════════════════════════════════════════
-function initEditMembers() {
-  const g = grp(); if (!g) return;
-  renderEmChips(g.members.slice()); // copia
-  document.getElementById('em-inp').value = '';
-}
-
-// Guardar estado temporal de miembros en edición
 let emMembers = [];
 
-function renderEmChips(members) {
-  emMembers = members;
-  const c = document.getElementById('em-chips');
-  c.innerHTML = '';
-  emMembers.forEach((m, i) => {
-    const ch = document.createElement('div');
-    ch.className = 'chip';
-    // No permitir borrar si tiene gastos asociados
-    const g = grp();
-    const hasExpenses = g && g.expenses.some(e =>
-      e.paidBy === m || e.splitAmong.includes(m)
-    );
-    const removeBtn = hasExpenses
-      ? `<span style="font-size:10px;color:var(--muted);margin-left:4px" title="Tiene gastos">🔒</span>`
-      : `<button class="chip-rm" onclick="emRemove(${i})">×</button>`;
-    ch.innerHTML = `<span>${esc(m)}</span>${removeBtn}`;
-    c.appendChild(ch);
-  });
+function initEditMembers() {
+  const g = grp(); if (!g) return;
+  emMembers = g.members.slice();
+  document.getElementById('em-inp').value = '';
+  renderEmChips();
 }
 
-function emRemove(i) {
-  emMembers.splice(i, 1);
-  renderEmChips(emMembers);
+function renderEmChips() {
+  const c = document.getElementById('em-chips');
+  if (!c) return;
+  c.innerHTML = '';
+  const g = grp();
+  emMembers.forEach((m) => {
+    const hasExp = g && g.expenses.some(e => e.paidBy===m || (e.splitAmong||[]).includes(m));
+    const ch = document.createElement('div');
+    ch.className = 'chip';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = m;
+    ch.appendChild(nameSpan);
+    if (hasExp) {
+      const lock = document.createElement('span');
+      lock.style.cssText = 'font-size:10px;color:var(--muted);margin-left:4px';
+      lock.textContent = '🔒';
+      ch.appendChild(lock);
+    } else {
+      const btn = document.createElement('button');
+      btn.className = 'chip-rm';
+      btn.textContent = '×';
+      btn.addEventListener('click', () => {
+        emMembers = emMembers.filter(x => x !== m);
+        renderEmChips();
+      });
+      ch.appendChild(btn);
+    }
+    c.appendChild(ch);
+  });
 }
 
 function emAdd() {
   const inp = document.getElementById('em-inp');
   const v = inp.value.trim();
   if (!v) return;
-  if (!emMembers.includes(v)) {
-    emMembers.push(v);
-    renderEmChips(emMembers);
-  } else {
+  if (emMembers.includes(v)) {
     toast('⚠️ ' + v + ' ya está en el grupo');
+  } else {
+    emMembers.push(v);
+    renderEmChips();
   }
   inp.value = '';
+  inp.focus();
 }
 
 function emKd(e) {
@@ -1325,12 +1393,10 @@ function saveMembers() {
   g.members = emMembers.slice();
   save();
   closeModal('m-edit-members');
-  // Actualizar cabecera del grupo
   document.getElementById('g-mems').textContent = g.members.join(' · ');
   renderGTab();
   renderHome();
-  if (added.length) toast('✅ Añadido/s: ' + added.join(', '));
-  else toast('✅ Miembros actualizados');
+  toast(added.length ? '✅ Añadido/s: ' + added.join(', ') : '✅ Miembros actualizados');
 }
 
 function askDelGrp() {
