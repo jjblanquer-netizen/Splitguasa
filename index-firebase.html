@@ -495,7 +495,7 @@ strong { font-weight: 600; }
 
 <!-- ══ HOME ══ -->
 <div class="scr on" id="scr-home">
-  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><div style="display:flex;gap:6px;margin-top:4px;flex-shrink:0"><span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;">v1.2f</span><span onclick="openModal('m-about')" style="font-size:13px;font-weight:700;color:var(--acc4);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:4px 10px;border-radius:8px;cursor:pointer;letter-spacing:.2px;">About</span></div></div>
+  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.2f</span></div>
   <div id="sbar" class="ok">
     <div style="display:flex;align-items:center;gap:8px">
       <div class="sdot" id="sdot"></div>
@@ -503,14 +503,15 @@ strong { font-weight: 600; }
     </div>
     <span id="sbtn-sync" onclick="manualSync()">↻ Sync</span>
   </div>
+  <div id="greeting" style="display:none;padding:0 16px 10px;">
+    <div style="font-family:var(--ff-head);font-size:20px;font-weight:800;color:var(--txt)">Hola, <span id="greeting-name" style="color:var(--acc)"></span> 👋</div>
+  </div>
   <div class="banner">
     <div class="ban-item"><div class="ban-lbl">Debes</div><div class="ban-val" id="b-deb" style="color:var(--acc3)">0,00 €</div></div>
     <div class="ban-item"><div class="ban-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
     <div class="ban-item"><div class="ban-lbl">Grupos</div><div class="ban-val" id="b-grp">0</div></div>
   </div>
-  <div id="banner-name" style="text-align:center;font-size:11px;color:var(--muted);margin:-8px 16px 10px;display:none">
-    Saldo de <strong id="banner-name-txt"></strong>
-  </div>
+
   <div class="sb">
     <div class="sec-lbl">Grupos activos</div>
     <div id="grp-list"></div>
@@ -556,7 +557,6 @@ strong { font-weight: 600; }
     <button class="btn-icon" style="background:var(--s3);color:var(--acc3);border:1px solid rgba(251,113,133,.25)" onclick="askDelGrp()" title="Eliminar grupo">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
     </button>
-    <button class="btn-icon" onclick="openAddExpense()">+</button>
   </div>
   <div class="grp-hdr">
     <div class="grp-emoji" id="g-emoji">🏖️</div>
@@ -572,6 +572,7 @@ strong { font-weight: 600; }
     <button class="btn-secondary" id="tab-deudas"   onclick="switchTab('deudas')">Deudas</button>
   </div>
   <div class="sb" id="gtab-cont"></div>
+  <button class="fab" onclick="openAddExpense()">+</button>
 </div>
 
 
@@ -1347,15 +1348,15 @@ function renderBanner() {
   document.getElementById('b-deb').textContent = fmt(deb);
   document.getElementById('b-ted').textContent = fmt(ted);
   document.getElementById('b-grp').textContent = DB.groups.length;
-  // Mostrar de quién es el saldo
-  const nameEl  = document.getElementById('banner-name');
-  const nameTxt = document.getElementById('banner-name-txt');
-  if (nameEl && nameTxt) {
+  // Saludo personalizado
+  const greetEl   = document.getElementById('greeting');
+  const greetName = document.getElementById('greeting-name');
+  if (greetEl && greetName) {
     if (me) {
-      nameTxt.textContent = me;
-      nameEl.style.display = 'block';
+      greetName.textContent = me;
+      greetEl.style.display = 'block';
     } else {
-      nameEl.style.display = 'none';
+      greetEl.style.display = 'none';
     }
   }
 }
