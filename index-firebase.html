@@ -799,11 +799,14 @@ function fixArrays(obj) {
 
 async function fbRead() {
   const res = await fetch(FB_URL + '?_=' + Date.now(), {
-    headers: { 'Cache-Control': 'no-cache' }
+    headers: { 'Cache-Control': 'no-cache' },
+    mode: 'cors'
   });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error('HTTP ' + res.status + ' ' + body.slice(0,80));
+  }
   const raw = await res.json();
-  // Firebase convierte arrays en objetos {"0":{...},"1":{...}} — revertir
   return fixArrays(raw);
 }
 
@@ -1624,53 +1627,48 @@ function askDelPerson(name) {
 // ════════════════════════════════════════════
 async function init() {
   document.getElementById('load-msg').textContent = 'Conectando con Firebase…';
-
-  // Arrancar siempre con DB vacía — Firebase es la fuente de verdad
   DB = { groups: [], v: 0 };
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   renderAll();
+  await connectFirebase();
+}
 
+async function connectFirebase() {
+  ss('syn', 'Conectando…');
   try {
-    ss('syn', 'Conectando…');
     const remote = await fbRead();
     if (remote && remote.groups) {
       DB = remote;
       try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
-      const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
-      ss('ok', '✓ Conectado · ' + now);
-    } else {
+    } else if (remote && Object.keys(remote).length === 0) {
       // Firebase vacío — inicializar
       DB = { groups: [], v: 0 };
       await fbWrite();
-      ss('ok', '✓ Base de datos lista');
+    } else if (!remote) {
+      // null = Firebase vacío
+      DB = { groups: [], v: 0 };
+      await fbWrite();
     }
+    const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+    ss('ok', '✓ Conectado · ' + now);
     renderAll();
   } catch(e) {
-    console.error('init error:', e);
-    // Solo usar backup si Firebase no responde
+    console.error('Firebase error:', e.message);
+    ss('err', '⚠️ ' + (e.message||'Sin conexión'));
+    // Intentar con backup local
     try {
       const bk = localStorage.getItem('sg_bk_fb');
-      if (bk) { const p = JSON.parse(bk); if (p?.groups) DB = p; }
+      if (bk) { const p = JSON.parse(bk); if (p?.groups) { DB = p; renderAll(); } }
     } catch(ex) {}
-    ss('err', 'Sin conexión · Datos locales');
-    renderAll();
+    ss('err', 'Sin conexión · Reintentando…');
+    // Reintentar cada 5s hasta conectar
+    setTimeout(connectFirebase, 5000);
   }
 }
 
 init();
 </script>
 
-<script>
-if ('serviceWorker' in navigator) {
-  // Registrar SW desde blob URL
-  const swCode = atob('CmNvbnN0IENBQ0hFID0gJ3NwbGl0Z3Vhc2EtdjEnOwpjb25zdCBBU1NFVFMgPSBbJy4vaW5kZXguaHRtbCcsICcuL21hbmlmZXN0Lmpzb24nXTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdpbnN0YWxsJywgZSA9PiB7CiAgZS53YWl0VW50aWwoY2FjaGVzLm9wZW4oQ0FDSEUpLnRoZW4oYyA9PiBjLmFkZEFsbChBU1NFVFMpKSk7CiAgc2VsZi5za2lwV2FpdGluZygpOwp9KTsKc2VsZi5hZGRFdmVudExpc3RlbmVyKCdhY3RpdmF0ZScsIGUgPT4gewogIGUud2FpdFVudGlsKGNhY2hlcy5rZXlzKCkudGhlbihrZXlzID0+CiAgICBQcm9taXNlLmFsbChrZXlzLmZpbHRlcihrID0+IGsgIT09IENBQ0hFKS5tYXAoayA9PiBjYWNoZXMuZGVsZXRlKGspKSkKICApKTsKICBzZWxmLmNsaWVudHMuY2xhaW0oKTsKfSk7CnNlbGYuYWRkRXZlbnRMaXN0ZW5lcignZmV0Y2gnLCBlID0+IHsKICBlLnJlc3BvbmRXaXRoKAogICAgY2FjaGVzLm1hdGNoKGUucmVxdWVzdCkudGhlbihjYWNoZWQgPT4gY2FjaGVkIHx8IGZldGNoKGUucmVxdWVzdCkuY2F0Y2goKCkgPT4gY2FjaGVzLm1hdGNoKCcuL2luZGV4Lmh0bWwnKSkpCiAgKTsKfSk7Cg==');
-  const blob = new Blob([swCode], {type: 'text/javascript'});
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl, {scope: '/Splitguasa/'})
-    .then(r => console.log('SW ok', r.scope))
-    .catch(e => console.warn('SW fail', e));
-}
-</script>
 </body>
 </html>
