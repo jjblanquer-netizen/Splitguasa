@@ -1408,59 +1408,90 @@ function renderActivity() {
 // REPORT
 // ════════════════════════════════════════════
 function renderReport() {
-  const c=document.getElementById('rep-cont');
-  if (!DB.groups.length) { c.innerHTML='<div class="empty"><div class="empty-icon">📊</div><p>Crea grupos y añade gastos para ver el informe.</p></div>'; return; }
-  let h='', gt=0; const cm={};
-  DB.groups.forEach(g=>{
-    const tot=g.expenses.reduce((a,e)=>a+e.amount,0); gt+=tot;
-    g.expenses.forEach(e=>{cm[e.category]=(cm[e.category]||0)+e.amount;});
-    const txs=computeDebts(g), bals=computeBals(g);
-    h+=`<div class="rep-card"><h3>${esc(g.emoji)} ${esc(g.name)}</h3>
-      <div class="stats-grid">
-        <div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val" style="font-size:17px">${fmt(tot)}</div></div>
-        <div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val" style="font-size:17px">${g.expenses.length}</div></div>
-      </div>
-      <div class="sec-lbl" style="margin-top:9px">Balances (${g.members.length} personas)</div>`;
-    bals.forEach(b=>{
-      const col=avc(b.name); const me=myName();
-      const tag=Math.abs(b.net)<0.005?'<span class="tag tag-ok">✓</span>':b.net>0?`<span style="color:var(--acc);font-family:var(--ff-head);font-weight:700;font-size:13px">+${fmt(b.net)}</span>`:`<span style="color:var(--acc3);font-family:var(--ff-head);font-weight:700;font-size:13px">-${fmt(Math.abs(b.net))}</span>`;
-      const isMeR = me && b.name.trim().toLowerCase()===me.trim().toLowerCase();
-      h+=`<div class="bal-row"><div class="avatar" style="background:${col}22;color:${col}">${ini(b.name)}</div><div class="bal-info"><div class="bal-name">${esc(b.name)}${isMeR?' (tú)':''}</div><div class="bal-sub">Pagó ${fmt(b.paid)}</div></div>${tag}</div>`;
-    });
-    if (txs.length) {
-      const totalDebt = txs.reduce((s,t)=>s+t.amount,0);
-      h+='<hr><div class="sec-lbl">Deudas pendientes</div>';
-      txs.forEach(t=>{
-        const isMe = me && t.from.trim().toLowerCase()===me.trim().toLowerCase();
-        h+=`<div class="debt-row" style="border-color:${isMe?'rgba(251,113,133,.2)':'var(--border)'}">
-          <span style="color:var(--acc2)">→</span>
-          <div class="debt-txt"><strong>${esc(t.from)}</strong> paga a <strong>${esc(t.to)}</strong></div>
-          <div class="debt-amt">${fmt(t.amount)}</div>
-        </div>`;
-      });
-      h+=`<div style="text-align:right;font-size:12px;color:var(--muted2);margin-top:6px">Total pendiente: <strong style="color:var(--acc2)">${fmt(totalDebt)}</strong></div>`;
-    }
-    else if (g.expenses.length) h+='<hr><div class="info-box">🎉 ¡Sin deudas pendientes!</div>';
-    h+='</div>';
-  });
-  const cats=Object.entries(cm).sort((a,b)=>b[1]-a[1]);
-  if (cats.length) {
-    h+='<div class="rep-card"><h3>📊 Gastos por categoría</h3>';
-    cats.forEach(([cid,amt])=>{
-      const cat=catBy(cid); const pct=gt>0?Math.round(amt/gt*100):0;
-      h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span style="font-size:18px;width:24px;text-align:center">${cat.e}</span>
-        <div style="flex:1">
-          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;color:var(--txt2)"><span>${cat.n}</span><span><strong style="color:var(--txt)">${fmt(amt)}</strong> <span style="color:var(--muted)">(${pct}%)</span></span></div>
-          <div style="background:var(--s3);border-radius:4px;height:5px"><div style="background:var(--acc);width:${pct}%;height:100%;border-radius:4px"></div></div>
-        </div>
-      </div>`;
-    });
-    h+=`<hr><div style="display:flex;justify-content:space-between;font-family:var(--ff-head);font-weight:700;font-size:15px;color:var(--txt)"><span>Total global</span><span style="color:var(--acc)">${fmt(gt)}</span></div></div>`;
+  const c = document.getElementById('rep-cont');
+  if (!DB.groups.length) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>Crea grupos y añade gastos para ver el informe.</p></div>';
+    return;
   }
-  c.innerHTML=h;
+  const me = myName();
+  let h = '', gt = 0;
+  const cm = {};
 
-  // Gráfica de gastos por día
+  DB.groups.forEach(g => {
+    const tot = g.expenses.reduce((a, e) => a + e.amount, 0);
+    gt += tot;
+    g.expenses.forEach(e => { cm[e.category] = (cm[e.category] || 0) + e.amount; });
+
+    const bals = computeBals(g);
+    const txs  = computeDebts(g);
+
+    h += '<div class="rep-card">';
+    h += '<h3>' + esc(g.emoji) + ' ' + esc(g.name) + '</h3>';
+    h += '<div class="stats-grid">';
+    h += '<div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val" style="font-size:17px">' + fmt(tot) + '</div></div>';
+    h += '<div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val" style="font-size:17px">' + g.expenses.length + '</div></div>';
+    h += '</div>';
+    h += '<div class="sec-lbl" style="margin-top:9px">Balances (' + bals.length + ' personas)</div>';
+
+    bals.forEach(b => {
+      const col   = avc(b.name);
+      const isMeB = me && b.name.trim().toLowerCase() === me.trim().toLowerCase();
+      let tag;
+      if (Math.abs(b.net) < 0.005) {
+        tag = '<span class="tag tag-ok">✓</span>';
+      } else if (b.net > 0) {
+        tag = '<span style="color:var(--acc);font-family:var(--ff-head);font-weight:700;font-size:13px">+' + fmt(b.net) + '</span>';
+      } else {
+        tag = '<span style="color:var(--acc3);font-family:var(--ff-head);font-weight:700;font-size:13px">-' + fmt(Math.abs(b.net)) + '</span>';
+      }
+      h += '<div class="bal-row">';
+      h += '<div class="avatar" style="background:' + col + '22;color:' + col + '">' + ini(b.name) + '</div>';
+      h += '<div class="bal-info"><div class="bal-name">' + esc(b.name) + (isMeB ? ' (tú)' : '') + '</div>';
+      h += '<div class="bal-sub">Pagó ' + fmt(b.paid) + '</div></div>';
+      h += tag + '</div>';
+    });
+
+    if (txs.length) {
+      const totalDebt = txs.reduce((s, t) => s + t.amount, 0);
+      h += '<hr><div class="sec-lbl">Deudas pendientes</div>';
+      txs.forEach(t => {
+        const isMeD = me && t.from.trim().toLowerCase() === me.trim().toLowerCase();
+        const borderCol = isMeD ? 'rgba(251,113,133,.25)' : 'var(--border)';
+        h += '<div class="debt-row" style="border-color:' + borderCol + '">';
+        h += '<span style="color:var(--acc2)">→</span>';
+        h += '<div class="debt-txt"><strong>' + esc(t.from) + '</strong> paga a <strong>' + esc(t.to) + '</strong></div>';
+        h += '<div class="debt-amt">' + fmt(t.amount) + '</div>';
+        h += '</div>';
+      });
+      h += '<div style="text-align:right;font-size:12px;color:var(--muted2);margin-top:6px">Total pendiente: <strong style="color:var(--acc2)">' + fmt(totalDebt) + '</strong></div>';
+    } else if (g.expenses.length) {
+      h += '<hr><div class="info-box">🎉 ¡Sin deudas pendientes!</div>';
+    }
+    h += '</div>';
+  });
+
+  const cats = Object.entries(cm).sort((a, b) => b[1] - a[1]);
+  if (cats.length) {
+    h += '<div class="rep-card"><h3>📊 Gastos por categoría</h3>';
+    cats.forEach(function(entry) {
+      const cid = entry[0], amt = entry[1];
+      const cat = catBy(cid);
+      const pct = gt > 0 ? Math.round(amt / gt * 100) : 0;
+      h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
+      h += '<span style="font-size:18px;width:24px;text-align:center">' + cat.e + '</span>';
+      h += '<div style="flex:1">';
+      h += '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;color:var(--txt2)">';
+      h += '<span>' + cat.n + '</span>';
+      h += '<span><strong style="color:var(--txt)">' + fmt(amt) + '</strong> <span style="color:var(--muted)">(' + pct + '%)</span></span>';
+      h += '</div>';
+      h += '<div style="background:var(--s3);border-radius:4px;height:5px"><div style="background:var(--acc);width:' + pct + '%;height:100%;border-radius:4px"></div></div>';
+      h += '</div></div>';
+    });
+    h += '<hr><div style="display:flex;justify-content:space-between;font-family:var(--ff-head);font-weight:700;font-size:15px;color:var(--txt)">';
+    h += '<span>Total global</span><span style="color:var(--acc)">' + fmt(gt) + '</span></div></div>';
+  }
+
+  c.innerHTML = h;
   renderDailyChart();
 }
 
