@@ -488,14 +488,14 @@ strong { font-weight: 600; }
   <div class="load-logo">💸</div>
   <div class="load-title">SplitGuasa</div>
   <div class="spinner"></div>
-  <div class="load-msg" id="load-msg">Conectando con GitHub…</div>
+  <div class="load-msg" id="load-msg">Conectando con Firebase…</div>
 </div>
 
 <div id="app" style="display:none">
 
 <!-- ══ HOME ══ -->
 <div class="scr on" id="scr-home">
-  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><div style="display:flex;gap:6px;margin-top:4px;flex-shrink:0"><span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;">v1.1f</span><span onclick="openModal('m-about')" style="font-size:13px;font-weight:700;color:var(--acc4);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:4px 10px;border-radius:8px;cursor:pointer;letter-spacing:.2px;">About</span></div></div>
+  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><div style="display:flex;gap:6px;margin-top:4px;flex-shrink:0"><span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;">v1.2f</span><span onclick="openModal('m-about')" style="font-size:13px;font-weight:700;color:var(--acc4);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:4px 10px;border-radius:8px;cursor:pointer;letter-spacing:.2px;">About</span></div></div>
   <div id="sbar" class="ok">
     <div style="display:flex;align-items:center;gap:8px">
       <div class="sdot" id="sdot"></div>
@@ -710,7 +710,7 @@ strong { font-weight: 600; }
     <div style="text-align:center;padding:10px 0 24px">
       <div style="font-size:56px;margin-bottom:14px">💳</div>
       <div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:var(--txt);margin-bottom:4px">SplitGuasa</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Versión 1.0</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Versión 1.2f</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -1285,24 +1285,6 @@ function renderBanner() {
   document.getElementById('b-grp').textContent = DB.groups.length;
 }
 
-function askDelGrp() {
-  const g=grp(); if(!g) return;
-  pDelGid=g.id;
-  document.getElementById('del-grp-txt').innerHTML=
-    `Vas a eliminar el grupo <strong>"${esc(g.name)}"</strong> con ${g.members.length} miembros.`;
-  document.getElementById('del-grp-count').textContent=
-    g.expenses.length===1?'1 gasto':g.expenses.length+' gastos';
-  openModal('m-del-grp');
-}
-function confirmDelGrp() {
-  if (!pDelGid) return;
-  DB.groups = DB.groups.filter(g=>g.id!==pDelGid);
-  pDelGid=null; curGid=null;
-  save(); closeModal('m-del-grp');
-  toast('🗑️ Grupo eliminado');
-  goTab('home');
-}
-
 // ════════════════════════════════════════════
 // ACTIVITY
 // ════════════════════════════════════════════
@@ -1624,6 +1606,9 @@ function renderNgFriendList() {
     list.appendChild(row);
   });
 }
+
+function addChip() {} // stub — miembros se añaden desde lista Amigos
+function mkd(e) {} // stub
 
 function createGroup() {
   const name = document.getElementById('ng-name').value.trim();
