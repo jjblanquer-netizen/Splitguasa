@@ -571,8 +571,14 @@ strong { font-weight: 600; }
     <button class="btn-secondary" id="tab-balances" onclick="switchTab('balances')">Balances</button>
     <button class="btn-secondary" id="tab-deudas"   onclick="switchTab('deudas')">Deudas</button>
   </div>
-  <div class="sb" id="gtab-cont"></div>
+  <div class="sb" id="gtab-cont" style="padding-bottom:calc(140px + var(--sab))"></div>
   <button class="fab" onclick="openAddExpense()">+</button>
+  <nav class="bnav">
+    <div class="nav-item" onclick="closeGroup();goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
+    <div class="nav-item" onclick="closeGroup();goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
+    <div class="nav-item" onclick="closeGroup();goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
+    <div class="nav-item" class="nav-yo" onclick="openModal('m-yo-soy')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
+  </nav>
 </div>
 
 
@@ -1033,25 +1039,39 @@ function renderGastos(g) {
 // ─── BALANCES ───
 function computeBals(g) {
   const p={}, o={};
-  // Asegurar que members y expenses son arrays
+  // Asegurar arrays (Firebase puede devolver objetos)
   const members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
   const expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
+
+  // Inicializar todos los miembros actuales
   members.forEach(m => { p[m]=0; o[m]=0; });
+
   expenses.forEach(e => {
-    if (!e || typeof e.amount !== 'number') return; // saltar gastos inválidos
-    // Asegurar splitAmong es array
+    if (!e || typeof e.amount !== 'number') return;
     const among = Array.isArray(e.splitAmong) ? e.splitAmong : Object.values(e.splitAmong || {});
+
+    // Incluir pagador aunque no esté en members (fue añadido después o eliminado)
+    if (!(e.paidBy in p)) { p[e.paidBy]=0; o[e.paidBy]=0; }
     p[e.paidBy] = (p[e.paidBy] || 0) + e.amount;
+
     const s = e.amount / (among.length || 1);
-    among.forEach(m => { o[m] = (o[m] || 0) + s; });
+    among.forEach(m => {
+      // Incluir deudores aunque no estén en members actuales
+      if (!(m in o)) { p[m]=p[m]||0; o[m]=0; }
+      o[m] = (o[m] || 0) + s;
+    });
   });
-  // Incluir solo los miembros actuales del grupo
-  return members.map(m => ({
+
+  // Unión de members actuales + personas que aparecen en gastos
+  const allPeople = new Set([...members, ...Object.keys(p), ...Object.keys(o)]);
+
+  return [...allPeople].map(m => ({
     name: m,
     paid: p[m] || 0,
     owes: o[m] || 0,
     net:  (p[m] || 0) - (o[m] || 0)
-  }));
+  })).filter(b => Math.abs(b.net) > 0.005 || members.includes(b.name));
+  // Mostrar: miembros actuales siempre + personas con deuda pendiente
 }
 function renderBals(g) {
   const bals=computeBals(g);
@@ -1072,7 +1092,7 @@ function renderBals(g) {
   }
   h+='<div class="card">';
   bals.forEach(b=>{
-    const col=avc(b.name); const isMe=b.name===me;
+    const col=avc(b.name); const isMe=me && b.name.trim().toLowerCase()===me.trim().toLowerCase();
     const tag=Math.abs(b.net)<0.005?'<span class="tag tag-ok">✓ OK</span>':b.net>0?`<span style="color:var(--acc);font-family:var(--ff-head);font-weight:700">+${fmt(b.net)}</span>`:`<span style="color:var(--acc3);font-family:var(--ff-head);font-weight:700">-${fmt(Math.abs(b.net))}</span>`;
     h+=`<div class="bal-row" ${isMe?'style="background:rgba(94,234,212,.04);border-radius:8px;padding:11px 8px;margin:0 -8px;"':''}>
       <div class="avatar" style="background:${col}22;color:${col}">${ini(b.name)}</div>
@@ -1102,15 +1122,18 @@ function computeDebts(g) {
   return txs;
 }
 function renderDebts(g) {
-  const txs=computeDebts(g); const me=myName();
+  const txs=computeDebts(g);
+  const me=myName();
+  // Comparación insensible a mayúsculas/espacios extra
+  const isMe = n => me && n.trim().toLowerCase() === me.trim().toLowerCase();
   if (!txs.length) return '<div class="empty"><div class="empty-icon">🎉</div><p>¡Todo liquidado!<br>Sin deudas pendientes.</p></div>';
-  const mine=txs.filter(t=>t.from===me||t.to===me);
-  const others=txs.filter(t=>t.from!==me&&t.to!==me);
+  const mine=txs.filter(t=>isMe(t.from)||isMe(t.to));
+  const others=txs.filter(t=>!isMe(t.from)&&!isMe(t.to));
   let h='';
   if (mine.length) {
     h+='<div class="sec-lbl">Tus pagos pendientes</div>';
     mine.forEach(t=>{
-      const fc=avc(t.from); const isD=t.from===me;
+      const fc=avc(t.from); const isD=isMe(t.from);
       h+=`<div class="debt-row" style="border-color:${isD?'rgba(251,113,133,.3)':'rgba(94,234,212,.3)'}">
         <div class="avatar" style="background:${fc}22;color:${fc};width:30px;height:30px;font-size:11px">${ini(t.from)}</div>
         <div class="debt-txt"><strong>${esc(t.from)}</strong> → <strong>${esc(t.to)}</strong></div>
