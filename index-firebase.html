@@ -1638,31 +1638,34 @@ async function connectFirebase() {
   ss('syn', 'Conectando…');
   try {
     const remote = await fbRead();
-    if (remote && remote.groups) {
-      DB = remote;
-      try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
-    } else if (remote && Object.keys(remote).length === 0) {
+
+    if (remote === null || remote === undefined) {
       // Firebase vacío — inicializar
       DB = { groups: [], v: 0 };
       await fbWrite();
-    } else if (!remote) {
-      // null = Firebase vacío
-      DB = { groups: [], v: 0 };
-      await fbWrite();
+    } else {
+      DB = remote;
+      // Asegurar que groups siempre es array
+      if (!Array.isArray(DB.groups)) DB.groups = [];
+      // Asegurar arrays internos de cada grupo
+      DB.groups.forEach(g => {
+        if (!Array.isArray(g.expenses))    g.expenses    = [];
+        if (!Array.isArray(g.members))     g.members     = [];
+        if (!Array.isArray(g.settlements)) g.settlements = [];
+      });
+      try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
     }
+
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
     ss('ok', '✓ Conectado · ' + now);
     renderAll();
   } catch(e) {
-    console.error('Firebase error:', e.message);
-    ss('err', '⚠️ ' + (e.message||'Sin conexión'));
-    // Intentar con backup local
+    console.error('Firebase error:', e);
     try {
       const bk = localStorage.getItem('sg_bk_fb');
       if (bk) { const p = JSON.parse(bk); if (p?.groups) { DB = p; renderAll(); } }
     } catch(ex) {}
-    ss('err', 'Sin conexión · Reintentando…');
-    // Reintentar cada 5s hasta conectar
+    ss('err', '⚠️ ' + (e.message || 'Sin conexión') + ' · Reintentando…');
     setTimeout(connectFirebase, 5000);
   }
 }
