@@ -786,13 +786,25 @@ function ss(st, msg) {
 // ════════════════════════════════════════════
 // FIREBASE READ
 // ════════════════════════════════════════════
+// Convierte objetos con claves numéricas de Firebase de vuelta a arrays
+function fixArrays(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  const keys = Object.keys(obj);
+  const isArr = keys.length > 0 && keys.every((k, i) => String(i) === k);
+  if (isArr) return keys.map(k => fixArrays(obj[k]));
+  const result = {};
+  keys.forEach(k => { result[k] = fixArrays(obj[k]); });
+  return result;
+}
+
 async function fbRead() {
   const res = await fetch(FB_URL + '?_=' + Date.now(), {
     headers: { 'Cache-Control': 'no-cache' }
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  return data; // Firebase devuelve el objeto directamente
+  const raw = await res.json();
+  // Firebase convierte arrays en objetos {"0":{...},"1":{...}} — revertir
+  return fixArrays(raw);
 }
 
 // ════════════════════════════════════════════
