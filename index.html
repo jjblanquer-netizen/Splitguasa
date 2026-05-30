@@ -1039,39 +1039,39 @@ function renderGastos(g) {
 
 // ─── BALANCES ───
 function computeBals(g) {
-  const p={}, o={};
-  // Asegurar arrays (Firebase puede devolver objetos)
-  const members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
-  const expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
+  var p = {}, o = {};
+  var members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
+  var expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
 
-  // Inicializar todos los miembros actuales
-  members.forEach(m => { p[m]=0; o[m]=0; });
+  members.forEach(function(m) { p[m] = 0; o[m] = 0; });
 
-  expenses.forEach(e => {
+  expenses.forEach(function(e) {
     if (!e || typeof e.amount !== 'number') return;
-    // REGLA: dividir SIEMPRE entre todos los miembros actuales del grupo,
-    // ignorando el splitAmong original (cualquier miembro nuevo comparte todo)
-    const among = members; // <-- siempre todos los miembros actuales
 
-    // Incluir pagador aunque no esté en members
-    if (!(e.paidBy in p)) { p[e.paidBy]=0; o[e.paidBy]=0; }
+    // Liquidaciones: usar splitAmong original (solo el acreedor)
+    // Gastos normales: dividir entre TODOS los miembros actuales
+    var among;
+    if (e.isSettlement) {
+      among = Array.isArray(e.splitAmong) ? e.splitAmong : Object.values(e.splitAmong || {});
+    } else {
+      among = members;
+    }
+
+    if (!(e.paidBy in p)) { p[e.paidBy] = 0; o[e.paidBy] = 0; }
     p[e.paidBy] = (p[e.paidBy] || 0) + e.amount;
 
-    const s = e.amount / (among.length || 1);
-    among.forEach(m => {
+    var s = e.amount / (among.length || 1);
+    among.forEach(function(m) {
+      if (!(m in o)) { p[m] = p[m] || 0; o[m] = 0; }
       o[m] = (o[m] || 0) + s;
     });
   });
 
-  // Unión de members + pagadores externos con deuda
-  const allPeople = new Set([...members, ...Object.keys(p)]);
+  var allPeople = new Set(members.concat(Object.keys(p)));
 
-  return [...allPeople].map(m => ({
-    name: m,
-    paid: p[m] || 0,
-    owes: o[m] || 0,
-    net:  (p[m] || 0) - (o[m] || 0)
-  }));
+  return Array.from(allPeople).map(function(m) {
+    return { name: m, paid: p[m] || 0, owes: o[m] || 0, net: (p[m] || 0) - (o[m] || 0) };
+  });
 }
 function renderBals(g) {
   const bals=computeBals(g);
@@ -1122,39 +1122,71 @@ function computeDebts(g) {
   return txs;
 }
 function renderDebts(g) {
-  const txs=computeDebts(g);
-  const me=myName();
-  // Comparación insensible a mayúsculas/espacios extra
-  const isMe = n => me && n.trim().toLowerCase() === me.trim().toLowerCase();
-  if (!txs.length) return '<div class="empty"><div class="empty-icon">🎉</div><p>¡Todo liquidado!<br>Sin deudas pendientes.</p></div>';
-  const mine=txs.filter(t=>isMe(t.from)||isMe(t.to));
-  const others=txs.filter(t=>!isMe(t.from)&&!isMe(t.to));
-  let h='';
+  var txs = computeDebts(g);
+  var me = myName();
+  var isMe = function(n) { return me && n.trim().toLowerCase() === me.trim().toLowerCase(); };
+  var expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
+  // Recopilar liquidaciones ya hechas
+  var settlements = expenses.filter(function(e) { return e.isSettlement; });
+
+  var h = '';
+
+  // Mostrar liquidaciones hechas (Pagado)
+  if (settlements.length) {
+    h += '<div class="sec-lbl">Pagos realizados</div>';
+    settlements.forEach(function(s) {
+      var fc = avc(s.paidBy);
+      var toName = Array.isArray(s.splitAmong) ? s.splitAmong[0] : Object.values(s.splitAmong || {})[0] || '?';
+      h += '<div class="debt-row" style="border-color:rgba(94,234,212,.2);opacity:.7">';
+      h += '<div class="avatar" style="background:' + fc + '22;color:' + fc + ';width:30px;height:30px;font-size:11px">' + ini(s.paidBy) + '</div>';
+      h += '<div class="debt-txt" style="text-decoration:line-through;color:var(--muted)">';
+      h += '<strong>' + esc(s.paidBy) + '</strong> → <strong>' + esc(toName) + '</strong></div>';
+      h += '<div class="debt-amt" style="text-decoration:line-through;color:var(--muted)">' + fmt(s.amount) + '</div>';
+      h += '<span style="color:var(--acc);font-size:12px;font-weight:700;padding:5px 9px">✓ Pagado</span>';
+      h += '</div>';
+    });
+  }
+
+  // Deudas pendientes
+  if (!txs.length && !settlements.length) {
+    return '<div class="empty"><div class="empty-icon">🎉</div><p>¡Todo liquidado!<br>Sin deudas pendientes.</p></div>';
+  }
+  if (!txs.length && settlements.length) {
+    h += '<div style="height:12px"></div>';
+    h += '<div class="info-box">🎉 ¡Todas las deudas han sido pagadas!</div>';
+    return h;
+  }
+
+  var mine = txs.filter(function(t) { return isMe(t.from) || isMe(t.to); });
+  var others = txs.filter(function(t) { return !isMe(t.from) && !isMe(t.to); });
+
   if (mine.length) {
-    h+='<div class="sec-lbl">Tus pagos pendientes</div>';
-    mine.forEach(t=>{
-      const fc=avc(t.from); const isD=isMe(t.from);
-      h+=`<div class="debt-row" style="border-color:${isD?'rgba(251,113,133,.3)':'rgba(94,234,212,.3)'}">
-        <div class="avatar" style="background:${fc}22;color:${fc};width:30px;height:30px;font-size:11px">${ini(t.from)}</div>
-        <div class="debt-txt"><strong>${esc(t.from)}</strong> → <strong>${esc(t.to)}</strong></div>
-        <div class="debt-amt">${fmt(t.amount)}</div>
-        <button class="btn-settle" onclick="openSettle(${txs.indexOf(t)},'${g.id}')">Pagar</button>
-      </div>`;
+    h += '<div class="sec-lbl">Tus pagos pendientes</div>';
+    mine.forEach(function(t) {
+      var fc = avc(t.from);
+      var isd = isMe(t.from);
+      h += '<div class="debt-row" style="border-color:' + (isd ? 'rgba(251,113,133,.25)' : 'rgba(94,234,212,.25)') + '">';
+      h += '<div class="avatar" style="background:' + fc + '22;color:' + fc + ';width:30px;height:30px;font-size:11px">' + ini(t.from) + '</div>';
+      h += '<div class="debt-txt"><strong>' + esc(t.from) + '</strong> → <strong>' + esc(t.to) + '</strong></div>';
+      h += '<div class="debt-amt">' + fmt(t.amount) + '</div>';
+      h += '<button class="btn-settle" onclick="openSettle(' + txs.indexOf(t) + ',\'' + g.id + '\')">Pagar</button>';
+      h += '</div>';
     });
   }
   if (others.length) {
-    h+='<div class="sec-lbl">Resto del grupo</div>';
-    others.forEach(t=>{
-      const fc=avc(t.from);
-      h+=`<div class="debt-row">
-        <div class="avatar" style="background:${fc}22;color:${fc};width:30px;height:30px;font-size:11px">${ini(t.from)}</div>
-        <div class="debt-txt"><strong>${esc(t.from)}</strong> → <strong>${esc(t.to)}</strong></div>
-        <div class="debt-amt">${fmt(t.amount)}</div>
-        <button class="btn-settle" onclick="openSettle(${txs.indexOf(t)},'${g.id}')">Pagar</button>
-      </div>`;
+    h += '<div class="sec-lbl">Resto del grupo</div>';
+    others.forEach(function(t) {
+      var fc = avc(t.from);
+      h += '<div class="debt-row">';
+      h += '<div class="avatar" style="background:' + fc + '22;color:' + fc + ';width:30px;height:30px;font-size:11px">' + ini(t.from) + '</div>';
+      h += '<div class="debt-txt"><strong>' + esc(t.from) + '</strong> → <strong>' + esc(t.to) + '</strong></div>';
+      h += '<div class="debt-amt">' + fmt(t.amount) + '</div>';
+      h += '<button class="btn-settle" onclick="openSettle(' + txs.indexOf(t) + ',\'' + g.id + '\')">Pagar</button>';
+      h += '</div>';
     });
   }
-  h+=`<div style="height:8px"></div><div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> cuando hayas transferido el dinero.</div>`;
+  h += '<div style="height:8px"></div>';
+  h += '<div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> cuando hayas transferido el dinero.</div>';
   return h;
 }
 
