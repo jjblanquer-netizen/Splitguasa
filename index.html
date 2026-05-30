@@ -445,6 +445,40 @@ hr { border: none; border-top: 1px solid var(--border); margin: 11px 0; }
 .empty-icon { font-size: 44px; margin-bottom: 10px; }
 .empty p { font-size: 14px; line-height: 1.7; }
 strong { font-weight: 600; }
+/* ── YO SOY ─────────────────────────────────────────────── */
+.yo-soy-banner {
+  margin: 0 16px 12px;
+  background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--r); padding: 13px 16px;
+  display: flex; align-items: center; gap: 12px;
+  cursor: pointer; transition: border-color .15s;
+}
+.yo-soy-banner.set { border-color: var(--acc); background: rgba(94,234,212,.05); }
+.yo-soy-banner:active { opacity: .85; }
+.yo-av { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--ff-head); font-weight: 700; font-size: 15px; flex-shrink: 0; }
+.yo-info { flex: 1; min-width: 0; }
+.yo-name { font-family: var(--ff-head); font-weight: 700; font-size: 15px; color: var(--txt); }
+.yo-sub  { font-size: 12px; color: var(--muted2); margin-top: 1px; }
+.yo-arr  { color: var(--muted); font-size: 18px; flex-shrink: 0; }
+
+/* ── SELECTOR PERSONAS ──────────────────────────────────── */
+.person-grid { display: flex; flex-direction: column; gap: 8px; }
+.person-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--s2); border: 1.5px solid var(--border);
+  border-radius: var(--rs); padding: 12px 14px;
+  cursor: pointer; transition: border-color .15s, background .15s;
+  position: relative;
+}
+.person-row.me  { border-color: var(--acc); background: rgba(94,234,212,.07); }
+.person-row:active { background: var(--s3); }
+.person-av { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--ff-head); font-weight: 700; font-size: 14px; flex-shrink: 0; }
+.person-name { flex: 1; font-size: 15px; font-weight: 500; color: var(--txt); }
+.person-groups { font-size: 11px; color: var(--muted2); margin-top: 1px; }
+.person-me-badge { font-size: 11px; font-weight: 700; color: var(--acc); background: rgba(94,234,212,.12); padding: 2px 8px; border-radius: 20px; flex-shrink: 0; }
+.person-del { background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 8px; flex-shrink: 0; transition: color .13s; }
+.person-del:active { color: var(--acc3); }
+
 </style>
 </head>
 <body>
@@ -461,7 +495,7 @@ strong { font-weight: 600; }
 
 <!-- ══ HOME ══ -->
 <div class="scr on" id="scr-home">
-  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Gastos compartidos del grupo</p></div><span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;margin-top:4px;flex-shrink:0">v1.0</span></div>
+  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Gastos compartidos del grupo</p></div><div style="display:flex;gap:6px;margin-top:4px;flex-shrink:0"><span style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;">v1.0</span><span onclick="openModal('m-about')" style="font-size:13px;font-weight:700;color:var(--acc4);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:4px 10px;border-radius:8px;cursor:pointer;letter-spacing:.2px;">About</span></div></div>
   <div id="sbar" class="ok">
     <div style="display:flex;align-items:center;gap:8px">
       <div class="sdot" id="sdot"></div>
@@ -469,7 +503,15 @@ strong { font-weight: 600; }
     </div>
     <span id="sbtn-sync" onclick="manualSync()">↻ Sync</span>
   </div>
-  <div class="banner">
+  <div id="yo-banner" class="yo-soy-banner" onclick="openModal('m-yo-soy')">
+    <div class="yo-av" id="yo-av" style="background:var(--s3);color:var(--muted)">?</div>
+    <div class="yo-info">
+      <div class="yo-name" id="yo-name">¿Quién eres tú?</div>
+      <div class="yo-sub" id="yo-sub">Pulsa para identificarte y ver tu saldo</div>
+    </div>
+    <div class="yo-arr">›</div>
+  </div>
+  <div class="banner" id="totals-banner" style="display:none">
     <div class="ban-item"><div class="ban-lbl">Debes</div><div class="ban-val" id="b-deb" style="color:var(--acc3)">0,00 €</div></div>
     <div class="ban-item"><div class="ban-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
     <div class="ban-item"><div class="ban-lbl">Grupos</div><div class="ban-val" id="b-grp">0</div></div>
@@ -483,7 +525,7 @@ strong { font-weight: 600; }
     <div class="nav-item on" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
     <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Actividad</span></div>
     <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Informe</span></div>
-    <div class="nav-item" onclick="openModal('m-about')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>About</span></div>
+    <div class="nav-item" id="nav-yo" onclick="openModal('m-yo-soy')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span id="nav-yo-lbl">Yo soy</span></div>
   </nav>
 </div>
 
@@ -495,7 +537,7 @@ strong { font-weight: 600; }
     <div class="nav-item" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
     <div class="nav-item on" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Actividad</span></div>
     <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Informe</span></div>
-    <div class="nav-item" onclick="openModal('m-about')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>About</span></div>
+    <div class="nav-item" id="nav-yo" onclick="openModal('m-yo-soy')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span id="nav-yo-lbl">Yo soy</span></div>
   </nav>
 </div>
 
@@ -507,7 +549,7 @@ strong { font-weight: 600; }
     <div class="nav-item" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
     <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Actividad</span></div>
     <div class="nav-item on" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Informe</span></div>
-    <div class="nav-item" onclick="openModal('m-about')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>About</span></div>
+    <div class="nav-item" id="nav-yo" onclick="openModal('m-yo-soy')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span id="nav-yo-lbl">Yo soy</span></div>
   </nav>
 </div>
 
@@ -639,6 +681,19 @@ strong { font-weight: 600; }
   </div>
 </div>
 
+<!-- ══ MODAL: YO SOY ══ -->
+<div class="modal-bg" id="m-yo-soy" onclick="closeOut(event,'m-yo-soy')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">👤 ¿Quién eres tú?</div>
+    <p class="sheet-sub">Selecciónate para ver tu saldo personal, lo que debes y lo que te deben.</p>
+    <div id="yo-person-list" class="person-grid"></div>
+    <div id="yo-empty" style="display:none;text-align:center;padding:30px 0;color:var(--muted2);font-size:13px">
+      Crea un grupo y añade personas primero.
+    </div>
+    <div class="pb"></div>
+  </div>
+</div>
 <!-- ══ MODAL: ABOUT ══ -->
 <div class="modal-bg" id="m-about" onclick="closeOut(event,'m-about')">
   <div class="sheet">
@@ -703,8 +758,8 @@ let curGid = null, curTab = 'gastos';
 let pSettle = null, pDelId = null, pDelGid = null;
 let selCat = 'otros', splits = {};
 
-const myName  = () => '';
-const setName = n  => {};
+const myName  = () => localStorage.getItem('sg_me') || '';
+const setName = n  => { localStorage.setItem('sg_me', n); updateYoBanner(); };
 
 // ════════════════════════════════════════════
 // HELPERS
@@ -854,6 +909,7 @@ function closeGroup() { goTab('home'); curGid=null; }
 function openModal(id) {
   if (id === 'm-newgrp')       initNewGrp();
   if (id === 'm-edit-members') initEditMembers();
+  if (id === 'm-yo-soy')        renderYoModal();
   const el = document.getElementById(id);
   if (el) { el.classList.add('on'); document.body.style.overflow = 'hidden'; }
 }
@@ -868,6 +924,7 @@ function closeOut(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 // RENDER ALL
 // ════════════════════════════════════════════
 function renderAll() {
+  updateYoBanner();
   renderHome();
   const cur = document.querySelector('.scr.on');
   if (cur?.id==='scr-activity') renderActivity();
@@ -1435,6 +1492,129 @@ function renderDailyChart() {
 
   const rep = document.getElementById('rep-cont');
   if (rep) rep.insertAdjacentHTML('afterbegin', chartHtml);
+}
+
+
+// ════════════════════════════════════════════
+// YO SOY — identificación local
+// ════════════════════════════════════════════
+
+// Devuelve todas las personas únicas de todos los grupos
+function getAllPersons() {
+  const map = {}; // name -> [groupName, ...]
+  DB.groups.forEach(g => {
+    g.members.forEach(m => {
+      if (!map[m]) map[m] = [];
+      map[m].push(g.name);
+    });
+  });
+  return map;
+}
+
+function updateYoBanner() {
+  const me = myName();
+  const banner = document.getElementById('yo-banner');
+  const totals = document.getElementById('totals-banner');
+  const navLbl = document.getElementById('nav-yo-lbl');
+  if (!banner) return;
+
+  if (me) {
+    const col = avc(me);
+    document.getElementById('yo-av').style.background = col + '28';
+    document.getElementById('yo-av').style.color = col;
+    document.getElementById('yo-av').textContent = ini(me);
+    document.getElementById('yo-name').textContent = me;
+    document.getElementById('yo-sub').textContent = 'Tú · Pulsa para cambiar';
+    banner.classList.add('set');
+    if (totals) totals.style.display = 'flex';
+    if (navLbl) navLbl.textContent = ini(me);
+  } else {
+    document.getElementById('yo-av').textContent = '?';
+    document.getElementById('yo-av').style.background = 'var(--s3)';
+    document.getElementById('yo-av').style.color = 'var(--muted)';
+    document.getElementById('yo-name').textContent = '¿Quién eres tú?';
+    document.getElementById('yo-sub').textContent = 'Pulsa para identificarte y ver tu saldo';
+    banner.classList.remove('set');
+    if (totals) totals.style.display = 'none';
+    if (navLbl) navLbl.textContent = 'Yo soy';
+  }
+}
+
+function renderYoModal() {
+  const persons = getAllPersons();
+  const names = Object.keys(persons).sort();
+  const list = document.getElementById('yo-person-list');
+  const empty = document.getElementById('yo-empty');
+  if (!list) return;
+
+  if (!names.length) {
+    list.style.display = 'none';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  list.style.display = 'flex';
+  if (empty) empty.style.display = 'none';
+
+  const me = myName();
+  list.innerHTML = '';
+
+  names.forEach(name => {
+    const col = avc(name);
+    const isMe = name === me;
+    const groups = persons[name];
+    const grpStr = groups.length === 1 ? groups[0] : groups.slice(0,2).join(', ') + (groups.length>2 ? ` +${groups.length-2}` : '');
+
+    const row = document.createElement('div');
+    row.className = 'person-row' + (isMe ? ' me' : '');
+
+    row.innerHTML = `
+      <div class="person-av" style="background:${col}22;color:${col}">${ini(name)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="person-name">${esc(name)}</div>
+        <div class="person-groups">${esc(grpStr)}</div>
+      </div>
+      ${isMe ? '<span class="person-me-badge">✓ Soy yo</span>' : ''}
+      <button class="person-del" onclick="event.stopPropagation();askDelPerson('${name.replace(/'/g,"\'")}')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+      </button>`;
+
+    // Click en la fila = seleccionarse
+    row.addEventListener('click', () => {
+      if (isMe) {
+        // Deseleccionarse
+        localStorage.removeItem('sg_me');
+      } else {
+        setName(name);
+      }
+      closeModal('m-yo-soy');
+      renderAll();
+    });
+
+    list.appendChild(row);
+  });
+}
+
+function askDelPerson(name) {
+  // Verificar si tiene gastos
+  const hasExpenses = DB.groups.some(g =>
+    g.expenses.some(e => e.paidBy === name || e.splitAmong.includes(name))
+  );
+  if (hasExpenses) {
+    toast('⚠️ ' + name + ' tiene gastos — no se puede eliminar');
+    return;
+  }
+  // Eliminar de todos los grupos donde aparece
+  DB.groups.forEach(g => {
+    g.members = g.members.filter(m => m !== name);
+  });
+  if (myName() === name) localStorage.removeItem('sg_me');
+  save();
+  renderYoModal();
+  renderAll();
+  toast('🗑️ ' + name + ' eliminado de todos los grupos');
 }
 
 // ════════════════════════════════════════════
