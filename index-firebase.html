@@ -706,7 +706,7 @@ strong { font-weight: 600; }
         <button class="chip-add" onclick="addFriend()">+</button>
       </div>
     </div>
-    <div class="sec-lbl">Soy yo</div>
+    <div class="sec-lbl">Amigos creados</div>
     <div id="yo-person-list" class="person-grid" style="margin-bottom:14px"></div>
     <div id="yo-empty" style="display:none;text-align:center;padding:20px 0;color:var(--muted2);font-size:13px">
       Añade personas con el campo de arriba.
@@ -1624,13 +1624,11 @@ function askDelPerson(name) {
 
 // Renderizar modal Amigos
 function renderYoModal() {
-  const list  = document.getElementById('yo-person-list');
-  const empty = document.getElementById('yo-empty');
+  var list  = document.getElementById('yo-person-list');
+  var empty = document.getElementById('yo-empty');
   if (!list) return;
-
-  const friends = getFriends();
-  const me = myName();
-
+  var friends = getFriends();
+  var me = myName();
   if (!friends.length) {
     list.innerHTML = '';
     list.style.display = 'none';
@@ -1640,42 +1638,55 @@ function renderYoModal() {
   list.style.display = 'flex';
   if (empty) empty.style.display = 'none';
   list.innerHTML = '';
-
-  friends.forEach(name => {
-    const col   = avc(name);
-    const isMe  = name === me;
-    // Grupos donde está
-    const grps  = DB.groups.filter(g => g.members.includes(name));
-    const grpStr = grps.length ? grps.map(g=>g.name).join(', ') : 'Sin grupos';
-
-    const row = document.createElement('div');
+  var sorted = friends.slice().sort(function(a, b) {
+    var aMe = me && a.trim().toLowerCase() === me.trim().toLowerCase();
+    var bMe = me && b.trim().toLowerCase() === me.trim().toLowerCase();
+    if (aMe && !bMe) return -1;
+    if (!aMe && bMe) return 1;
+    return a.localeCompare(b, 'es');
+  });
+  sorted.forEach(function(name) {
+    var col = avc(name);
+    var isMe = me && name.trim().toLowerCase() === me.trim().toLowerCase();
+    var grps = DB.groups.filter(function(g) { return g.members.includes(name); });
+    var grpStr = grps.length ? grps.map(function(g) { return g.name; }).join(', ') : 'Sin grupos';
+    var row = document.createElement('div');
     row.className = 'person-row' + (isMe ? ' me' : '');
-    row.innerHTML = `
-      <div class="person-av" style="background:${col}22;color:${col}">${ini(name)}</div>
-      <div style="flex:1;min-width:0">
-        <div class="person-name">${esc(name)}${isMe?' <span style="font-size:11px;color:var(--acc)">✓ soy yo</span>':''}</div>
-        <div class="person-groups">${esc(grpStr)}</div>
-      </div>
-      <button class="person-del" onclick="event.stopPropagation();askDelPerson('${name.replace(/'/g,"\'")}')" >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-        </svg>
-      </button>`;
-
-    row.addEventListener('click', (e) => {
-      if (e.target.closest('.person-del')) return;
+    if (isMe) row.style.borderColor = 'var(--acc)';
+    var h = '';
+    h += '<div class="person-av" style="background:' + col + '22;color:' + col + '">' + ini(name) + '</div>';
+    h += '<div style="flex:1;min-width:0">';
+    h += '<div class="person-name">' + esc(name);
+    if (isMe) h += ' <span style="font-size:11px;color:var(--acc);background:rgba(94,234,212,.12);padding:1px 7px;border-radius:10px;margin-left:4px">soy yo</span>';
+    h += '</div>';
+    h += '<div class="person-groups">' + esc(grpStr) + '</div>';
+    h += '</div>';
+    if (!isMe) h += '<span style="font-size:11px;color:var(--muted);padding:4px 8px;cursor:pointer">Soy yo</span>';
+    h += '<button class="person-del" style="flex-shrink:0">';
+    h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
+    h += '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>';
+    h += '<path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>';
+    row.innerHTML = h;
+    var delBtn = row.querySelector('.person-del');
+    if (delBtn) {
+      delBtn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        askDelPerson(name);
+      });
+    }
+    row.addEventListener('click', function(ev) {
+      if (ev.target.closest('.person-del')) return;
       if (isMe) {
         localStorage.removeItem('sg_me_fb');
         localStorage.removeItem('sg_me');
-        goTab('home');
+        goTab('friends');
         renderAll();
-        toast('👋 Ya no estás identificado');
+        toast('Ya no estas identificado');
       } else {
         setName(name);
-        goTab('home');
+        goTab('friends');
         renderAll();
-        toast('✅ ¡Hola ' + name + '! Ahora ves tu saldo personal.');
+        toast('Hola ' + name + '! Ahora ves tu saldo personal.');
       }
     });
     list.appendChild(row);
