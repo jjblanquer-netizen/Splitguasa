@@ -744,8 +744,8 @@ let curGid = null, curTab = 'gastos';
 let pSettle = null, pDelId = null, pDelGid = null;
 let selCat = 'otros', splits = {};
 
-const myName  = () => localStorage.getItem('sg_me') || '';
-const setName = n  => { localStorage.setItem('sg_me', n); updateYoBanner(); };
+const myName  = () => localStorage.getItem('sg_me_fb') || '';
+const setName = n  => { localStorage.setItem('sg_me_fb', n); updateYoBanner(); };
 
 // ════════════════════════════════════════════
 // HELPERS
@@ -811,7 +811,7 @@ async function fbWrite() {
       body: JSON.stringify(DB)
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+    try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
     ss('ok', '✓ Guardado · ' + now);
   } catch(e) {
@@ -835,7 +835,7 @@ async function sync(silent = false) {
       const prevV = DB.v || 0;
       if ((remote.v || 0) >= (DB.v || 0)) {
         DB = remote;
-        try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+        try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
       }
       const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
       ss('ok', '✓ Sync · ' + now);
@@ -865,7 +865,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // SAVE — guarda local + sube a Firebase
 // ════════════════════════════════════════════
 function save() {
-  try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+  try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
   fbWrite();
 }
 
@@ -1579,36 +1579,36 @@ function askDelPerson(name) {
 async function init() {
   document.getElementById('load-msg').textContent = 'Conectando con Firebase…';
 
-  // Cargar backup local primero para respuesta inmediata
-  try {
-    const bk = localStorage.getItem('sg_bk');
-    if (bk) { const p = JSON.parse(bk); if (p?.groups) DB = p; }
-  } catch(e) {}
-
-  // Mostrar app ya (con datos locales si los hay)
+  // Arrancar siempre con DB vacía — Firebase es la fuente de verdad
+  DB = { groups: [], v: 0 };
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   renderAll();
 
-  // Luego sincronizar con JSONBin
   try {
     ss('syn', 'Conectando…');
     const remote = await fbRead();
     if (remote && remote.groups) {
       DB = remote;
-      if (!DB.groups) DB.groups = [];
-      try { localStorage.setItem('sg_bk', JSON.stringify(DB)); } catch(e) {}
+      try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
       const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
       ss('ok', '✓ Conectado · ' + now);
-      renderAll();
     } else {
-      // Bin vacío — inicializar
+      // Firebase vacío — inicializar
       DB = { groups: [], v: 0 };
       await fbWrite();
+      ss('ok', '✓ Base de datos lista');
     }
+    renderAll();
   } catch(e) {
-    console.error('init sync error:', e);
+    console.error('init error:', e);
+    // Solo usar backup si Firebase no responde
+    try {
+      const bk = localStorage.getItem('sg_bk_fb');
+      if (bk) { const p = JSON.parse(bk); if (p?.groups) DB = p; }
+    } catch(ex) {}
     ss('err', 'Sin conexión · Datos locales');
+    renderAll();
   }
 }
 
