@@ -580,13 +580,14 @@ strong { font-weight: 600; }
     <p class="sheet-sub">Todos los miembros verán este grupo automáticamente al abrir la app.</p>
     <div class="field"><label>Nombre del grupo</label><input id="ng-name" type="text" placeholder="Viaje Asturias, Piso, Cena…" autocomplete="off"></div>
     <div class="field"><label>Icono</label><div class="emoji-grid" id="emoji-grid"></div></div>
-    <div id="ng-suggestions" style="margin-bottom:12px;display:none"></div>
     <div class="field">
-      <label>Miembros</label>
+      <label>Miembros del grupo</label>
       <div class="chips" id="ng-chips"></div>
-      <div class="chip-row">
-        <input id="ng-minp" type="text" placeholder="Nombre de persona…" autocomplete="off" autocapitalize="words" onkeydown="mkd(event)">
-        <button class="chip-add" onclick="addChip()">+</button>
+      <input id="ng-search" type="text" placeholder="Buscar amigo…" autocomplete="off"
+        oninput="renderNgFriendList()" style="background:var(--s2);border:1.5px solid var(--border);color:var(--txt);padding:10px 13px;border-radius:var(--rs);font-size:16px;width:100%;outline:none;margin-bottom:8px;">
+      <div id="ng-friend-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
+      <div id="ng-no-friends" style="display:none;font-size:13px;color:var(--acc3);padding:8px 0">
+        ⚠️ No hay amigos disponibles. Añade personas desde la sección <strong>Amigos</strong> primero.
       </div>
     </div>
     <div style="height:8px"></div>
@@ -657,33 +658,47 @@ strong { font-weight: 600; }
 <div class="modal-bg" id="m-edit-members" onclick="closeOut(event,'m-edit-members')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">👥 Miembros del grupo</div>
-    <p class="sheet-sub">Añade o elimina personas. Los gastos existentes no se modifican.</p>
+    <div class="sheet-title">👥 Editar Miembros</div>
     <div class="field">
       <label>Miembros actuales</label>
-      <div id="em-chips"></div>
+      <div id="em-chips" style="margin-bottom:8px"></div>
     </div>
     <div class="field">
-      <label>Añadir persona</label>
-      <div class="chip-row">
-        <input id="em-inp" type="text" placeholder="Nombre de la persona…" autocomplete="off" autocapitalize="words" onkeydown="emKd(event)">
-        <button class="chip-add" onclick="emAdd()">+</button>
+      <label>Añadir amigo al grupo</label>
+      <input id="em-search" type="text" placeholder="Buscar amigo…" autocomplete="off"
+        oninput="renderEmFriendList()" style="background:var(--s2);border:1.5px solid var(--border);color:var(--txt);padding:10px 13px;border-radius:var(--rs);font-size:16px;width:100%;outline:none;margin-bottom:8px;">
+      <div id="em-friend-list" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;"></div>
+      <div id="em-no-friends" style="display:none;font-size:13px;color:var(--muted2);padding:8px 0">
+        Todos los amigos ya están en el grupo.
       </div>
     </div>
     <div style="height:8px"></div>
     <button class="btn-primary" onclick="saveMembers()">Guardar cambios</button>
+    <div style="height:8px"></div>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-edit-members')">Cancelar</button>
     <div class="pb"></div>
   </div>
 </div>
 
-<!-- ══ MODAL: YO SOY ══ -->
+<!-- ══ MODAL: AMIGOS ══ -->
 <div class="modal-bg" id="m-yo-soy" onclick="closeOut(event,'m-yo-soy')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">👤 Yo soy…</div>
-    <div id="yo-person-list" class="person-grid"></div>
-    <div id="yo-empty" style="display:none;text-align:center;padding:30px 0;color:var(--muted2);font-size:13px">
-      Sin personas en ningún grupo todavía.
+    <div class="sheet-title">👥 Amigos</div>
+    <p class="sheet-sub">Lista maestra de personas. Desde aquí se añaden a los grupos.</p>
+    <!-- Añadir nuevo amigo -->
+    <div class="field">
+      <label>Nuevo amigo</label>
+      <div class="chip-row">
+        <input id="friend-inp" type="text" placeholder="Nombre…" autocomplete="off" autocapitalize="words" onkeydown="friendKd(event)">
+        <button class="chip-add" onclick="addFriend()">+</button>
+      </div>
+    </div>
+    <!-- Sección: Soy yo -->
+    <div class="sec-lbl">Soy yo</div>
+    <div id="yo-person-list" class="person-grid" style="margin-bottom:14px"></div>
+    <div id="yo-empty" style="display:none;text-align:center;padding:20px 0;color:var(--muted2);font-size:13px">
+      Añade personas con el campo de arriba.
     </div>
     <div class="pb"></div>
   </div>
@@ -852,7 +867,8 @@ async function sync(silent = false) {
     const prevV = DB.v || 0;
     if (remote && typeof remote === 'object') {
       DB = remote;
-      if (!Array.isArray(DB.groups)) DB.groups = [];
+      if (!Array.isArray(DB.groups))  DB.groups  = [];
+      if (!Array.isArray(DB.friends)) DB.friends = [];
       DB.groups.forEach(g => {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
@@ -876,7 +892,8 @@ async function manualSync() {
     const remote = await fbRead();
     if (remote && typeof remote === 'object') {
       DB = remote;
-      if (!Array.isArray(DB.groups)) DB.groups = [];
+      if (!Array.isArray(DB.groups))  DB.groups  = [];
+      if (!Array.isArray(DB.friends)) DB.friends = [];
       DB.groups.forEach(g => {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
@@ -1555,40 +1572,71 @@ function renderDailyChart() {
 
 
 // ════════════════════════════════════════════
-// YO SOY — identificación local
+// AMIGOS — lista maestra
 // ════════════════════════════════════════════
 
-// Devuelve todas las personas únicas de todos los grupos
-function getAllPersons() {
-  const map = {}; // name -> [groupName, ...]
+function getFriends() {
+  if (!Array.isArray(DB.friends)) DB.friends = [];
+  return DB.friends.slice().sort();
+}
+
+// Añadir amigo nuevo
+function addFriend() {
+  const inp = document.getElementById('friend-inp');
+  const name = inp.value.trim();
+  if (!name) return;
+  if (!Array.isArray(DB.friends)) DB.friends = [];
+  if (DB.friends.includes(name)) {
+    toast('⚠️ ' + name + ' ya existe en Amigos');
+    inp.value = ''; return;
+  }
+  DB.friends.push(name);
+  save();
+  inp.value = '';
+  renderYoModal();
+  toast('✅ ' + name + ' añadido a Amigos');
+}
+
+function friendKd(e) {
+  if (e.key === 'Enter') { e.preventDefault(); addFriend(); }
+}
+
+// Borrar amigo de la lista maestra
+function askDelPerson(name) {
+  const inGroup = DB.groups.some(g =>
+    g.expenses.some(e => e.paidBy === name || (e.splitAmong||[]).includes(name))
+  );
+  if (inGroup) {
+    toast('⚠️ ' + name + ' tiene gastos — no se puede eliminar');
+    return;
+  }
+  // Quitar de todos los grupos
   DB.groups.forEach(g => {
-    g.members.forEach(m => {
-      if (!map[m]) map[m] = [];
-      map[m].push(g.name);
-    });
+    g.members = g.members.filter(m => m !== name);
   });
-  return map;
+  // Quitar de la lista maestra
+  DB.friends = DB.friends.filter(f => f !== name);
+  if (myName() === name) {
+    localStorage.removeItem('sg_me_fb');
+    localStorage.removeItem('sg_me');
+  }
+  save();
+  renderYoModal();
+  renderAll();
+  toast('🗑️ ' + name + ' eliminado');
 }
 
-function updateYoBanner() {
-  const me = myName();
-  const navLbl = document.getElementById('nav-yo-lbl');
-  // Solo actualizar el label del nav
-  if (navLbl) navLbl.textContent = me ? me.slice(0, 7) : 'Amigos';
-}
-
+// Renderizar modal Amigos
 function renderYoModal() {
   const list  = document.getElementById('yo-person-list');
   const empty = document.getElementById('yo-empty');
   if (!list) return;
 
+  const friends = getFriends();
   const me = myName();
 
-  // ── Sección: Soy yo ──
-  const persons = getAllPersons();
-  const names   = Object.keys(persons).sort();
-
-  if (!names.length) {
+  if (!friends.length) {
+    list.innerHTML = '';
     list.style.display = 'none';
     if (empty) empty.style.display = 'block';
     return;
@@ -1597,36 +1645,30 @@ function renderYoModal() {
   if (empty) empty.style.display = 'none';
   list.innerHTML = '';
 
-  // Encabezado sección personas
-  const secLbl = document.createElement('div');
-  secLbl.className = 'sec-lbl';
-  secLbl.textContent = 'Selecciona quién eres';
-  list.appendChild(secLbl);
-
-  names.forEach(name => {
+  friends.forEach(name => {
     const col   = avc(name);
     const isMe  = name === me;
-    const groups = persons[name];
-    const grpStr = groups.length === 1
-      ? groups[0]
-      : groups.slice(0,2).join(', ') + (groups.length > 2 ? ` +${groups.length-2}` : '');
+    // Grupos donde está
+    const grps  = DB.groups.filter(g => g.members.includes(name));
+    const grpStr = grps.length ? grps.map(g=>g.name).join(', ') : 'Sin grupos';
 
     const row = document.createElement('div');
     row.className = 'person-row' + (isMe ? ' me' : '');
     row.innerHTML = `
       <div class="person-av" style="background:${col}22;color:${col}">${ini(name)}</div>
       <div style="flex:1;min-width:0">
-        <div class="person-name">${esc(name)}${isMe ? ' <span style="font-size:11px;color:var(--acc)">✓ soy yo</span>' : ''}</div>
+        <div class="person-name">${esc(name)}${isMe?' <span style="font-size:11px;color:var(--acc)">✓ soy yo</span>':''}</div>
         <div class="person-groups">${esc(grpStr)}</div>
       </div>
-      <button class="person-del" onclick="event.stopPropagation();askDelPerson('${name.replace(/'/g,"\'")}')">
+      <button class="person-del" onclick="event.stopPropagation();askDelPerson('${name.replace(/'/g,"\'")}')" >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
           <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
         </svg>
       </button>`;
 
-    row.addEventListener('click', () => {
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.person-del')) return;
       if (isMe) {
         localStorage.removeItem('sg_me_fb');
         localStorage.removeItem('sg_me');
@@ -1638,54 +1680,178 @@ function renderYoModal() {
     });
     list.appendChild(row);
   });
-
-  // ── Sección: Editar miembros por grupo ──
-  if (DB.groups.length) {
-    const secLbl2 = document.createElement('div');
-    secLbl2.className = 'sec-lbl';
-    secLbl2.style.marginTop = '16px';
-    secLbl2.textContent = 'Editar miembros por grupo';
-    list.appendChild(secLbl2);
-
-    DB.groups.forEach(g => {
-      const btn = document.createElement('div');
-      btn.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:11px 13px;cursor:pointer;margin-bottom:6px;';
-      btn.innerHTML = `
-        <span style="font-size:20px">${esc(g.emoji)}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:14px;color:var(--txt)">${esc(g.name)}</div>
-          <div style="font-size:11px;color:var(--muted2);margin-top:1px">${g.members.join(', ')}</div>
-        </div>
-        <span style="color:var(--acc);font-size:12px;font-weight:600;">Editar ›</span>`;
-      btn.addEventListener('click', () => {
-        closeModal('m-yo-soy');
-        // Abrir grupo y luego modal editar
-        openGroup(g.id);
-        setTimeout(() => openModal('m-edit-members'), 300);
-      });
-      list.appendChild(btn);
-    });
-  }
 }
 
-function askDelPerson(name) {
-  // Verificar si tiene gastos
-  const hasExpenses = DB.groups.some(g =>
-    g.expenses.some(e => e.paidBy === name || e.splitAmong.includes(name))
-  );
-  if (hasExpenses) {
-    toast('⚠️ ' + name + ' tiene gastos — no se puede eliminar');
+function updateYoBanner() {
+  const me = myName();
+  const navLbl = document.getElementById('nav-yo-lbl');
+  if (navLbl) navLbl.textContent = me ? me.slice(0,7) : 'Amigos';
+}
+
+// ════════════════════════════════════════════
+// NUEVO GRUPO — selector de amigos
+// ════════════════════════════════════════════
+let ngMem = [], ngEmoji = EMOJIS[0];
+
+function initNewGrp() {
+  ngMem = [];
+  ngEmoji = EMOJIS[0];
+  document.getElementById('ng-name').value = '';
+  const srch = document.getElementById('ng-search');
+  if (srch) srch.value = '';
+  renderNgChips();
+  renderNgFriendList();
+  const eg = document.getElementById('emoji-grid'); eg.innerHTML = '';
+  EMOJIS.forEach(e => {
+    const d = document.createElement('div');
+    d.className = 'emoji-opt' + (e === ngEmoji ? ' sel' : '');
+    d.textContent = e;
+    d.addEventListener('click', () => {
+      ngEmoji = e;
+      document.querySelectorAll('.emoji-opt').forEach(x => x.classList.remove('sel'));
+      d.classList.add('sel');
+    });
+    eg.appendChild(d);
+  });
+}
+
+function renderNgChips() {
+  const c = document.getElementById('ng-chips'); if (!c) return;
+  c.innerHTML = '';
+  ngMem.forEach(m => {
+    const col = avc(m);
+    const ch = document.createElement('div'); ch.className = 'chip';
+    const sp = document.createElement('span'); sp.textContent = m; ch.appendChild(sp);
+    const btn = document.createElement('button'); btn.className = 'chip-rm'; btn.textContent = '×';
+    btn.addEventListener('click', () => { ngMem = ngMem.filter(x => x !== m); renderNgChips(); renderNgFriendList(); });
+    ch.appendChild(btn);
+    c.appendChild(ch);
+  });
+}
+
+function renderNgFriendList() {
+  const list   = document.getElementById('ng-friend-list');   if (!list) return;
+  const noFr   = document.getElementById('ng-no-friends');
+  const search = (document.getElementById('ng-search')?.value || '').toLowerCase();
+  const friends = getFriends().filter(f => !ngMem.includes(f) && f.toLowerCase().includes(search));
+
+  list.innerHTML = '';
+  if (!friends.length) {
+    if (noFr) noFr.style.display = 'block';
     return;
   }
-  // Eliminar de todos los grupos donde aparece
-  DB.groups.forEach(g => {
-    g.members = g.members.filter(m => m !== name);
+  if (noFr) noFr.style.display = 'none';
+
+  friends.forEach(name => {
+    const col = avc(name);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--rs);padding:10px 13px;cursor:pointer;transition:border-color .13s;';
+    row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-family:var(--ff-head);font-weight:700;font-size:12px;flex-shrink:0">${ini(name)}</div><span style="flex:1;font-size:14px;color:var(--txt2)">${esc(name)}</span><span style="color:var(--acc);font-size:18px">+</span>`;
+    row.addEventListener('click', () => {
+      if (!ngMem.includes(name)) ngMem.push(name);
+      renderNgChips();
+      renderNgFriendList();
+    });
+    list.appendChild(row);
   });
-  if (myName() === name) { localStorage.removeItem('sg_me'); localStorage.removeItem('sg_me_fb'); }
+}
+
+function createGroup() {
+  const name = document.getElementById('ng-name').value.trim();
+  if (!name) { toast('⚠️ Escribe el nombre del grupo'); return; }
+  if (ngMem.length < 2) { toast('⚠️ Selecciona al menos 2 amigos'); return; }
+  const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
+  DB.groups.unshift(g);
   save();
-  renderYoModal();
-  renderAll();
-  toast('🗑️ ' + name + ' eliminado de todos los grupos');
+  closeModal('m-newgrp');
+  toast('✅ Grupo "' + name + '" creado');
+  renderHome();
+  openGroup(g.id);
+}
+
+// ════════════════════════════════════════════
+// EDITAR MIEMBROS — selector de amigos
+// ════════════════════════════════════════════
+let emMembers = [];
+
+function initEditMembers() {
+  const g = grp(); if (!g) return;
+  emMembers = g.members.slice();
+  const srch = document.getElementById('em-search');
+  if (srch) srch.value = '';
+  renderEmChips();
+  renderEmFriendList();
+}
+
+function renderEmChips() {
+  const c = document.getElementById('em-chips'); if (!c) return;
+  c.innerHTML = '';
+  const g = grp();
+  emMembers.forEach(m => {
+    const hasExp = g && g.expenses.some(e => e.paidBy===m || (e.splitAmong||[]).includes(m));
+    const ch = document.createElement('div'); ch.className = 'chip';
+    const sp = document.createElement('span'); sp.textContent = m; ch.appendChild(sp);
+    if (hasExp) {
+      const lock = document.createElement('span');
+      lock.style.cssText = 'font-size:10px;color:var(--muted);margin-left:4px';
+      lock.textContent = '🔒'; ch.appendChild(lock);
+    } else {
+      const btn = document.createElement('button'); btn.className = 'chip-rm'; btn.textContent = '×';
+      btn.addEventListener('click', () => { emMembers = emMembers.filter(x => x !== m); renderEmChips(); renderEmFriendList(); });
+      ch.appendChild(btn);
+    }
+    c.appendChild(ch);
+  });
+}
+
+function renderEmFriendList() {
+  const list   = document.getElementById('em-friend-list');   if (!list) return;
+  const noFr   = document.getElementById('em-no-friends');
+  const search = (document.getElementById('em-search')?.value || '').toLowerCase();
+  const friends = getFriends().filter(f => !emMembers.includes(f) && f.toLowerCase().includes(search));
+
+  list.innerHTML = '';
+  if (!friends.length) {
+    if (noFr) noFr.style.display = 'block';
+    return;
+  }
+  if (noFr) noFr.style.display = 'none';
+
+  friends.forEach(name => {
+    const col = avc(name);
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--rs);padding:10px 13px;cursor:pointer;';
+    row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-family:var(--ff-head);font-weight:700;font-size:12px;flex-shrink:0">${ini(name)}</div><span style="flex:1;font-size:14px;color:var(--txt2)">${esc(name)}</span><span style="color:var(--acc);font-size:18px">+</span>`;
+    row.addEventListener('click', () => {
+      if (!emMembers.includes(name)) emMembers.push(name);
+      renderEmChips();
+      renderEmFriendList();
+    });
+    list.appendChild(row);
+  });
+}
+
+function emKd(e) {} // ya no se usa input libre, mantener por compatibilidad
+function emAdd() {}
+
+function saveMembers() {
+  const g = grp(); if (!g) return;
+  if (emMembers.length < 2) { toast('⚠️ El grupo necesita al menos 2 personas'); return; }
+  const added = emMembers.filter(m => !g.members.includes(m));
+  g.members = emMembers.slice();
+  save();
+  closeModal('m-edit-members');
+  document.getElementById('g-mems').textContent = g.members.join(' · ');
+  renderGTab();
+  renderHome();
+  toast(added.length ? '✅ Añadido/s: ' + added.join(', ') : '✅ Miembros actualizados');
+}
+
+// getAllPersons ya no se usa — sustituido por getFriends()
+function getAllPersons() {
+  const map = {};
+  getFriends().forEach(f => { map[f] = DB.groups.filter(g=>g.members.includes(f)).map(g=>g.name); });
+  return map;
 }
 
 // ════════════════════════════════════════════
