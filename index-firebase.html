@@ -508,6 +508,9 @@ strong { font-weight: 600; }
     <div class="ban-item"><div class="ban-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
     <div class="ban-item"><div class="ban-lbl">Grupos</div><div class="ban-val" id="b-grp">0</div></div>
   </div>
+  <div id="banner-name" style="text-align:center;font-size:11px;color:var(--muted);margin:-8px 16px 10px;display:none">
+    Saldo de <strong id="banner-name-txt"></strong>
+  </div>
   <div class="sb">
     <div class="sec-lbl">Grupos activos</div>
     <div id="grp-list"></div>
@@ -1026,14 +1029,26 @@ function renderGastos(g) {
 
 // ─── BALANCES ───
 function computeBals(g) {
-  const p={},o={};
-  g.members.forEach(m=>{p[m]=0;o[m]=0;});
-  g.expenses.forEach(e=>{
-    p[e.paidBy]=(p[e.paidBy]||0)+e.amount;
-    const s=e.amount/(e.splitAmong.length||1);
-    e.splitAmong.forEach(m=>{o[m]=(o[m]||0)+s;});
+  const p={}, o={};
+  // Asegurar que members y expenses son arrays
+  const members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
+  const expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
+  members.forEach(m => { p[m]=0; o[m]=0; });
+  expenses.forEach(e => {
+    if (!e || typeof e.amount !== 'number') return; // saltar gastos inválidos
+    // Asegurar splitAmong es array
+    const among = Array.isArray(e.splitAmong) ? e.splitAmong : Object.values(e.splitAmong || {});
+    p[e.paidBy] = (p[e.paidBy] || 0) + e.amount;
+    const s = e.amount / (among.length || 1);
+    among.forEach(m => { o[m] = (o[m] || 0) + s; });
   });
-  return g.members.map(m=>({name:m, paid:p[m]||0, owes:o[m]||0, net:(p[m]||0)-(o[m]||0)}));
+  // Incluir solo los miembros actuales del grupo
+  return members.map(m => ({
+    name: m,
+    paid: p[m] || 0,
+    owes: o[m] || 0,
+    net:  (p[m] || 0) - (o[m] || 0)
+  }));
 }
 function renderBals(g) {
   const bals=computeBals(g);
@@ -1321,12 +1336,28 @@ function renderHome() {
 function renderBanner() {
   let deb=0, ted=0;
   const me = myName();
-  DB.groups.forEach(g=>computeBals(g).forEach(b=>{
-    if (b.name===me) { if(b.net<-0.005) deb+=Math.abs(b.net); else if(b.net>0.005) ted+=b.net; }
-  }));
+  DB.groups.forEach(g => {
+    computeBals(g).forEach(b => {
+      if (b.name === me) {
+        if (b.net < -0.005) deb += Math.abs(b.net);
+        else if (b.net > 0.005) ted += b.net;
+      }
+    });
+  });
   document.getElementById('b-deb').textContent = fmt(deb);
   document.getElementById('b-ted').textContent = fmt(ted);
   document.getElementById('b-grp').textContent = DB.groups.length;
+  // Mostrar de quién es el saldo
+  const nameEl  = document.getElementById('banner-name');
+  const nameTxt = document.getElementById('banner-name-txt');
+  if (nameEl && nameTxt) {
+    if (me) {
+      nameTxt.textContent = me;
+      nameEl.style.display = 'block';
+    } else {
+      nameEl.style.display = 'none';
+    }
+  }
 }
 
 // ════════════════════════════════════════════
