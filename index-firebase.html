@@ -883,7 +883,7 @@ async function sync(silent = false) {
     const remote = await fbRead();
     const prevV = DB.v || 0;
     if (remote && typeof remote === 'object') {
-      DB = remote;
+      DB = migrateSettlements(remote);
       if (!Array.isArray(DB.groups))  DB.groups  = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
       DB.groups.forEach(g => {
@@ -909,7 +909,7 @@ async function manualSync() {
   try {
     const remote = await fbRead();
     if (remote && typeof remote === 'object') {
-      DB = remote;
+      DB = migrateSettlements(remote);
       if (!Array.isArray(DB.groups))  DB.groups  = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
       DB.groups.forEach(g => {
@@ -1937,6 +1937,31 @@ async function init() {
   await connectFirebase();
 }
 
+// Migrar liquidaciones antiguas (isSettlement) al nuevo sistema settled[]
+function migrateSettlements(db) {
+  if (!db || !Array.isArray(db.groups)) return db;
+  db.groups.forEach(function(g) {
+    if (!Array.isArray(g.expenses)) return;
+    if (!Array.isArray(g.settled)) g.settled = [];
+    var remaining = [];
+    g.expenses.forEach(function(e) {
+      if (e && e.isSettlement) {
+        // Convertir a entrada settled: deudor|acreedor
+        var to = Array.isArray(e.splitAmong) ? e.splitAmong[0] : Object.values(e.splitAmong||{})[0];
+        if (e.paidBy && to) {
+          var key = e.paidBy + '|' + to;
+          if (g.settled.indexOf(key) < 0) g.settled.push(key);
+        }
+        // No conservar el gasto de liquidación
+      } else {
+        remaining.push(e);
+      }
+    });
+    g.expenses = remaining;
+  });
+  return db;
+}
+
 async function connectFirebase() {
   ss('syn', 'Conectando…');
   try {
@@ -1947,7 +1972,7 @@ async function connectFirebase() {
       DB = { groups: [], v: 0 };
       await fbWrite();
     } else {
-      DB = remote;
+      DB = migrateSettlements(remote);
       // Asegurar que groups siempre es array
       if (!Array.isArray(DB.groups)) DB.groups = [];
       // Asegurar arrays internos de cada grupo
