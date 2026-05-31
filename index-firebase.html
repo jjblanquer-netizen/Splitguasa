@@ -890,6 +890,7 @@ async function sync(silent = false) {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
         if (!Array.isArray(g.settlements)) g.settlements = [];
+        if (!Array.isArray(g.settled))     g.settled     = [];
       });
       try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
       if (!silent && (remote.v||0) > prevV + 1) toast('🔄 Actualizado por otro miembro');
@@ -915,6 +916,7 @@ async function manualSync() {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
         if (!Array.isArray(g.settlements)) g.settlements = [];
+        if (!Array.isArray(g.settled))     g.settled     = [];
       });
       try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
     }
@@ -1039,39 +1041,39 @@ function renderGastos(g) {
 
 // ─── BALANCES ───
 function computeBals(g) {
-  const p={}, o={};
-  // Asegurar arrays (Firebase puede devolver objetos)
-  const members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
-  const expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
+  var p = {}, o = {};
+  var members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
+  var expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
 
-  // Inicializar todos los miembros actuales
-  members.forEach(m => { p[m]=0; o[m]=0; });
+  members.forEach(function(m) { p[m] = 0; o[m] = 0; });
 
-  expenses.forEach(e => {
+  expenses.forEach(function(e) {
     if (!e || typeof e.amount !== 'number') return;
-    // REGLA: dividir SIEMPRE entre todos los miembros actuales del grupo,
-    // ignorando el splitAmong original (cualquier miembro nuevo comparte todo)
-    const among = members; // <-- siempre todos los miembros actuales
 
-    // Incluir pagador aunque no esté en members
-    if (!(e.paidBy in p)) { p[e.paidBy]=0; o[e.paidBy]=0; }
+    // Liquidaciones: usar splitAmong original (solo el acreedor)
+    // Gastos normales: dividir entre TODOS los miembros actuales
+    var among;
+    if (e.isSettlement) {
+      among = Array.isArray(e.splitAmong) ? e.splitAmong : Object.values(e.splitAmong || {});
+    } else {
+      among = members;
+    }
+
+    if (!(e.paidBy in p)) { p[e.paidBy] = 0; o[e.paidBy] = 0; }
     p[e.paidBy] = (p[e.paidBy] || 0) + e.amount;
 
-    const s = e.amount / (among.length || 1);
-    among.forEach(m => {
+    var s = e.amount / (among.length || 1);
+    among.forEach(function(m) {
+      if (!(m in o)) { p[m] = p[m] || 0; o[m] = 0; }
       o[m] = (o[m] || 0) + s;
     });
   });
 
-  // Unión de members + pagadores externos con deuda
-  const allPeople = new Set([...members, ...Object.keys(p)]);
+  var allPeople = new Set(members.concat(Object.keys(p)));
 
-  return [...allPeople].map(m => ({
-    name: m,
-    paid: p[m] || 0,
-    owes: o[m] || 0,
-    net:  (p[m] || 0) - (o[m] || 0)
-  }));
+  return Array.from(allPeople).map(function(m) {
+    return { name: m, paid: p[m] || 0, owes: o[m] || 0, net: (p[m] || 0) - (o[m] || 0) };
+  });
 }
 function renderBals(g) {
   const bals=computeBals(g);
@@ -1108,71 +1110,103 @@ function renderBals(g) {
 }
 
 // ─── DEUDAS ───
+// Calcula deudas SOLO con gastos normales (ignora liquidaciones).
+// Las liquidaciones se gestionan aparte como pagos marcados.
 function computeDebts(g) {
-  const bals=computeBals(g);
-  const d=bals.filter(b=>b.net<-0.005).map(b=>({name:b.name,amount:Math.abs(b.net)}));
-  const cr=bals.filter(b=>b.net>0.005).map(b=>({name:b.name,amount:b.net}));
-  const txs=[];let di=0,ci=0;
-  while(di<d.length&&ci<cr.length){
-    const a=Math.min(d[di].amount,cr[ci].amount);
-    if(a>0.005) txs.push({from:d[di].name,to:cr[ci].name,amount:a});
+  var p={}, o={};
+  var members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members||{});
+  var expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses||{});
+  members.forEach(function(m){ p[m]=0; o[m]=0; });
+  // Solo gastos normales (no liquidaciones)
+  expenses.forEach(function(e){
+    if(!e || typeof e.amount!=='number' || e.isSettlement) return;
+    var among = members;
+    if(!(e.paidBy in p)){ p[e.paidBy]=0; o[e.paidBy]=0; }
+    p[e.paidBy]+=e.amount;
+    var s=e.amount/(among.length||1);
+    among.forEach(function(m){ if(!(m in o)){p[m]=p[m]||0;o[m]=0;} o[m]+=s; });
+  });
+  var allP = Array.from(new Set(members.concat(Object.keys(p))));
+  var bals = allP.map(function(m){ return {name:m, net:(p[m]||0)-(o[m]||0)}; });
+  var d  = bals.filter(function(b){return b.net<-0.005;}).map(function(b){return {name:b.name,amount:Math.abs(b.net)};});
+  var cr = bals.filter(function(b){return b.net>0.005;}).map(function(b){return {name:b.name,amount:b.net};});
+  d.sort(function(a,b){return b.amount-a.amount;});
+  cr.sort(function(a,b){return b.amount-a.amount;});
+  var txs=[]; var di=0, ci=0;
+  while(di<d.length && ci<cr.length){
+    var a=Math.min(d[di].amount, cr[ci].amount);
+    if(a>0.005){
+      var key = d[di].name + '|' + cr[ci].name;
+      var settled = Array.isArray(g.settled) && g.settled.indexOf(key) >= 0;
+      txs.push({from:d[di].name, to:cr[ci].name, amount:a, key:key, settled:settled});
+    }
     d[di].amount-=a; cr[ci].amount-=a;
     if(d[di].amount<0.005)di++; if(cr[ci].amount<0.005)ci++;
   }
   return txs;
 }
 function renderDebts(g) {
-  const txs=computeDebts(g);
-  const me=myName();
-  // Comparación insensible a mayúsculas/espacios extra
-  const isMe = n => me && n.trim().toLowerCase() === me.trim().toLowerCase();
-  if (!txs.length) return '<div class="empty"><div class="empty-icon">🎉</div><p>¡Todo liquidado!<br>Sin deudas pendientes.</p></div>';
-  const mine=txs.filter(t=>isMe(t.from)||isMe(t.to));
-  const others=txs.filter(t=>!isMe(t.from)&&!isMe(t.to));
-  let h='';
-  if (mine.length) {
-    h+='<div class="sec-lbl">Tus pagos pendientes</div>';
-    mine.forEach(t=>{
-      const fc=avc(t.from); const isD=isMe(t.from);
-      h+=`<div class="debt-row" style="border-color:${isD?'rgba(251,113,133,.3)':'rgba(94,234,212,.3)'}">
-        <div class="avatar" style="background:${fc}22;color:${fc};width:30px;height:30px;font-size:11px">${ini(t.from)}</div>
-        <div class="debt-txt"><strong>${esc(t.from)}</strong> → <strong>${esc(t.to)}</strong></div>
-        <div class="debt-amt">${fmt(t.amount)}</div>
-        <button class="btn-settle" onclick="openSettle(${txs.indexOf(t)},'${g.id}')">Pagar</button>
-      </div>`;
-    });
+  var txs = computeDebts(g);
+  var me = myName();
+  var isMe = function(n){ return me && n.trim().toLowerCase()===me.trim().toLowerCase(); };
+
+  if (!txs.length) {
+    return '<div class="empty"><div class="empty-icon">🎉</div><p>¡Todo liquidado!<br>Sin deudas pendientes.</p></div>';
   }
-  if (others.length) {
-    h+='<div class="sec-lbl">Resto del grupo</div>';
-    others.forEach(t=>{
-      const fc=avc(t.from);
-      h+=`<div class="debt-row">
-        <div class="avatar" style="background:${fc}22;color:${fc};width:30px;height:30px;font-size:11px">${ini(t.from)}</div>
-        <div class="debt-txt"><strong>${esc(t.from)}</strong> → <strong>${esc(t.to)}</strong></div>
-        <div class="debt-amt">${fmt(t.amount)}</div>
-        <button class="btn-settle" onclick="openSettle(${txs.indexOf(t)},'${g.id}')">Pagar</button>
-      </div>`;
-    });
+
+  var pending = txs.filter(function(t){ return !t.settled; });
+  var paid    = txs.filter(function(t){ return t.settled; });
+  var h = '';
+
+  function row(t, isPaid) {
+    var fc = avc(t.from);
+    var isd = isMe(t.from);
+    var bc = isPaid ? 'rgba(94,234,212,.2)' : (isd ? 'rgba(251,113,133,.25)' : 'var(--border)');
+    var s = '<div class="debt-row" style="border-color:' + bc + (isPaid ? ';opacity:.65' : '') + '">';
+    s += '<div class="avatar" style="background:' + fc + '22;color:' + fc + ';width:30px;height:30px;font-size:11px">' + ini(t.from) + '</div>';
+    s += '<div class="debt-txt"' + (isPaid ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>';
+    s += '<strong>' + esc(t.from) + '</strong> → <strong>' + esc(t.to) + '</strong></div>';
+    s += '<div class="debt-amt"' + (isPaid ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>' + fmt(t.amount) + '</div>';
+    if (isPaid) {
+      s += '<button class="btn-settle" style="background:rgba(94,234,212,.15);color:var(--acc);border-color:transparent" onclick="togglePaid(\'' + g.id + '\',\'' + t.key + '\')">✓ Pagado</button>';
+    } else {
+      s += '<button class="btn-settle" onclick="togglePaid(\'' + g.id + '\',\'' + t.key + '\')">Pagar</button>';
+    }
+    s += '</div>';
+    return s;
   }
-  h+=`<div style="height:8px"></div><div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> cuando hayas transferido el dinero.</div>`;
+
+  if (pending.length) {
+    h += '<div class="sec-lbl">Pagos pendientes</div>';
+    pending.forEach(function(t){ h += row(t, false); });
+  }
+  if (paid.length) {
+    h += '<div class="sec-lbl" style="margin-top:14px">Pagos realizados</div>';
+    paid.forEach(function(t){ h += row(t, true); });
+  }
+  if (!pending.length) {
+    h = '<div class="info-box" style="margin-bottom:12px">🎉 ¡Todas las deudas han sido pagadas!</div>' + h;
+  }
+  h += '<div style="height:8px"></div>';
+  h += '<div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> al transferir. Si te equivocas, pulsa <strong>✓ Pagado</strong> para revertir.</div>';
   return h;
 }
 
-function openSettle(idx,gid) {
-  const g=DB.groups.find(x=>x.id===gid); if(!g) return;
-  const txs=computeDebts(g); if(!txs[idx]) return;
-  pSettle={gid,tx:txs[idx]};
-  document.getElementById('settle-txt').innerHTML=`<strong>${esc(txs[idx].from)}</strong> pagará <strong style="color:var(--acc)">${fmt(txs[idx].amount)}</strong> a <strong>${esc(txs[idx].to)}</strong>.<br><br>¿Confirmas que este pago ya se ha realizado?`;
-  openModal('m-settle');
-}
-function confirmSettle() {
-  if (!pSettle) return;
-  const g=DB.groups.find(x=>x.id===pSettle.gid); if(!g) return;
-  const t=pSettle.tx;
-  g.expenses.push({id:uid(),desc:`✅ Liquidación: ${t.from} → ${t.to}`,amount:t.amount,paidBy:t.from,splitAmong:[t.to],category:'otros',date:tod(),isSettlement:true});
-  save(); closeModal('m-settle'); pSettle=null;
-  toast('✅ Liquidación guardada');
-  renderGTab(); renderHome();
+function togglePaid(gid, key) {
+  var g = DB.groups.find(function(x){ return x.id===gid; });
+  if (!g) return;
+  if (!Array.isArray(g.settled)) g.settled = [];
+  var i = g.settled.indexOf(key);
+  if (i >= 0) {
+    g.settled.splice(i, 1);
+    toast('↩️ Marcado como pendiente');
+  } else {
+    g.settled.push(key);
+    toast('✅ Marcado como pagado');
+  }
+  save();
+  renderGTab();
+  renderHome();
 }
 
 // ════════════════════════════════════════════
@@ -1451,12 +1485,15 @@ function renderReport() {
       h += tag + '</div>';
     });
 
-    if (txs.length) {
-      const totalDebt = txs.reduce((s, t) => s + t.amount, 0);
+    var pending = txs.filter(function(t){ return !t.settled; });
+    var paidTxs = txs.filter(function(t){ return t.settled; });
+
+    if (pending.length) {
+      var totalDebt = pending.reduce(function(s, t){ return s + t.amount; }, 0);
       h += '<hr><div class="sec-lbl">Deudas pendientes</div>';
-      txs.forEach(t => {
-        const isMeD = me && t.from.trim().toLowerCase() === me.trim().toLowerCase();
-        const borderCol = isMeD ? 'rgba(251,113,133,.25)' : 'var(--border)';
+      pending.forEach(function(t){
+        var isMeD = me && t.from.trim().toLowerCase() === me.trim().toLowerCase();
+        var borderCol = isMeD ? 'rgba(251,113,133,.25)' : 'var(--border)';
         h += '<div class="debt-row" style="border-color:' + borderCol + '">';
         h += '<span style="color:var(--acc2)">→</span>';
         h += '<div class="debt-txt"><strong>' + esc(t.from) + '</strong> paga a <strong>' + esc(t.to) + '</strong></div>';
@@ -1464,7 +1501,18 @@ function renderReport() {
         h += '</div>';
       });
       h += '<div style="text-align:right;font-size:12px;color:var(--muted2);margin-top:6px">Total pendiente: <strong style="color:var(--acc2)">' + fmt(totalDebt) + '</strong></div>';
-    } else if (g.expenses.length) {
+    }
+    if (paidTxs.length) {
+      h += '<div class="sec-lbl" style="margin-top:10px">Pagos realizados</div>';
+      paidTxs.forEach(function(t){
+        h += '<div class="debt-row" style="border-color:rgba(94,234,212,.2);opacity:.65">';
+        h += '<span style="color:var(--acc)">✓</span>';
+        h += '<div class="debt-txt" style="text-decoration:line-through;color:var(--muted)"><strong>' + esc(t.from) + '</strong> pagó a <strong>' + esc(t.to) + '</strong></div>';
+        h += '<div class="debt-amt" style="text-decoration:line-through;color:var(--muted)">' + fmt(t.amount) + '</div>';
+        h += '</div>';
+      });
+    }
+    if (!pending.length && g.expenses.length) {
       h += '<hr><div class="info-box">🎉 ¡Sin deudas pendientes!</div>';
     }
     h += '</div>';
@@ -1803,22 +1851,26 @@ function initEditMembers() {
 }
 
 function renderEmChips() {
-  const c = document.getElementById('em-chips'); if (!c) return;
+  var c = document.getElementById('em-chips'); if (!c) return;
   c.innerHTML = '';
-  const g = grp();
-  emMembers.forEach(m => {
-    const hasExp = g && g.expenses.some(e => e.paidBy===m || (e.splitAmong||[]).includes(m));
-    const ch = document.createElement('div'); ch.className = 'chip';
-    const sp = document.createElement('span'); sp.textContent = m; ch.appendChild(sp);
-    if (hasExp) {
-      const lock = document.createElement('span');
-      lock.style.cssText = 'font-size:10px;color:var(--muted);margin-left:4px';
-      lock.textContent = '🔒'; ch.appendChild(lock);
-    } else {
-      const btn = document.createElement('button'); btn.className = 'chip-rm'; btn.textContent = '×';
-      btn.addEventListener('click', () => { emMembers = emMembers.filter(x => x !== m); renderEmChips(); renderEmFriendList(); });
-      ch.appendChild(btn);
-    }
+  var g = grp();
+  emMembers.forEach(function(m) {
+    var paidSomething = g && (Array.isArray(g.expenses)?g.expenses:[]).some(function(e){
+      return !e.isSettlement && e.paidBy===m;
+    });
+    var ch = document.createElement('div'); ch.className = 'chip';
+    var sp = document.createElement('span'); sp.textContent = m; ch.appendChild(sp);
+    // Siempre se puede quitar — botón ×
+    var btn = document.createElement('button'); btn.className = 'chip-rm'; btn.textContent = '×';
+    btn.addEventListener('click', function() {
+      if (paidSomething) {
+        if (!confirm(m + ' ha pagado gastos en este grupo. Si lo quitas, esos gastos seguirán existiendo pero él/ella ya no participará en el reparto. ¿Continuar?')) return;
+      }
+      emMembers = emMembers.filter(function(x){ return x !== m; });
+      renderEmChips();
+      renderEmFriendList();
+    });
+    ch.appendChild(btn);
     c.appendChild(ch);
   });
 }
@@ -1903,6 +1955,7 @@ async function connectFirebase() {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
         if (!Array.isArray(g.settlements)) g.settlements = [];
+        if (!Array.isArray(g.settled))     g.settled     = [];
       });
       try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
     }
