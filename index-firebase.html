@@ -1137,7 +1137,7 @@ function computeDebts(g) {
     var a=Math.min(d[di].amount, cr[ci].amount);
     if(a>0.005){
       var key = d[di].name + '|' + cr[ci].name;
-      var settled = Array.isArray(g.settled) && g.settled.indexOf(key) >= 0;
+      var settled = settledKeys(g.settled).indexOf(key) >= 0;
       txs.push({from:d[di].name, to:cr[ci].name, amount:a, key:key, settled:settled});
     }
     d[di].amount-=a; cr[ci].amount-=a;
@@ -1196,17 +1196,40 @@ function togglePaid(gid, key) {
   var g = DB.groups.find(function(x){ return x.id===gid; });
   if (!g) return;
   if (!Array.isArray(g.settled)) g.settled = [];
-  var i = g.settled.indexOf(key);
+  // settled puede contener strings (formato viejo) u objetos {key,...}
+  var i = settledIndex(g.settled, key);
   if (i >= 0) {
     g.settled.splice(i, 1);
     toast('↩️ Marcado como pendiente');
   } else {
-    g.settled.push(key);
+    // Guardar con metadatos para mostrarlo en Actividad
+    var parts = key.split('|');
+    var amount = 0;
+    var txs = computeDebts(g);
+    for (var k=0; k<txs.length; k++) { if (txs[k].key===key) { amount=txs[k].amount; break; } }
+    g.settled.push({ key:key, from:parts[0], to:parts[1], amount:amount, date:tod() });
     toast('✅ Marcado como pagado');
   }
   save();
   renderGTab();
   renderHome();
+  renderReport();
+}
+
+// Busca un key en settled[] tanto si son strings como objetos
+function settledIndex(arr, key) {
+  for (var i=0; i<arr.length; i++) {
+    var item = arr[i];
+    if (typeof item === 'string' && item === key) return i;
+    if (item && item.key === key) return i;
+  }
+  return -1;
+}
+
+// Devuelve los keys de settled como array de strings
+function settledKeys(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(function(item){ return typeof item === 'string' ? item : (item && item.key); }).filter(Boolean);
 }
 
 // ════════════════════════════════════════════
@@ -1424,16 +1447,39 @@ function renderBanner() {
 // ACTIVITY
 // ════════════════════════════════════════════
 function renderActivity() {
-  const c=document.getElementById('act-list');
-  const all=[];
-  DB.groups.forEach(g=>g.expenses.forEach(e=>all.push({...e,gn:g.name,ge:g.emoji})));
-  if (!all.length) { c.innerHTML='<div class="empty"><div class="empty-icon">💸</div><p>Sin gastos todavía en ningún grupo.</p></div>'; return; }
-  all.sort((a,b)=>b.date.localeCompare(a.date));
-  c.innerHTML=''; let lastD='';
-  all.forEach(e=>{
-    if (e.date!==lastD) { lastD=e.date; const l=document.createElement('div'); l.className='sec-lbl'; l.textContent=dlbl(e.date); c.appendChild(l); }
-    const d=document.createElement('div'); d.className='exp-item';
-    d.innerHTML=`${catBadge(e.category)}<div class="exp-info"><div class="exp-desc">${esc(e.desc)}</div><div class="exp-meta">${esc(e.ge)} ${esc(e.gn)} · Pagó <strong>${esc(e.paidBy)}</strong></div></div><div class="exp-amt"><div class="exp-total">${fmt(e.amount)}</div></div>`;
+  var c = document.getElementById('act-list');
+  var all = [];
+  // Gastos normales
+  DB.groups.forEach(function(g){
+    (Array.isArray(g.expenses)?g.expenses:[]).forEach(function(e){
+      if (e && !e.isSettlement) all.push({type:'expense', date:e.date, desc:e.desc, category:e.category, paidBy:e.paidBy, amount:e.amount, gn:g.name, ge:g.emoji});
+    });
+    // Pagos de deudas (settled con metadatos)
+    if (Array.isArray(g.settled)) {
+      g.settled.forEach(function(s){
+        if (s && typeof s === 'object' && s.from) {
+          all.push({type:'payment', date:s.date||tod(), from:s.from, to:s.to, amount:s.amount||0, gn:g.name, ge:g.emoji});
+        }
+      });
+    }
+  });
+  if (!all.length) { c.innerHTML='<div class="empty"><div class="empty-icon">💸</div><p>Sin actividad todavía en ningún grupo.</p></div>'; return; }
+  all.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  c.innerHTML=''; var lastD='';
+  all.forEach(function(e){
+    if (e.date!==lastD) { lastD=e.date; var l=document.createElement('div'); l.className='sec-lbl'; l.textContent=dlbl(e.date); c.appendChild(l); }
+    var d=document.createElement('div'); d.className='exp-item';
+    if (e.type==='payment') {
+      d.innerHTML='<div class="exp-cat" style="background:rgba(94,234,212,.12)"><span>✅</span><span class="exp-cat-lbl" style="color:var(--acc)">Pago</span></div>'
+        + '<div class="exp-info"><div class="exp-desc">'+esc(e.from)+' → '+esc(e.to)+'</div>'
+        + '<div class="exp-meta">'+esc(e.ge)+' '+esc(e.gn)+' · Deuda saldada</div></div>'
+        + '<div class="exp-amt"><div class="exp-total" style="color:var(--acc)">'+fmt(e.amount)+'</div></div>';
+    } else {
+      d.innerHTML=catBadge(e.category)
+        + '<div class="exp-info"><div class="exp-desc">'+esc(e.desc)+'</div>'
+        + '<div class="exp-meta">'+esc(e.ge)+' '+esc(e.gn)+' · Pagó <strong>'+esc(e.paidBy)+'</strong></div></div>'
+        + '<div class="exp-amt"><div class="exp-total">'+fmt(e.amount)+'</div></div>';
+    }
     c.appendChild(d);
   });
 }
@@ -1946,13 +1992,13 @@ function migrateSettlements(db) {
     var remaining = [];
     g.expenses.forEach(function(e) {
       if (e && e.isSettlement) {
-        // Convertir a entrada settled: deudor|acreedor
         var to = Array.isArray(e.splitAmong) ? e.splitAmong[0] : Object.values(e.splitAmong||{})[0];
         if (e.paidBy && to) {
           var key = e.paidBy + '|' + to;
-          if (g.settled.indexOf(key) < 0) g.settled.push(key);
+          if (settledIndex(g.settled, key) < 0) {
+            g.settled.push({ key:key, from:e.paidBy, to:to, amount:e.amount||0, date:e.date||tod() });
+          }
         }
-        // No conservar el gasto de liquidación
       } else {
         remaining.push(e);
       }
