@@ -627,16 +627,7 @@ strong { font-weight: 600; }
   </div>
 </div>
 
-<!-- ══ MODAL: SETTLE ══ -->
-<div class="modal-bg" id="m-settle" onclick="closeOut(event,'m-settle')">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Liquidar Deuda</div>
-    <p id="settle-txt" style="color:var(--muted2);margin-bottom:18px;line-height:1.6;font-size:14px"></p>
-    <button class="btn-primary" onclick="confirmSettle()">✓ Marcar como pagado</button>
-    <div class="pb"></div>
-  </div>
-</div>
+
 
 <!-- ══ MODAL: DELETE EXPENSE ══ -->
 <div class="modal-bg" id="m-del" onclick="closeOut(event,'m-del')">
@@ -1168,9 +1159,9 @@ function renderDebts(g) {
     s += '<strong>' + esc(t.from) + '</strong> → <strong>' + esc(t.to) + '</strong></div>';
     s += '<div class="debt-amt"' + (isPaid ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>' + fmt(t.amount) + '</div>';
     if (isPaid) {
-      s += '<button class="btn-settle" style="background:rgba(94,234,212,.15);color:var(--acc);border-color:transparent" onclick="togglePaid(\'' + g.id + '\',\'' + t.key + '\')">✓ Pagado</button>';
+      s += '<button class="btn-settle btn-pay" data-gid="' + g.id + '" data-key="' + esc(t.key) + '" style="background:rgba(94,234,212,.15);color:var(--acc);border-color:transparent">✓ Pagado</button>';
     } else {
-      s += '<button class="btn-settle" onclick="togglePaid(\'' + g.id + '\',\'' + t.key + '\')">Pagar</button>';
+      s += '<button class="btn-settle btn-pay" data-gid="' + g.id + '" data-key="' + esc(t.key) + '">Pagar</button>';
     }
     s += '</div>';
     return s;
@@ -1191,6 +1182,16 @@ function renderDebts(g) {
   h += '<div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> al transferir. Si te equivocas, pulsa <strong>✓ Pagado</strong> para revertir.</div>';
   return h;
 }
+
+// Delegación de eventos para los botones Pagar/Pagado
+document.addEventListener('click', function(ev) {
+  var btn = ev.target.closest('.btn-pay');
+  if (!btn) return;
+  var gid = btn.getAttribute('data-gid');
+  var key = btn.getAttribute('data-key');
+  if (gid && key) togglePaid(gid, key);
+});
+
 
 function togglePaid(gid, key) {
   var g = DB.groups.find(function(x){ return x.id===gid; });
@@ -1214,6 +1215,7 @@ function togglePaid(gid, key) {
   renderGTab();
   renderHome();
   renderReport();
+  renderActivity();
 }
 
 // Busca un key en settled[] tanto si son strings como objetos
@@ -1985,10 +1987,21 @@ async function init() {
 
 // Migrar liquidaciones antiguas (isSettlement) al nuevo sistema settled[]
 function migrateSettlements(db) {
-  if (!db || !Array.isArray(db.groups)) return db;
+  if (!db) return db;
+  // Normalizar groups
+  if (!Array.isArray(db.groups)) db.groups = db.groups ? Object.values(db.groups) : [];
+  if (!Array.isArray(db.friends)) db.friends = db.friends ? Object.values(db.friends) : [];
   db.groups.forEach(function(g) {
-    if (!Array.isArray(g.expenses)) return;
-    if (!Array.isArray(g.settled)) g.settled = [];
+    // Normalizar TODOS los arrays del grupo (Firebase los convierte a objetos)
+    if (!Array.isArray(g.members))  g.members  = g.members  ? Object.values(g.members)  : [];
+    if (!Array.isArray(g.expenses)) g.expenses = g.expenses ? Object.values(g.expenses) : [];
+    if (!Array.isArray(g.settled))  g.settled  = g.settled  ? Object.values(g.settled)  : [];
+    // Normalizar splitAmong de cada gasto
+    g.expenses.forEach(function(e) {
+      if (e && e.splitAmong && !Array.isArray(e.splitAmong)) {
+        e.splitAmong = Object.values(e.splitAmong);
+      }
+    });
     var remaining = [];
     g.expenses.forEach(function(e) {
       if (e && e.isSettlement) {
