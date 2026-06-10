@@ -764,6 +764,8 @@ const EMOJIS = ['🏖️','🏔️','🍕','🍺','🏠','🚗','✈️','🎉',
 let DB    = { groups:[], v:0 };
 let busy  = false;
 let retry = false;
+let pendingWrite = false;  // hay cambios locales sin confirmar en servidor
+let lastSavedV = 0;        // última versión confirmada por nosotros
 
 let curGid = null, curTab = 'gastos';
 let pSettle = null, pDelId = null, pDelGid = null;
@@ -777,7 +779,7 @@ const setName = n  => { localStorage.setItem('sg_me_fb', n); updateYoBanner(); }
 // HELPERS
 // ════════════════════════════════════════════
 const uid  = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-const fmt  = n  => (typeof n==='number'&&!isNaN(n)) ? n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €' : '0,00 €';
+const fmt  = n  => (typeof n==='number'&&!isNaN(n)) ? n.toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})+' €' : '0,0 €';
 const tod  = () => { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 const dlbl = d  => { try{ return new Date((d||'')+' 12:00').toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){return d||'';} };
 const AVC  = ['#5eead4','#fbbf24','#818cf8','#fb7185','#a78bfa','#f472b6','#34d399','#38bdf8','#fb923c','#4ade80'];
@@ -844,47 +846,133 @@ async function fbWrite() {
   busy = true; retry = false;
   ss('syn', 'Guardando…');
   try {
+    // 1. Releer el servidor para fusionar cambios de otros usuarios
+    var remote = null;
+    try { remote = await fbRead(); } catch(e) { remote = null; }
+    if (remote && typeof remote === 'object') {
+      remote = migrateSettlements(remote);
+      DB = mergeDB(remote, DB);
+    }
+    // 2. Subir el resultado fusionado
     DB.v = (DB.v || 0) + 1;
     DB.ts = Date.now();
+    var snapshot = JSON.stringify(DB);
+    var sentV = DB.v;
     const res = await fetch(FB_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(DB)
+      body: snapshot
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
+    lastSavedV = sentV;
+    try { localStorage.setItem('sg_bk_fb', snapshot); } catch(e) {}
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
     ss('ok', '✓ Guardado · ' + now);
+    if (!retry) pendingWrite = false;
+    renderAll();
   } catch(e) {
     ss('err', 'Error al guardar · Reintentando…');
     console.error('fbWrite error:', e);
+    busy = false;
     setTimeout(fbWrite, 4000);
+    return;
   } finally {
     busy = false;
     if (retry) fbWrite();
   }
 }
 
+// Fusiona datos remotos con locales sin perder gastos de nadie.
+// local tiene prioridad en conflictos, pero se conservan los grupos/gastos
+// que existan en remote y no en local (añadidos por otros usuarios).
+function mergeDB(remote, local) {
+  if (!remote || !remote.groups) return local;
+  if (!local || !local.groups) return remote;
+
+  // Tombstones: ids borrados (unión de ambos lados)
+  var deleted = {};
+  (Array.isArray(local.deleted)?local.deleted:[]).forEach(function(d){ deleted[d]=true; });
+  (Array.isArray(remote.deleted)?remote.deleted:[]).forEach(function(d){ deleted[d]=true; });
+
+  var result = { v: Math.max(remote.v||0, local.v||0), ts: Date.now(), deleted: Object.keys(deleted) };
+
+  // Fusionar friends (unión)
+  var friendsSet = {};
+  (Array.isArray(local.friends)?local.friends:[]).forEach(function(f){ friendsSet[f]=true; });
+  (Array.isArray(remote.friends)?remote.friends:[]).forEach(function(f){ friendsSet[f]=true; });
+  result.friends = Object.keys(friendsSet);
+
+  // Indexar grupos por id
+  var byId = {};
+  (Array.isArray(remote.groups)?remote.groups:[]).forEach(function(g){ if(g&&g.id) byId[g.id]={remote:g}; });
+  (Array.isArray(local.groups)?local.groups:[]).forEach(function(g){
+    if(!g||!g.id) return;
+    if(byId[g.id]) byId[g.id].local=g; else byId[g.id]={local:g};
+  });
+
+  result.groups = [];
+  Object.keys(byId).forEach(function(id){
+    if (deleted['grp:'+id]) return;  // grupo borrado — no resucitar
+    var pair = byId[id];
+    if (pair.local && pair.remote) {
+      result.groups.push(mergeGroup(pair.remote, pair.local, deleted));
+    } else if (pair.local) {
+      result.groups.push(pair.local);
+    } else {
+      result.groups.push(pair.remote);
+    }
+  });
+
+  return result;
+}
+
+function mergeGroup(remote, local, deleted) {
+  deleted = deleted || {};
+  var g = JSON.parse(JSON.stringify(local));
+  // Fusionar gastos por id (unión), respetando tombstones
+  var expById = {};
+  (Array.isArray(remote.expenses)?remote.expenses:[]).forEach(function(e){ if(e&&e.id && !deleted['exp:'+e.id]) expById[e.id]=e; });
+  (Array.isArray(local.expenses)?local.expenses:[]).forEach(function(e){ if(e&&e.id && !deleted['exp:'+e.id]) expById[e.id]=e; });
+  g.expenses = Object.keys(expById).map(function(k){ return expById[k]; });
+  // settled: unión por key
+  var setByKey = {};
+  function addSettled(arr){ (Array.isArray(arr)?arr:[]).forEach(function(s){ var k = typeof s==='string'?s:(s&&s.key); if(k) setByKey[k]=s; }); }
+  addSettled(remote.settled); addSettled(local.settled);
+  g.settled = Object.keys(setByKey).map(function(k){ return setByKey[k]; });
+  return g;
+}
+
 // ════════════════════════════════════════════
 // SYNC (leer Firebase → actualizar UI)
 // ════════════════════════════════════════════
 async function sync(silent = false) {
+  // NO sincronizar si estamos guardando o hay cambios locales pendientes
+  // (evita que el servidor pise un gasto recién añadido)
+  if (busy || pendingWrite) {
+    return;
+  }
   if (!silent) ss('syn', 'Sincronizando…');
   try {
     const remote = await fbRead();
     const prevV = DB.v || 0;
     if (remote && typeof remote === 'object') {
-      DB = migrateSettlements(remote);
-      if (!Array.isArray(DB.groups))  DB.groups  = [];
-      if (!Array.isArray(DB.friends)) DB.friends = [];
-      DB.groups.forEach(g => {
-        if (!Array.isArray(g.expenses))    g.expenses    = [];
-        if (!Array.isArray(g.members))     g.members     = [];
-        if (!Array.isArray(g.settlements)) g.settlements = [];
-        if (!Array.isArray(g.settled))     g.settled     = [];
-      });
-      try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
-      if (!silent && (remote.v||0) > prevV + 1) toast('🔄 Actualizado por otro miembro');
+      var remoteV = remote.v || 0;
+      // Solo aceptar datos del servidor si son MÁS nuevos que los nuestros
+      // y si no tenemos cambios sin guardar
+      if (remoteV >= prevV && !pendingWrite && !busy) {
+        DB = migrateSettlements(remote);
+        if (!Array.isArray(DB.groups))  DB.groups  = [];
+        if (!Array.isArray(DB.friends)) DB.friends = [];
+        DB.groups.forEach(function(g) {
+          if (!Array.isArray(g.expenses))    g.expenses    = [];
+          if (!Array.isArray(g.members))     g.members     = [];
+          if (!Array.isArray(g.settlements)) g.settlements = [];
+          if (!Array.isArray(g.settled))     g.settled     = [];
+        });
+        lastSavedV = DB.v || 0;
+        try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
+        if (!silent && remoteV > prevV) toast('🔄 Actualizado por otro miembro');
+      }
     }
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
     ss('ok', '✓ Conectado · ' + now);
@@ -929,6 +1017,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // SAVE — guarda local + sube a Firebase
 // ════════════════════════════════════════════
 function save() {
+  pendingWrite = true;
   try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
   fbWrite();
 }
@@ -1067,38 +1156,63 @@ function computeBals(g) {
   });
 }
 function renderBals(g) {
-  const bals=computeBals(g);
-  const total=g.expenses.reduce((a,e)=>a+e.amount,0);
-  const me=myName();
-  const myb=bals.find(b=>b.name===me);
-  let h=`<div class="stats-grid">
-    <div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val">${fmt(total)}</div></div>
-    <div class="stat-box"><div class="stat-lbl">Media/persona</div><div class="stat-val">${fmt(total/(g.members.length||1))}</div></div>
-  </div>`;
+  var bals = computeBals(g);
+  var total = (Array.isArray(g.expenses)?g.expenses:[]).reduce(function(a,e){ return a + (e.isSettlement?0:e.amount); }, 0);
+  var me = myName();
+  var nMembers = (Array.isArray(g.members)?g.members:[]).length || 1;
+
+  var h = '<div class="stats-grid">';
+  h += '<div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val">' + fmt(total) + '</div></div>';
+  h += '<div class="stat-box"><div class="stat-lbl">Media/persona</div><div class="stat-val">' + fmt(total/nMembers) + '</div></div>';
+  h += '</div>';
+
+  // Tu saldo destacado
+  var myb = bals.find(function(b){ return me && b.name.trim().toLowerCase()===me.trim().toLowerCase(); });
   if (myb) {
-    const net=myb.net, color=Math.abs(net)<0.005?'var(--muted2)':net>0?'var(--acc)':'var(--acc3)';
-    const msg=Math.abs(net)<0.005?'Estás al día 🎉':net>0?`Te deben ${fmt(net)}`:`Debes ${fmt(Math.abs(net))}`;
-    h+=`<div style="background:${color}18;border:1px solid ${color}30;border-radius:var(--rs);padding:13px 14px;margin-bottom:12px;text-align:center">
-      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Tu saldo</div>
-      <div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:${color}">${msg}</div>
-    </div>`;
+    var net = myb.net;
+    var color = Math.abs(net)<0.005 ? 'var(--muted2)' : (net>0 ? 'var(--acc)' : 'var(--acc3)');
+    var msg = Math.abs(net)<0.005 ? 'Estás al día 🎉' : (net>0 ? 'Te deben ' + fmt(net) : 'Debes ' + fmt(Math.abs(net)));
+    h += '<div style="background:' + color + '18;border:1px solid ' + color + '30;border-radius:var(--rs);padding:13px 14px;margin-bottom:12px;text-align:center">';
+    h += '<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Tu saldo</div>';
+    h += '<div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:' + color + '">' + msg + '</div>';
+    h += '</div>';
   }
-  h+='<div class="card">';
-  bals.forEach(b=>{
-    const col=avc(b.name); const isMe=me && b.name.trim().toLowerCase()===me.trim().toLowerCase();
-    const tag=Math.abs(b.net)<0.005?'<span class="tag tag-ok">✓ OK</span>':b.net>0?`<span style="color:var(--acc);font-family:var(--ff-head);font-weight:700">+${fmt(b.net)}</span>`:`<span style="color:var(--acc3);font-family:var(--ff-head);font-weight:700">-${fmt(Math.abs(b.net))}</span>`;
-    h+=`<div class="bal-row" ${isMe?'style="background:rgba(94,234,212,.04);border-radius:8px;padding:11px 8px;margin:0 -8px;"':''}>
-      <div class="avatar" style="background:${col}22;color:${col}">${ini(b.name)}</div>
-      <div class="bal-info">
-        <div class="bal-name">${esc(b.name)}${isMe?' <span style="font-size:11px;color:var(--muted2)">(tú)</span>':''}</div>
-        <div class="bal-sub">Pagó ${fmt(b.paid)} · Debe ${fmt(b.owes)}</div>
-      </div>
-      ${tag}
-    </div>`;
+
+  // Cabecera explicativa
+  h += '<div class="sec-lbl">Saldo de cada persona</div>';
+
+  h += '<div class="card">';
+  bals.forEach(function(b){
+    var col = avc(b.name);
+    var isMe = me && b.name.trim().toLowerCase()===me.trim().toLowerCase();
+
+    // Frase clara de saldo
+    var saldoLine;
+    if (Math.abs(b.net) < 0.005) {
+      saldoLine = '<span style="color:var(--muted2);font-weight:600">Está al día ✓</span>';
+    } else if (b.net > 0) {
+      saldoLine = '<span style="color:var(--acc);font-weight:700">Le deben ' + fmt(b.net) + '</span>';
+    } else {
+      saldoLine = '<span style="color:var(--acc3);font-weight:700">Debe ' + fmt(Math.abs(b.net)) + '</span>';
+    }
+
+    h += '<div class="bal-row" style="align-items:flex-start;' + (isMe ? 'background:rgba(94,234,212,.05);border-radius:10px;padding:11px 10px;margin:0 -10px;' : '') + '">';
+    h += '<div class="avatar" style="background:' + col + '22;color:' + col + '">' + ini(b.name) + '</div>';
+    h += '<div class="bal-info" style="flex:1">';
+    h += '<div class="bal-name">' + esc(b.name) + (isMe ? ' <span style="font-size:11px;color:var(--muted2)">(tú)</span>' : '') + '</div>';
+    h += '<div style="font-size:13px;margin-top:3px">' + saldoLine + '</div>';
+    h += '<div class="bal-sub" style="margin-top:2px">Pagó ' + fmt(b.paid) + ' de ' + fmt(b.owes) + ' que le tocaban</div>';
+    h += '</div>';
+    h += '</div>';
   });
-  h+='</div>';
+  h += '</div>';
+
+  // Leyenda explicativa
+  h += '<div class="info-box" style="margin-top:10px;font-size:12px">💡 <strong>Le deben</strong>: pagó más de lo que le tocaba. <strong>Debe</strong>: pagó menos. Ve a <strong>Deudas</strong> para ver quién paga a quién.</div>';
+
   return h;
 }
+
 
 // ─── DEUDAS ───
 // Calcula deudas SOLO con gastos normales (ignora liquidaciones).
@@ -1344,9 +1458,11 @@ function askDel(id) { pDelId=id; openModal('m-del'); }
 function confirmDel() {
   const g=grp(); if(!g||!pDelId) return;
   g.expenses=g.expenses.filter(e=>e.id!==pDelId);
+  if (!Array.isArray(DB.deleted)) DB.deleted = [];
+  DB.deleted.push('exp:'+pDelId);
   pDelId=null; save(); closeModal('m-del');
   toast('🗑️ Gasto eliminado');
-  renderGTab(); renderHome();
+  renderGTab(); renderHome(); renderReport(); renderActivity();
 }
 
 // ════════════════════════════════════════════
@@ -1363,7 +1479,9 @@ function askDelGrp() {
 }
 function confirmDelGrp() {
   if (!pDelGid) return;
-  DB.groups = DB.groups.filter(g=>g.id!==pDelGid);
+  DB.groups = DB.groups.filter(function(g){ return g.id!==pDelGid; });
+  if (!Array.isArray(DB.deleted)) DB.deleted = [];
+  DB.deleted.push('grp:'+pDelGid);
   pDelGid=null; curGid=null;
   save(); closeModal('m-del-grp');
   toast('🗑️ Grupo eliminado');
