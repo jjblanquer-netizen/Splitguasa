@@ -1,0 +1,42 @@
+{
+  "name": "SplitGuasa",
+  "short_name": "SplitGuasa",
+  "description": "Divide gastos compartidos con amigos sin complicaciones",
+  "start_url": "/Splitguasa/index-firebase.html",
+  "scope": "/Splitguasa/",
+  "display": "standalone",
+  "background_color": "#0a0b0f",
+  "theme_color": "#0a0b0f",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": [
+    "finance",
+    "utilities"
+  ],
+  "icons": [
+    {
+      "src": "/Splitguasa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Splitguasa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/Splitguasa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/Splitguasa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

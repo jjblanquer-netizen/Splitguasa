@@ -2390,23 +2390,37 @@ init();
     if (banner) banner.style.display = 'none';
   });
 
-  // Inicializar cuando cargue el DOM
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      ready();
-      // En iPhone no hay beforeinstallprompt: mostrar banner con instrucciones tras unos segundos
-      if (isIos() && !isStandalone() && !recentlyDismissed()) {
-        setTimeout(function() {
-          show();
-          showIosInstructions();
-        }, 3000);
-      }
-    });
-  } else {
-    ready();
-    if (isIos() && !isStandalone() && !recentlyDismissed()) {
-      setTimeout(function() { show(); showIosInstructions(); }, 3000);
+  function showAndroidInstructions() {
+    if (sub) {
+      sub.innerHTML = 'Pulsa el menú <strong>⋮</strong> de Chrome y luego <strong>"Instalar aplicación"</strong> o <strong>"Añadir a pantalla de inicio"</strong>';
     }
+    var b = document.getElementById('install-btn');
+    if (b) b.style.display = 'none';
+  }
+
+  function init() {
+    ready();
+    if (isStandalone() || recentlyDismissed()) return;
+
+    if (isIos()) {
+      // iPhone: instrucciones manuales tras 3s
+      setTimeout(function() { show(); showIosInstructions(); }, 3000);
+    } else {
+      // Android: esperar a beforeinstallprompt; si no llega en 4s,
+      // mostrar banner con instrucciones manuales de respaldo
+      setTimeout(function() {
+        if (!deferredPrompt && banner && banner.style.display !== 'block') {
+          show();
+          showAndroidInstructions();
+        }
+      }, 4000);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 })();
 
