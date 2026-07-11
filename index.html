@@ -573,6 +573,28 @@ strong { font-weight: 600; }
   align-items: center; justify-content: center; color: #04221d; font-size: 12px; font-weight: 700;
 }
 .bg-opt.sel .bg-check { display: flex; }
+
+/* Cabecera de grupo con imagen de fondo */
+.grp-hdr { position: relative; overflow: hidden; }
+.grp-hdr-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background-size: cover; background-position: center;
+  display: none;
+}
+.grp-hdr-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgba(10,11,15,.35) 0%, rgba(10,11,15,.7) 100%);
+  display: none; pointer-events: none;
+}
+.grp-hdr.has-bg .grp-hdr-bg,
+.grp-hdr.has-bg .grp-hdr-overlay { display: block; }
+.grp-hdr > *:not(.grp-hdr-bg):not(.grp-hdr-overlay) { position: relative; z-index: 2; }
+.grp-hdr.has-bg .grp-title,
+.grp-hdr.has-bg .grp-members-line { color: #fff; text-shadow: 0 1px 5px rgba(0,0,0,.6); }
+.grp-hdr.has-bg .grp-emoji {
+  background: rgba(255,255,255,.16); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,.22);
+}
 </style>
 </head>
 <body>
@@ -655,7 +677,9 @@ strong { font-weight: 600; }
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
     </button>
   </div>
-  <div class="grp-hdr">
+  <div class="grp-hdr" id="g-hdr">
+    <div class="grp-hdr-bg" id="g-hdr-bg"></div>
+    <div class="grp-hdr-overlay" id="g-hdr-overlay"></div>
     <div class="grp-emoji" id="g-emoji">🏖️</div>
     <div class="grp-title" id="g-name">Grupo</div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
@@ -1332,9 +1356,24 @@ function openGroup(id) {
   document.getElementById('g-emoji').textContent  = g.emoji;
   document.getElementById('g-name').textContent   = g.name;
   document.getElementById('g-mems').textContent   = g.members.join(' · ');
+  applyGroupHeaderBg(g);
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
   document.getElementById('scr-grp').classList.add('on');
   switchTab('gastos');
+}
+
+// Pinta (o quita) la imagen de fondo en la cabecera del grupo
+function applyGroupHeaderBg(g) {
+  var hdr = document.getElementById('g-hdr');
+  var bgEl = document.getElementById('g-hdr-bg');
+  if (!hdr || !bgEl) return;
+  if (g && g.bg) {
+    bgEl.style.backgroundImage = "url('" + g.bg + "')";
+    hdr.classList.add('has-bg');
+  } else {
+    bgEl.style.backgroundImage = '';
+    hdr.classList.remove('has-bg');
+  }
 }
 
 function switchTab(tab) {
@@ -2316,46 +2355,82 @@ let ngMem = [], ngEmoji = EMOJIS[0];
 // FONDOS DE TARJETA (Fase 3)
 // ════════════════════════════════════════════
 const BG_BASE = 'backgrounds/';
+// Formatos soportados (se prueba en orden hasta encontrar el que existe)
+const BG_EXTS = ['webp', 'png', 'jpg'];
 const BG_THEMES = [
-  { id: '',         name: 'Sin fondo', file: null },
-  { id: 'playa',    name: 'Playa',     file: 'playa.png' },
-  { id: 'montana',  name: 'Montaña',   file: 'montana.png' },
-  { id: 'ciudad',   name: 'Ciudad',    file: 'ciudad.png' },
-  { id: 'esqui',    name: 'Esquí',     file: 'esqui.png' },
-  { id: 'invierno', name: 'Invierno',  file: 'invierno.png' },
-  { id: 'verano',   name: 'Verano',    file: 'verano.png' },
-  { id: 'islas',    name: 'Islas',     file: 'islas.png' },
-  { id: 'tropical', name: 'Tropical',  file: 'tropical.png' }
+  { id: '',         name: 'Sin fondo' },
+  { id: 'playa',    name: 'Playa'    },
+  { id: 'montana',  name: 'Montaña'  },
+  { id: 'ciudad',   name: 'Ciudad'   },
+  { id: 'esqui',    name: 'Esquí'    },
+  { id: 'invierno', name: 'Invierno' },
+  { id: 'verano',   name: 'Verano'   },
+  { id: 'islas',    name: 'Islas'    },
+  { id: 'tropical', name: 'Tropical' }
 ];
-var ngSelectedBg = '';  // fondo elegido en el modal (id del tema)
+var ngSelectedBg = '';   // fondo elegido en el modal (id del tema)
+var BG_RESOLVED = {};    // cache: id -> URL que sí existe
 
-// Devuelve la URL completa del fondo a partir de su id
+// Comprueba qué extensión existe para un tema y guarda la URL en cache
+function resolveBgUrl(id, cb) {
+  if (!id) { cb(null); return; }
+  if (BG_RESOLVED[id] !== undefined) { cb(BG_RESOLVED[id]); return; }
+  var i = 0;
+  function tryNext() {
+    if (i >= BG_EXTS.length) { BG_RESOLVED[id] = null; cb(null); return; }
+    var url = BG_BASE + id + '.' + BG_EXTS[i];
+    var img = new Image();
+    img.onload  = function(){ BG_RESOLVED[id] = url; cb(url); };
+    img.onerror = function(){ i++; tryNext(); };
+    img.src = url;
+  }
+  tryNext();
+}
+
+// URL del fondo (usa la cacheada si ya se resolvió; si no, prueba webp por defecto)
 function bgUrl(id) {
   if (!id) return null;
-  var theme = BG_THEMES.find(function(t){ return t.id === id; });
-  return theme && theme.file ? (BG_BASE + theme.file) : null;
+  if (BG_RESOLVED[id]) return BG_RESOLVED[id];
+  // Fallback: si aún no se resolvió, devolver la primera extensión
+  return BG_BASE + id + '.' + BG_EXTS[0];
+}
+
+// Extrae el id del tema a partir de una URL guardada (soporta cualquier extensión)
+function bgIdFromUrl(url) {
+  if (!url) return '';
+  var m = String(url).match(/([^/]+)\.(webp|png|jpg|jpeg)$/i);
+  return m ? m[1] : '';
 }
 
 function renderBgGrid(selectedId) {
-  var grid = document.getElementById('ng-bg-grid');
-  if (!grid) return;
+  buildBgGrid('ng-bg-grid', selectedId, function(id){ ngSelectedBg = id; });
   ngSelectedBg = selectedId || '';
+}
+
+// Construye una parrilla de fondos en el contenedor indicado.
+// Resuelve automáticamente la extensión (webp / png / jpg).
+function buildBgGrid(containerId, selectedId, onSelect) {
+  var grid = document.getElementById(containerId);
+  if (!grid) return;
   grid.innerHTML = '';
   BG_THEMES.forEach(function(t) {
     var el = document.createElement('div');
-    var isSel = (t.id === ngSelectedBg);
-    if (!t.file) {
+    var isSel = (t.id === (selectedId || ''));
+    if (!t.id) {
       el.className = 'bg-opt bg-none' + (isSel ? ' sel' : '');
       el.textContent = 'Sin fondo';
     } else {
       el.className = 'bg-opt' + (isSel ? ' sel' : '');
-      el.style.backgroundImage = "url('" + BG_BASE + t.file + "')";
       el.innerHTML = '<div class="bg-check">✓</div><div class="bg-lbl">' + t.name + '</div>';
+      // Buscar la extensión que exista realmente
+      resolveBgUrl(t.id, function(url) {
+        if (url) el.style.backgroundImage = "url('" + url + "')";
+      });
     }
     el.addEventListener('click', function() {
-      ngSelectedBg = t.id;
       grid.querySelectorAll('.bg-opt').forEach(function(o){ o.classList.remove('sel'); });
       el.classList.add('sel');
+      if (onSelect) onSelect(t.id);
     });
     grid.appendChild(el);
   });
@@ -2432,13 +2507,17 @@ function createGroup() {
   const name = document.getElementById('ng-name').value.trim();
   if (!name) { toast('⚠️ Escribe el nombre del grupo'); return; }
   if (ngMem.length < 2) { toast('⚠️ Selecciona al menos 2 amigos'); return; }
-  const g = {id:uid(), name, emoji:ngEmoji, bg:bgUrl(ngSelectedBg), members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
-  DB.groups.unshift(g);
-  save();
-  closeModal('m-newgrp');
-  toast('✅ Grupo "' + name + '" creado');
-  renderHome();
-  openGroup(g.id);
+  // Resolver la URL real del fondo (extensión correcta) antes de guardar
+  resolveBgUrl(ngSelectedBg, function(url) {
+    const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
+    if (url) g.bg = url;
+    DB.groups.unshift(g);
+    save();
+    closeModal('m-newgrp');
+    toast('✅ Grupo "' + name + '" creado');
+    renderHome();
+    openGroup(g.id);
+  });
 }
 
 // ════════════════════════════════════════════
@@ -2450,33 +2529,9 @@ let emMembers = [];
 var emSelectedBg = '';  // fondo elegido al editar
 
 function renderEmBgGrid(currentBgUrl) {
-  var grid = document.getElementById('em-bg-grid');
-  if (!grid) return;
-  // Determinar qué tema corresponde a la URL actual
-  emSelectedBg = '';
-  if (currentBgUrl) {
-    var found = BG_THEMES.find(function(t){ return t.file && (BG_BASE + t.file) === currentBgUrl; });
-    emSelectedBg = found ? found.id : '';
-  }
-  grid.innerHTML = '';
-  BG_THEMES.forEach(function(t) {
-    var el = document.createElement('div');
-    var isSel = (t.id === emSelectedBg);
-    if (!t.file) {
-      el.className = 'bg-opt bg-none' + (isSel ? ' sel' : '');
-      el.textContent = 'Sin fondo';
-    } else {
-      el.className = 'bg-opt' + (isSel ? ' sel' : '');
-      el.style.backgroundImage = "url('" + BG_BASE + t.file + "')";
-      el.innerHTML = '<div class="bg-check">✓</div><div class="bg-lbl">' + t.name + '</div>';
-    }
-    el.addEventListener('click', function() {
-      emSelectedBg = t.id;
-      grid.querySelectorAll('.bg-opt').forEach(function(o){ o.classList.remove('sel'); });
-      el.classList.add('sel');
-    });
-    grid.appendChild(el);
-  });
+  // Deducir el tema actual a partir de la URL guardada (cualquier extensión)
+  emSelectedBg = bgIdFromUrl(currentBgUrl);
+  buildBgGrid('em-bg-grid', emSelectedBg, function(id){ emSelectedBg = id; });
 }
 
 function initEditMembers() {
@@ -2549,15 +2604,20 @@ function saveMembers() {
   if (emMembers.length < 2) { toast('⚠️ El grupo necesita al menos 2 personas'); return; }
   const added = emMembers.filter(m => !g.members.includes(m));
   g.members = emMembers.slice();
-  // Guardar fondo elegido (o quitarlo si es "sin fondo")
-  var newBg = bgUrl(emSelectedBg);
-  if (newBg) g.bg = newBg; else delete g.bg;
-  save();
-  closeModal('m-edit-members');
-  document.getElementById('g-mems').textContent = g.members.join(' · ');
-  renderGTab();
-  renderHome();
-  toast(added.length ? '✅ Añadido/s: ' + added.join(', ') : '✅ Miembros actualizados');
+  // Resolver la URL real del fondo (extensión correcta) antes de guardar
+  resolveBgUrl(emSelectedBg, function(url) {
+    if (url) g.bg = url; else delete g.bg;
+    save();
+    closeModal('m-edit-members');
+    var memsEl = document.getElementById('g-mems');
+    if (memsEl) memsEl.textContent = g.members.join(' · ');
+    applyGroupHeaderBg(g);
+    renderGTab();
+    renderHome();
+    renderReport();
+    renderActivity();
+    toast(added.length ? '✅ Añadido/s: ' + added.join(', ') : '✅ Miembros actualizados');
+  });
 }
 
 // getAllPersons ya no se usa — sustituido por getFriends()
