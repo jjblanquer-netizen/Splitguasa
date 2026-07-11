@@ -548,6 +548,31 @@ strong { font-weight: 600; }
 .person-del:active { color: var(--acc3); }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.bg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bg-opt {
+  aspect-ratio: 2/1; border-radius: 11px; cursor: pointer;
+  background-size: cover; background-position: center;
+  border: 2.5px solid transparent; position: relative; overflow: hidden;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.bg-opt.sel { border-color: var(--acc); }
+.bg-opt .bg-lbl {
+  font-size: 10px; font-weight: 600; color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8); padding: 3px; width: 100%;
+  text-align: center; background: linear-gradient(transparent, rgba(0,0,0,.5));
+}
+.bg-opt.bg-none {
+  background: var(--s3); border: 2.5px solid var(--border);
+  align-items: center; color: var(--muted2); font-size: 11px; font-weight: 600;
+}
+.bg-opt.bg-none.sel { border-color: var(--acc); color: var(--acc); }
+.bg-opt .bg-check {
+  position: absolute; top: 4px; right: 4px; width: 20px; height: 20px;
+  background: var(--acc); border-radius: 50%; display: none;
+  align-items: center; justify-content: center; color: #04221d; font-size: 12px; font-weight: 700;
+}
+.bg-opt.sel .bg-check { display: flex; }
 </style>
 </head>
 <body>
@@ -663,6 +688,7 @@ strong { font-weight: 600; }
     <p class="sheet-sub">Todos los miembros verán este grupo automáticamente al abrir la app.</p>
     <div class="field"><label>Nombre del grupo</label><input id="ng-name" type="text" placeholder="Viaje Asturias, Piso, Cena…" autocomplete="off"></div>
     <div class="field"><label>Icono</label><div class="emoji-grid" id="emoji-grid"></div></div>
+    <div class="field"><label>Fondo de la tarjeta</label><div class="bg-grid" id="ng-bg-grid"></div></div>
     <div class="field">
       <label>Miembros del grupo</label>
       <div class="chips" id="ng-chips"></div>
@@ -740,6 +766,10 @@ strong { font-weight: 600; }
       <div id="em-chips" style="margin-bottom:8px"></div>
     </div>
     <div class="field">
+      <label>Fondo de la tarjeta</label>
+      <div class="bg-grid" id="em-bg-grid"></div>
+    </div>
+    <div class="field">
       <label>Añadir amigo al grupo</label>
       <input id="em-search" type="text" placeholder="Buscar amigo…" autocomplete="off"
         oninput="renderEmFriendList()" style="background:var(--s2);border:1.5px solid var(--border);color:var(--txt);padding:10px 13px;border-radius:var(--rs);font-size:16px;width:100%;outline:none;margin-bottom:8px;">
@@ -791,13 +821,7 @@ strong { font-weight: 600; }
     <span class="topbar-title">Ajustes</span>
   </div>
   <div class="sb">
-    <div class="sec-lbl" style="margin-top:6px">¿Quién eres?</div>
-    <div class="card">
-      <div style="font-size:13px;color:var(--muted2);margin-bottom:10px">Selecciona tu nombre para personalizar la app y ver tus saldos.</div>
-      <div id="settings-me-list"></div>
-    </div>
-
-    <div class="sec-lbl" style="margin-top:18px">Apariencia</div>
+    <div class="sec-lbl" style="margin-top:6px">Apariencia</div>
     <div class="card" style="padding:6px">
       <div style="display:flex;gap:8px">
         <button id="theme-dark-btn" onclick="setTheme('dark')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;background:var(--s2);border:2px solid var(--acc);border-radius:14px;cursor:pointer;transition:all .15s">
@@ -811,6 +835,16 @@ strong { font-weight: 600; }
           <span id="theme-light-check" style="font-size:11px;color:var(--muted);font-weight:600">Activar</span>
         </button>
       </div>
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Tu perfil</div>
+    <div class="card" id="settings-me-card" onclick="openMeSelector()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div id="settings-me-avatar" class="avatar" style="width:44px;height:44px;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div id="settings-me-name" style="font-weight:700;font-size:15px;color:var(--txt)">Sin identificar</div>
+        <div id="settings-me-sub" style="font-size:12px;color:var(--muted2);margin-top:1px">Toca para elegir quién eres</div>
+      </div>
+      <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
     </div>
 
     <div class="sec-lbl" style="margin-top:18px">Información</div>
@@ -1151,48 +1185,74 @@ function save() {
 // ════════════════════════════════════════════
 
 function renderSettingsMe() {
-  var cont = document.getElementById('settings-me-list');
+  // Actualiza la tarjeta compacta de "Tu perfil" en Ajustes
+  var me = myName();
+  var avatar = document.getElementById('settings-me-avatar');
+  var nameEl = document.getElementById('settings-me-name');
+  var subEl = document.getElementById('settings-me-sub');
+  if (!avatar || !nameEl) return;
+  if (me) {
+    var col = avc(me);
+    avatar.style.background = col + '22';
+    avatar.style.color = col;
+    avatar.textContent = ini(me);
+    avatar.style.display = 'flex';
+    nameEl.textContent = me;
+    if (subEl) subEl.textContent = 'Toca para cambiar';
+  } else {
+    avatar.style.background = 'var(--s3)';
+    avatar.style.color = 'var(--muted)';
+    avatar.textContent = '?';
+    avatar.style.display = 'flex';
+    nameEl.textContent = 'Sin identificar';
+    if (subEl) subEl.textContent = 'Toca para elegir quién eres';
+  }
+}
+
+function openMeSelector() {
+  renderMeSelectorList();
+  openModal('m-me-selector');
+}
+
+function renderMeSelectorList() {
+  var cont = document.getElementById('me-selector-list');
   if (!cont) return;
   var friends = getFriends();
   var me = myName();
+  var h = '';
   if (!friends.length) {
-    cont.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">No hay amigos todavía. Añádelos desde la pantalla Amigos.</div>';
+    h = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:14px 0">No hay amigos todavía.<br>Añádelos desde la pantalla Amigos.</div>';
+    cont.innerHTML = h;
     return;
   }
-  var h = '';
   friends.forEach(function(name) {
     var isMe = me && name.trim().toLowerCase() === me.trim().toLowerCase();
     var col = avc(name);
-    h += '<div class="settings-me-row" data-name="' + esc(name) + '" style="display:flex;align-items:center;gap:11px;padding:11px 8px;border-radius:11px;cursor:pointer;margin-bottom:4px;' + (isMe ? 'background:rgba(94,234,212,.1);border:1px solid var(--acc)' : 'border:1px solid transparent') + '">';
-    h += '<div class="avatar" style="background:' + col + '22;color:' + col + ';width:38px;height:38px;flex-shrink:0">' + ini(name) + '</div>';
+    h += '<div class="me-sel-row" data-name="' + esc(name) + '" style="display:flex;align-items:center;gap:12px;padding:12px 10px;border-radius:12px;cursor:pointer;margin-bottom:4px;' + (isMe ? 'background:rgba(94,234,212,.1)' : '') + '">';
+    h += '<div class="avatar" style="background:' + col + '22;color:' + col + ';width:40px;height:40px;flex-shrink:0">' + ini(name) + '</div>';
     h += '<div style="flex:1;font-weight:600;color:var(--txt)">' + esc(name) + '</div>';
-    if (isMe) {
-      h += '<span style="font-size:12px;color:var(--acc);font-weight:700">✓ Soy yo</span>';
-    } else {
-      h += '<span style="font-size:12px;color:var(--muted)">Seleccionar</span>';
-    }
+    if (isMe) h += '<span style="color:var(--acc);font-size:18px;font-weight:700">✓</span>';
     h += '</div>';
   });
   cont.innerHTML = h;
-
-  // Eventos
-  cont.querySelectorAll('.settings-me-row').forEach(function(row) {
+  cont.querySelectorAll('.me-sel-row').forEach(function(row) {
     row.addEventListener('click', function() {
       var name = row.getAttribute('data-name');
       var cur = myName();
       if (cur && name.trim().toLowerCase() === cur.trim().toLowerCase()) {
-        // Ya era yo: desidentificar
         setName('');
         toast('Ya no estás identificado');
       } else {
         setName(name);
         toast('👋 Hola, ' + name);
       }
+      closeModal('m-me-selector');
       renderSettingsMe();
       renderAll();
     });
   });
 }
+
 
 function setTheme(theme) {
   if (theme === 'light') {
@@ -2238,9 +2298,8 @@ function renderYoModal() {
 
 function updateYoBanner() {
   const me = myName();
-  const label = me ? me.slice(0, 7) : 'Amigos';
-  // Actualizar TODOS los nav-yo-lbl (hay uno por cada pantalla)
-  document.querySelectorAll('.nav-yo-lbl').forEach(el => el.textContent = label);
+  // El botón SIEMPRE dice "Amigos" (nunca el nombre del usuario)
+  document.querySelectorAll('.nav-yo-lbl').forEach(el => el.textContent = 'Amigos');
   // Color del icono según si está identificado
   document.querySelectorAll('.nav-yo').forEach(el => {
     el.style.color = me ? 'var(--acc)' : '';
@@ -2252,6 +2311,56 @@ function updateYoBanner() {
 // ════════════════════════════════════════════
 let ngMem = [], ngEmoji = EMOJIS[0];
 
+
+// ════════════════════════════════════════════
+// FONDOS DE TARJETA (Fase 3)
+// ════════════════════════════════════════════
+const BG_BASE = 'backgrounds/';
+const BG_THEMES = [
+  { id: '',         name: 'Sin fondo', file: null },
+  { id: 'playa',    name: 'Playa',     file: 'playa.webp' },
+  { id: 'montana',  name: 'Montaña',   file: 'montana.webp' },
+  { id: 'ciudad',   name: 'Ciudad',    file: 'ciudad.webp' },
+  { id: 'esqui',    name: 'Esquí',     file: 'esqui.webp' },
+  { id: 'invierno', name: 'Invierno',  file: 'invierno.webp' },
+  { id: 'verano',   name: 'Verano',    file: 'verano.webp' },
+  { id: 'islas',    name: 'Islas',     file: 'islas.webp' },
+  { id: 'tropical', name: 'Tropical',  file: 'tropical.webp' }
+];
+var ngSelectedBg = '';  // fondo elegido en el modal (id del tema)
+
+// Devuelve la URL completa del fondo a partir de su id
+function bgUrl(id) {
+  if (!id) return null;
+  var theme = BG_THEMES.find(function(t){ return t.id === id; });
+  return theme && theme.file ? (BG_BASE + theme.file) : null;
+}
+
+function renderBgGrid(selectedId) {
+  var grid = document.getElementById('ng-bg-grid');
+  if (!grid) return;
+  ngSelectedBg = selectedId || '';
+  grid.innerHTML = '';
+  BG_THEMES.forEach(function(t) {
+    var el = document.createElement('div');
+    var isSel = (t.id === ngSelectedBg);
+    if (!t.file) {
+      el.className = 'bg-opt bg-none' + (isSel ? ' sel' : '');
+      el.textContent = 'Sin fondo';
+    } else {
+      el.className = 'bg-opt' + (isSel ? ' sel' : '');
+      el.style.backgroundImage = "url('" + BG_BASE + t.file + "')";
+      el.innerHTML = '<div class="bg-check">✓</div><div class="bg-lbl">' + t.name + '</div>';
+    }
+    el.addEventListener('click', function() {
+      ngSelectedBg = t.id;
+      grid.querySelectorAll('.bg-opt').forEach(function(o){ o.classList.remove('sel'); });
+      el.classList.add('sel');
+    });
+    grid.appendChild(el);
+  });
+}
+
 function initNewGrp() {
   ngMem = [];
   ngEmoji = EMOJIS[0];
@@ -2260,6 +2369,7 @@ function initNewGrp() {
   if (srch) srch.value = '';
   renderNgChips();
   renderNgFriendList();
+  renderBgGrid('');
   const eg = document.getElementById('emoji-grid'); eg.innerHTML = '';
   EMOJIS.forEach(e => {
     const d = document.createElement('div');
@@ -2322,7 +2432,7 @@ function createGroup() {
   const name = document.getElementById('ng-name').value.trim();
   if (!name) { toast('⚠️ Escribe el nombre del grupo'); return; }
   if (ngMem.length < 2) { toast('⚠️ Selecciona al menos 2 amigos'); return; }
-  const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
+  const g = {id:uid(), name, emoji:ngEmoji, bg:bgUrl(ngSelectedBg), members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
   DB.groups.unshift(g);
   save();
   closeModal('m-newgrp');
@@ -2336,6 +2446,39 @@ function createGroup() {
 // ════════════════════════════════════════════
 let emMembers = [];
 
+
+var emSelectedBg = '';  // fondo elegido al editar
+
+function renderEmBgGrid(currentBgUrl) {
+  var grid = document.getElementById('em-bg-grid');
+  if (!grid) return;
+  // Determinar qué tema corresponde a la URL actual
+  emSelectedBg = '';
+  if (currentBgUrl) {
+    var found = BG_THEMES.find(function(t){ return t.file && (BG_BASE + t.file) === currentBgUrl; });
+    emSelectedBg = found ? found.id : '';
+  }
+  grid.innerHTML = '';
+  BG_THEMES.forEach(function(t) {
+    var el = document.createElement('div');
+    var isSel = (t.id === emSelectedBg);
+    if (!t.file) {
+      el.className = 'bg-opt bg-none' + (isSel ? ' sel' : '');
+      el.textContent = 'Sin fondo';
+    } else {
+      el.className = 'bg-opt' + (isSel ? ' sel' : '');
+      el.style.backgroundImage = "url('" + BG_BASE + t.file + "')";
+      el.innerHTML = '<div class="bg-check">✓</div><div class="bg-lbl">' + t.name + '</div>';
+    }
+    el.addEventListener('click', function() {
+      emSelectedBg = t.id;
+      grid.querySelectorAll('.bg-opt').forEach(function(o){ o.classList.remove('sel'); });
+      el.classList.add('sel');
+    });
+    grid.appendChild(el);
+  });
+}
+
 function initEditMembers() {
   const g = grp(); if (!g) return;
   emMembers = g.members.slice();
@@ -2343,6 +2486,7 @@ function initEditMembers() {
   if (srch) srch.value = '';
   renderEmChips();
   renderEmFriendList();
+  renderEmBgGrid(g.bg || '');
 }
 
 function renderEmChips() {
@@ -2405,6 +2549,9 @@ function saveMembers() {
   if (emMembers.length < 2) { toast('⚠️ El grupo necesita al menos 2 personas'); return; }
   const added = emMembers.filter(m => !g.members.includes(m));
   g.members = emMembers.slice();
+  // Guardar fondo elegido (o quitarlo si es "sin fondo")
+  var newBg = bgUrl(emSelectedBg);
+  if (newBg) g.bg = newBg; else delete g.bg;
   save();
   closeModal('m-edit-members');
   document.getElementById('g-mems').textContent = g.members.join(' · ');
@@ -2803,6 +2950,15 @@ if ('serviceWorker' in navigator) {
           <button onclick="welcomeCreateMe()" style="background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:0 18px;border-radius:11px;cursor:pointer">Crear</button>
         </div>
       </div>
+    </div>
+  </div>
+  <!-- ══ MODAL SELECTOR USUARIO ══ -->
+  <div class="modal-bg" id="m-me-selector" onclick="closeOut(event,'m-me-selector')">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <h2 style="font-family:var(--ff-head);font-weight:800;font-size:19px;color:var(--txt);margin-bottom:4px">¿Quién eres?</h2>
+      <p style="font-size:13px;color:var(--muted2);margin-bottom:16px">Elige tu nombre para ver tus saldos personales.</p>
+      <div id="me-selector-list" style="max-height:50vh;overflow-y:auto"></div>
     </div>
   </div>
 </body>
