@@ -121,8 +121,7 @@ body {
 /* ─── SCROLL AREA ───────────────────────────────────────────────── */
 .sb {
   flex: 1; overflow-y: auto; overflow-x: hidden;
-  padding: 0 16px;
-  padding-bottom: calc(24px + var(--sab));
+  padding: 0 16px 24px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
@@ -159,8 +158,11 @@ body {
 .bnav {
   display: flex; justify-content: space-around; align-items: center;
   background: var(--surface); border-top: 1px solid var(--border);
-  padding: 10px 0;
-  padding-bottom: max(12px, calc(10px + var(--sab)));
+  padding: 9px 0;
+  /* En iOS standalone --sab ≈ 34px (indicador de inicio): usamos ESE valor,
+     no lo sumamos a un extra, para que los iconos no queden flotando alto.
+     En Android/web --sab = 0 → cae al mínimo de 10px. */
+  padding-bottom: max(10px, var(--sab));
   flex-shrink: 0; z-index: 10;
 }
 .nav-item {
