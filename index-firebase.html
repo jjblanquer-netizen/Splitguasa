@@ -155,7 +155,8 @@ body {
 .bnav {
   display: flex; justify-content: space-around; align-items: center;
   background: var(--surface); border-top: 1px solid var(--border);
-  padding: 8px 0; padding-bottom: calc(8px + var(--sab));
+  padding: 10px 0;
+  padding-bottom: max(12px, calc(10px + var(--sab)));
   flex-shrink: 0; z-index: 10;
 }
 .nav-item {
@@ -278,6 +279,8 @@ body {
 .group-card.has-bg .group-avatars .av-mini { border-color: rgba(255,255,255,.3); }
 .group-members-txt { font-size: 13px; color: var(--muted2); margin-left: 8px; }
 .group-total { font-family: var(--ff-head); font-weight: 800; font-size: 19px; color: var(--acc); }
+.group-total-sub { font-size: 10px; color: var(--muted2); margin-top: -1px; }
+.group-card.has-bg .group-total-sub { color: rgba(255,255,255,.75); text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 
 /* ─── EXPENSE ITEM ──────────────────────────────────────────────── */
 .exp-item {
@@ -631,9 +634,9 @@ strong { font-weight: 600; }
 }
 
 /* Tabs separados del hero */
-.grp-tabs { margin-top: 14px; }
+.grp-tabs { margin-top: 20px; }
 /* Más aire bajo la cabecera para que la imagen respire */
-.grp-hdr { padding: 2px 16px 22px; }
+.grp-hdr { padding: 4px 16px 30px; }
 </style>
 </head>
 <body>
@@ -1364,11 +1367,24 @@ function loadTheme() {
 function goTab(tab) {
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
   document.getElementById('scr-'+tab).classList.add('on');
+  setActiveNav(tab);
   if (tab==='activity') renderActivity();
   if (tab==='report')   renderReport();
   if (tab==='home')     renderHome();
   if (tab==='friends')  renderYoModal();
   if (tab==='settings') { var t='dark'; try{t=localStorage.getItem('sg_theme')||'dark';}catch(e){} updateThemeButtons(t); renderSettingsMe(); }
+}
+
+// Marca como activo solo el botón de la pantalla actual (en todas las barras)
+function setActiveNav(tab) {
+  document.querySelectorAll('.bnav .nav-item').forEach(function(el) {
+    el.classList.remove('on');
+    el.style.color = '';
+    var oc = el.getAttribute('onclick') || '';
+    if (oc.indexOf("goTab('" + tab + "')") >= 0) {
+      el.classList.add('on');
+    }
+  });
 }
 function closeGroup() { goTab('home'); curGid=null; }
 
@@ -1869,8 +1885,8 @@ function renderHome() {
     var balHtml = '';
     if (myb && Math.abs(myb.net) > 0.005) {
       balHtml = myb.net > 0
-        ? '<div style="text-align:right"><div style="color:var(--acc);font-family:var(--ff-head);font-weight:700;font-size:14px">+' + fmt(myb.net) + '</div><div style="font-size:10px;color:var(--muted2)">te deben</div></div>'
-        : '<div style="text-align:right"><div style="color:var(--acc3);font-family:var(--ff-head);font-weight:700;font-size:14px">-' + fmt(Math.abs(myb.net)) + '</div><div style="font-size:10px;color:var(--muted2)">debes</div></div>';
+        ? '<div style="text-align:right"><div class="group-total">+' + fmt(myb.net) + '</div><div class="group-total-sub">te deben</div></div>'
+        : '<div style="text-align:right"><div class="group-total" style="color:var(--acc3)">-' + fmt(Math.abs(myb.net)) + '</div><div class="group-total-sub">debes</div></div>';
     }
 
     // Avatares de miembros (máx 3 + contador)
@@ -2365,13 +2381,10 @@ function renderYoModal() {
 }
 
 function updateYoBanner() {
-  const me = myName();
   // El botón SIEMPRE dice "Amigos" (nunca el nombre del usuario)
   document.querySelectorAll('.nav-yo-lbl').forEach(el => el.textContent = 'Amigos');
-  // Color del icono según si está identificado
-  document.querySelectorAll('.nav-yo').forEach(el => {
-    el.style.color = me ? 'var(--acc)' : '';
-  });
+  // El color activo lo gestiona goTab según la pantalla, no la identificación
+  document.querySelectorAll('.nav-yo').forEach(el => { el.style.color = ''; });
 }
 
 // ════════════════════════════════════════════
