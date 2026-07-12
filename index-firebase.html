@@ -156,35 +156,58 @@ body {
 
 /* ─── BOTTOM NAV ────────────────────────────────────────────────── */
 .bnav {
-  display: flex; align-items: stretch;
-  background: var(--surface); border-top: 1px solid var(--border);
-  padding: 6px 0;
-  /* En iOS standalone --sab ≈ 34px (indicador de inicio). En Android/web = 0. */
-  padding-bottom: max(8px, var(--sab));
-  flex-shrink: 0; z-index: 10;
+  /* Barra de pestañas con ALTURA EXPLÍCITA:
+     56px de contenido + el área segura de iOS (indicador de inicio).
+     Con box-sizing:border-box, el padding-bottom queda DENTRO de la altura,
+     así el área de iconos siempre mide exactamente 56px. */
+  height: calc(56px + var(--sab));
+  padding-bottom: var(--sab);
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  /* Aspecto de barra de app: ligera elevación sobre el contenido */
+  box-shadow: 0 -1px 12px rgba(0,0,0,.28);
 }
+body.light .bnav { box-shadow: 0 -1px 10px rgba(0,0,0,.06); }
+
 .nav-item {
-  /* flex:1 → cada botón ocupa exactamente 1/5 del ancho, siempre.
-     Así no se mueven aunque las etiquetas tengan distinta longitud. */
+  /* Cada botón = exactamente 1/5 del ancho. Nunca cambia de tamaño. */
   flex: 1 1 0;
   min-width: 0;
-  display: flex; flex-direction: column; align-items: center;
+  height: 100%;                 /* ocupa los 56px de contenido */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 3px;
-  height: 44px;              /* altura fija: nada se desplaza al cambiar de estado */
+  gap: 4px;
   cursor: pointer;
   padding: 0;
   color: var(--muted);
   transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
 }
+
 .nav-item span {
-  font-size: 11px; font-weight: 500; letter-spacing: .2px;
-  white-space: nowrap;   /* nunca parte en dos líneas */
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .1px;
   line-height: 1;
+  white-space: nowrap;          /* nunca parte en dos líneas */
 }
-/* El estado activo SOLO cambia el color: nunca el tamaño ni el peso */
+
+/* El estado activo SOLO cambia el color: nunca tamaño, peso ni posición */
 .nav-item.on { color: var(--acc); }
-.nav-item svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+
+.nav-item svg { width: 22px; height: 22px; flex-shrink: 0; display: block; }
+
+
+/* El estado activo SOLO cambia el color: nunca el tamaño ni el peso */
+
+
 
 /* ─── SYNC BAR ──────────────────────────────────────────────────── */
 #sbar {
