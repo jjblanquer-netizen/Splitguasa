@@ -80,12 +80,15 @@ body.light .fab { box-shadow: 0 4px 18px rgba(13,148,136,.35); }
 input, select, button, textarea { -webkit-appearance: none; appearance: none; font-family: var(--ff-body); }
 
 html {
-  height: 100%; height: -webkit-fill-available;
+  height: 100%;
   background: var(--bg);
   overscroll-behavior: none;
 }
 body {
-  height: 100vh; height: -webkit-fill-available;
+  /* Altura: 100dvh se adapta a la barra dinámica de iOS/Android.
+     Los fallbacks anteriores se mantienen para navegadores antiguos. */
+  height: 100vh;
+  height: var(--app-h, 100dvh);
   width: 100%;
   background: var(--bg);
   color: var(--txt);
@@ -94,6 +97,7 @@ body {
   line-height: 1.5;
   overflow: hidden;
   position: fixed;
+  top: 0; left: 0; right: 0;
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -108,6 +112,8 @@ body {
   background: var(--bg);
   overflow: hidden;
 }
+/* El loading también a pantalla completa */
+#loading { height: 100%; }
 
 /* ─── SCREENS ───────────────────────────────────────────────────── */
 .scr { display: none; flex-direction: column; flex: 1; overflow: hidden; }
@@ -1000,6 +1006,27 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
 </div><!-- /app -->
 
 <script>
+
+// ════════════════════════════════════════════
+// FIX ALTURA iOS: ajusta la altura real de la ventana
+// (Safari calcula mal 100vh cuando la barra de direcciones aparece/desaparece)
+// ════════════════════════════════════════════
+(function() {
+  function setAppHeight() {
+    // Usa la altura real visible del viewport
+    var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    document.documentElement.style.setProperty('--app-h', h + 'px');
+  }
+  setAppHeight();
+  window.addEventListener('resize', setAppHeight);
+  window.addEventListener('orientationchange', function() {
+    setTimeout(setAppHeight, 150);
+  });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', setAppHeight);
+  }
+})();
+
 // ════════════════════════════════════════════
 // FIREBASE — base de datos en tiempo real
 // ════════════════════════════════════════════
