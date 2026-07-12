@@ -720,7 +720,7 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
 
 /* Rejilla de 3 estadísticas (pestaña Gastos del grupo) */
 .stats-grid.cols3 { grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.stats-grid.cols3 .stat-box { padding: 11px 9px; }
+.stats-grid.cols3 .stat-box { padding: 11px 6px; text-align: center; }
 .stats-grid.cols3 .stat-val { font-size: 15px; }
 .stats-grid.cols3 .stat-lbl { font-size: 9.5px; letter-spacing: .3px; }
 </style>
@@ -2026,7 +2026,7 @@ function buildPaidDonut(bals) {
   });
   legend += '</div>';
 
-  return '<div class="sec-lbl">Quién ha pagado</div>' +
+  return '<div class="sec-lbl">Cuánto ha pagado cada persona</div>' +
     '<div class="card" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center">' +
       svg + legend +
     '</div>';
