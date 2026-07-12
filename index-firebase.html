@@ -996,7 +996,7 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
     </div>
 
     <div id="admin-groups-sec" style="display:none">
-      <div class="sec-lbl" style="margin-top:18px">Grupos <span style="color:var(--acc2);font-size:9px">· ADMIN</span></div>
+      <div class="sec-lbl" style="margin-top:18px">Administración <span style="color:var(--acc2);font-size:9px">· ADMIN</span></div>
       <div class="card" onclick="openModal('m-newgrp')" style="cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:9px">
         <div style="width:42px;height:42px;border-radius:12px;background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc);font-size:22px;font-weight:700">+</div>
         <div style="flex:1;min-width:0">
@@ -1016,9 +1016,15 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
         <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
       </div>
 
-      <div class="card" onclick="changeAdminPin()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-top:9px">
-        <span style="color:var(--txt2);font-size:14px">🔐 Cambiar PIN de administrador</span>
-        <span style="color:var(--muted);font-size:18px">›</span>
+      <div class="card" onclick="changeAdminPin()" style="cursor:pointer;display:flex;align-items:center;gap:12px;margin-top:9px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc4)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--txt)">Cambiar PIN</div>
+          <div style="font-size:12px;color:var(--muted2);margin-top:1px">Clave de acceso de administrador</div>
+        </div>
+        <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
       </div>
     </div>
 
@@ -1255,9 +1261,21 @@ function mergeDB(remote, local) {
 
   var result = { v: Math.max(remote.v||0, local.v||0), ts: Date.now(), deleted: Object.keys(deleted) };
 
-  // Campos de administración: conservar (si no, se perderían al fusionar).
-  // Gana el local si lo tiene; si no, el del servidor.
-  result.adminPin = (local.adminPin !== undefined && local.adminPin !== null) ? local.adminPin : remote.adminPin;
+  // ── PIN de administrador ──
+  // Gana el que tenga la marca de tiempo MÁS RECIENTE. Así un dispositivo con
+  // datos viejos no puede pisar el PIN real, pero un cambio legítimo sí se propaga.
+  var lts = local.adminPinTs || 0;
+  var rts = remote.adminPinTs || 0;
+  if (remote.adminPin && rts > lts) {
+    result.adminPin   = remote.adminPin;
+    result.adminPinTs = rts;
+  } else if (local.adminPin) {
+    result.adminPin   = local.adminPin;
+    result.adminPinTs = lts;
+  } else if (remote.adminPin) {
+    result.adminPin   = remote.adminPin;
+    result.adminPinTs = rts;
+  }
   var hg = (Array.isArray(local.hiddenGroups) ? local.hiddenGroups
           : (Array.isArray(remote.hiddenGroups) ? remote.hiddenGroups : []));
   result.hiddenGroups = hg;
@@ -1433,9 +1451,30 @@ function isAdminUser() {
   return !!me && me.trim().toLowerCase() === ADMIN_NAME.toLowerCase();
 }
 
-// ¿Hay PIN configurado en la base de datos?
+// ¿Hay PIN configurado en la base de datos (según lo que tenemos cargado)?
 function hasAdminPin() {
   return !!(DB && DB.adminPin);
+}
+
+// Consulta el PIN REAL directamente al servidor.
+// CRÍTICO: sin esto, un móvil que aún no ha sincronizado creería que no hay PIN
+// y permitiría crear uno nuevo, pisando el verdadero.
+// Devuelve: { ok:true, pin:<hash|null> }  o  { ok:false } si no hay conexión.
+async function fetchServerPin() {
+  try {
+    var remote = await fbRead();
+    if (remote && typeof remote === 'object') {
+      // Guardar lo que diga el servidor en nuestra copia local
+      if (remote.adminPin) {
+        DB.adminPin   = remote.adminPin;
+        DB.adminPinTs = remote.adminPinTs || 0;
+      }
+      return { ok: true, pin: remote.adminPin || null };
+    }
+    return { ok: true, pin: null };
+  } catch (e) {
+    return { ok: false };
+  }
 }
 
 // ¿Este dispositivo ha desbloqueado el modo administrador?
@@ -1463,7 +1502,8 @@ function createAdminPin() {
   var p2 = prompt('Repite el PIN para confirmar:');
   if (p2 === null) return false;
   if (String(p2).trim() !== p1) { toast('⚠️ Los PIN no coinciden'); return false; }
-  DB.adminPin = hashPin(p1);
+  DB.adminPin   = hashPin(p1);
+  DB.adminPinTs = Date.now();
   setAdminUnlocked(true);
   save();
   toast('🔐 PIN creado. Ya eres administrador.');
@@ -1483,6 +1523,28 @@ function askAdminPin() {
   return true;
 }
 
+
+// Flujo de acceso como administrador: SIEMPRE consulta el servidor primero.
+// Devuelve true si el usuario queda autenticado como admin.
+async function adminLoginFlow() {
+  var res = await fetchServerPin();
+
+  if (!res.ok) {
+    // Sin conexión: no podemos verificar. Si no tenemos PIN guardado, no
+    // permitimos crear uno (evita que alguien sin red se haga administrador).
+    if (!hasAdminPin()) {
+      toast('⚠️ Sin conexión: no se puede verificar el administrador');
+      return false;
+    }
+    return askAdminPin();   // usamos el PIN que ya conocíamos
+  }
+
+  if (res.pin) {
+    return askAdminPin();   // ya existe en el servidor → pedirlo
+  }
+  return createAdminPin();  // no existe en NINGÚN sitio → crearlo
+}
+
 // Cambiar el PIN (solo el administrador, desde Ajustes)
 function changeAdminPin() {
   if (!isAdmin()) { toast('⚠️ Solo el administrador puede cambiar el PIN'); return; }
@@ -1496,7 +1558,8 @@ function changeAdminPin() {
   var rep = prompt('Repite el nuevo PIN:');
   if (rep === null) return;
   if (String(rep).trim() !== nuevo) { toast('⚠️ Los PIN no coinciden'); return; }
-  DB.adminPin = hashPin(nuevo);
+  DB.adminPin   = hashPin(nuevo);
+  DB.adminPinTs = Date.now();
   save();
   toast('🔐 PIN actualizado');
 }
@@ -1657,28 +1720,24 @@ function renderMeSelectorList() {
         return;
       }
 
-      // Si eliges al ADMINISTRADOR, hace falta el PIN
+      // Si eliges al ADMINISTRADOR, hace falta el PIN (se verifica en el servidor)
       if (name.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) {
-        setName(name);                       // identificar primero (createAdminPin usa save())
-        var ok;
-        if (!hasAdminPin()) {
-          ok = createAdminPin();             // primera vez: crearlo
-        } else {
-          ok = askAdminPin();                // ya existe: pedirlo
-        }
-        if (!ok) {
-          setName(cur || '');                // revertir si no lo introduce
-          setAdminUnlocked(false);
+        setName(name);
+        adminLoginFlow().then(function(ok) {
+          if (!ok) {
+            setName(cur || '');              // revertir si no supera el PIN
+            setAdminUnlocked(false);
+          }
+          closeModal('m-me-selector');
           renderSettingsMe();
           renderAll();
-          return;
-        }
-      } else {
-        setName(name);
-        setAdminUnlocked(false);             // los demás no son admin
-        toast('👋 Hola, ' + name);
+        });
+        return;
       }
 
+      setName(name);
+      setAdminUnlocked(false);               // los demás no son admin
+      toast('👋 Hola, ' + name);
       closeModal('m-me-selector');
       renderSettingsMe();
       renderAll();
@@ -3451,15 +3510,19 @@ function renderWelcomeList() {
 }
 
 function welcomeSelectMe(name) {
-  // Si es el administrador, hace falta el PIN
+  // Si es el administrador, hace falta el PIN (verificado contra el servidor)
   if (name.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) {
     setName(name);
-    var ok = hasAdminPin() ? askAdminPin() : createAdminPin();
-    if (!ok) { setName(''); setAdminUnlocked(false); return; }   // sigue en el onboarding
-  } else {
-    setName(name);
-    setAdminUnlocked(false);
+    adminLoginFlow().then(function(ok) {
+      if (!ok) { setName(''); setAdminUnlocked(false); return; }  // sigue en el onboarding
+      closeModal('m-welcome');
+      renderAll();
+      toast('👋 ¡Hola, ' + name + '!');
+    });
+    return;
   }
+  setName(name);
+  setAdminUnlocked(false);
   closeModal('m-welcome');
   renderAll();
   toast('👋 ¡Hola, ' + name + '!');
