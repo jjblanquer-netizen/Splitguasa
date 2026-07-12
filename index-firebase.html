@@ -717,6 +717,12 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
   letter-spacing: .6px;
   margin: 2px 0 10px;         /* menos aire arriba */
 }
+
+/* Rejilla de 3 estadísticas (pestaña Gastos del grupo) */
+.stats-grid.cols3 { grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.stats-grid.cols3 .stat-box { padding: 11px 9px; }
+.stats-grid.cols3 .stat-val { font-size: 15px; }
+.stats-grid.cols3 .stat-lbl { font-size: 9.5px; letter-spacing: .3px; }
 </style>
 </head>
 <body>
@@ -856,6 +862,17 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
   </div>
 </div>
 
+<!-- ══ MODAL: OCULTAR GRUPOS (admin) ══ -->
+<div class="modal-bg" id="m-hide-groups" onclick="closeOut(event,'m-hide-groups')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🙈 Ocultar grupos</div>
+    <p style="color:var(--muted2);margin-bottom:14px;font-size:13px;line-height:1.5">Los grupos ocultos no aparecerán en Inicio <strong>para nadie</strong>. Sus datos se conservan.</p>
+    <div id="hide-groups-list" style="max-height:50vh;overflow-y:auto;margin-bottom:14px"></div>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-hide-groups')">Hecho</button>
+    <div class="pb"></div>
+  </div>
+</div>
 <!-- ══ MODAL: DELETE PERSON ══ -->
 <div class="modal-bg" id="m-del-person" onclick="closeOut(event,'m-del-person')">
   <div class="sheet">
@@ -921,7 +938,7 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
     <span class="topbar-title">Amigos</span>
   </div>
   <div class="sb">
-    <div class="field" style="margin-top:4px">
+    <div class="field" id="add-friend-field" style="margin-top:4px;display:none">
       <label>Nuevo amigo</label>
       <div class="chip-row">
         <input id="friend-inp" type="text" placeholder="Nombre..." autocomplete="off" autocapitalize="words" onkeydown="friendKd(event)">
@@ -978,14 +995,31 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
       <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
     </div>
 
-    <div class="sec-lbl" style="margin-top:18px">Grupos</div>
-    <div class="card" onclick="openModal('m-newgrp')" style="cursor:pointer;display:flex;align-items:center;gap:12px">
-      <div style="width:42px;height:42px;border-radius:12px;background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc);font-size:22px;font-weight:700">+</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:15px;color:var(--txt)">Crear nuevo grupo</div>
-        <div style="font-size:12px;color:var(--muted2);margin-top:1px">Empieza a compartir gastos</div>
+    <div id="admin-groups-sec" style="display:none">
+      <div class="sec-lbl" style="margin-top:18px">Grupos <span style="color:var(--acc2);font-size:9px">· ADMIN</span></div>
+      <div class="card" onclick="openModal('m-newgrp')" style="cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:9px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc);font-size:22px;font-weight:700">+</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--txt)">Crear nuevo grupo</div>
+          <div style="font-size:12px;color:var(--muted2);margin-top:1px">Empieza a compartir gastos</div>
+        </div>
+        <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
       </div>
-      <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+      <div class="card" onclick="openHideGroups()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc2)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--txt)">Ocultar grupos</div>
+          <div id="hidden-count" style="font-size:12px;color:var(--muted2);margin-top:1px">Elige qué grupos no se ven en Inicio</div>
+        </div>
+        <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+      </div>
+
+      <div class="card" onclick="changeAdminPin()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-top:9px">
+        <span style="color:var(--txt2);font-size:14px">🔐 Cambiar PIN de administrador</span>
+        <span style="color:var(--muted);font-size:18px">›</span>
+      </div>
     </div>
 
     <div class="sec-lbl" style="margin-top:18px">Compartir</div>
@@ -1216,8 +1250,17 @@ function mergeDB(remote, local) {
   var deleted = {};
   (Array.isArray(local.deleted)?local.deleted:[]).forEach(function(d){ deleted[d]=true; });
   (Array.isArray(remote.deleted)?remote.deleted:[]).forEach(function(d){ deleted[d]=true; });
+  // Un amigo re-creado a propósito revive: su tombstone deja de aplicar
+  Object.keys(revivedFriends).forEach(function(name){ delete deleted['fr:' + name]; });
 
   var result = { v: Math.max(remote.v||0, local.v||0), ts: Date.now(), deleted: Object.keys(deleted) };
+
+  // Campos de administración: conservar (si no, se perderían al fusionar).
+  // Gana el local si lo tiene; si no, el del servidor.
+  result.adminPin = (local.adminPin !== undefined && local.adminPin !== null) ? local.adminPin : remote.adminPin;
+  var hg = (Array.isArray(local.hiddenGroups) ? local.hiddenGroups
+          : (Array.isArray(remote.hiddenGroups) ? remote.hiddenGroups : []));
+  result.hiddenGroups = hg;
 
   // Fusionar friends (unión), respetando tombstones de amigos borrados
   var friendsSet = {};
@@ -1257,9 +1300,19 @@ function mergeGroup(remote, local, deleted) {
   (Array.isArray(remote.expenses)?remote.expenses:[]).forEach(function(e){ if(e&&e.id && !deleted['exp:'+e.id]) expById[e.id]=e; });
   (Array.isArray(local.expenses)?local.expenses:[]).forEach(function(e){ if(e&&e.id && !deleted['exp:'+e.id]) expById[e.id]=e; });
   g.expenses = Object.keys(expById).map(function(k){ return expById[k]; });
-  // settled: unión por key
+  // settled: unión por key, descartando los que referencian a alguien
+  // borrado o renombrado (si no, al renombrar quedarían DUPLICADOS: uno con
+  // el nombre viejo del servidor y otro con el nuevo).
   var setByKey = {};
-  function addSettled(arr){ (Array.isArray(arr)?arr:[]).forEach(function(s){ var k = typeof s==='string'?s:(s&&s.key); if(k) setByKey[k]=s; }); }
+  function addSettled(arr){
+    (Array.isArray(arr)?arr:[]).forEach(function(s){
+      var k = typeof s === 'string' ? s : (s && s.key);
+      if (!k) return;
+      var parts = String(k).split('|');
+      if (deleted['fr:' + parts[0]] || deleted['fr:' + parts[1]]) return;  // clave obsoleta
+      setByKey[k] = s;
+    });
+  }
   addSettled(remote.settled); addSettled(local.settled);
   g.settled = Object.keys(setByKey).map(function(k){ return setByKey[k]; });
   return g;
@@ -1286,6 +1339,7 @@ async function sync(silent = false) {
         DB = migrateSettlements(remote);
         if (!Array.isArray(DB.groups))  DB.groups  = [];
         if (!Array.isArray(DB.friends)) DB.friends = [];
+        if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
         DB.groups.forEach(function(g) {
           if (!Array.isArray(g.expenses))    g.expenses    = [];
           if (!Array.isArray(g.members))     g.members     = [];
@@ -1314,6 +1368,7 @@ async function manualSync() {
       DB = migrateSettlements(remote);
       if (!Array.isArray(DB.groups))  DB.groups  = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
+      if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
       DB.groups.forEach(g => {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
@@ -1352,6 +1407,188 @@ function save() {
 // ════════════════════════════════════════════
 // TEMA CLARO / OSCURO
 // ════════════════════════════════════════════
+
+
+// ════════════════════════════════════════════
+// ADMINISTRADOR (Jota) + PIN
+// ────────────────────────────────────────────
+// NOTA: la app es HTML público y la base de datos es abierta, así que esto
+// NO es seguridad real: es un candado para evitar cambios accidentales.
+// ════════════════════════════════════════════
+const ADMIN_NAME = 'Jota';
+
+// Hash sencillo del PIN: evita guardarlo en claro en la base de datos.
+function hashPin(pin) {
+  var h = 5381;
+  var s = String(pin);
+  for (var i = 0; i < s.length; i++) {
+    h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  }
+  return 'p' + h.toString(36);
+}
+
+// ¿El usuario identificado es el administrador (por nombre)?
+function isAdminUser() {
+  var me = myName();
+  return !!me && me.trim().toLowerCase() === ADMIN_NAME.toLowerCase();
+}
+
+// ¿Hay PIN configurado en la base de datos?
+function hasAdminPin() {
+  return !!(DB && DB.adminPin);
+}
+
+// ¿Este dispositivo ha desbloqueado el modo administrador?
+function adminUnlocked() {
+  try { return localStorage.getItem('sg_admin_ok') === '1'; } catch(e) { return false; }
+}
+function setAdminUnlocked(v) {
+  try {
+    if (v) localStorage.setItem('sg_admin_ok', '1');
+    else   localStorage.removeItem('sg_admin_ok');
+  } catch(e) {}
+}
+
+// Permiso efectivo: es Jota Y ha introducido el PIN en este dispositivo
+function isAdmin() {
+  return isAdminUser() && adminUnlocked();
+}
+
+// Crear el PIN por primera vez
+function createAdminPin() {
+  var p1 = prompt('Eres el administrador.\nCrea un PIN (4-8 dígitos):');
+  if (p1 === null) return false;
+  p1 = String(p1).trim();
+  if (!/^\d{4,8}$/.test(p1)) { toast('⚠️ El PIN debe tener entre 4 y 8 dígitos'); return false; }
+  var p2 = prompt('Repite el PIN para confirmar:');
+  if (p2 === null) return false;
+  if (String(p2).trim() !== p1) { toast('⚠️ Los PIN no coinciden'); return false; }
+  DB.adminPin = hashPin(p1);
+  setAdminUnlocked(true);
+  save();
+  toast('🔐 PIN creado. Ya eres administrador.');
+  return true;
+}
+
+// Pedir el PIN para desbloquear
+function askAdminPin() {
+  var p = prompt('Introduce el PIN de administrador:');
+  if (p === null) return false;
+  if (hashPin(String(p).trim()) !== DB.adminPin) {
+    toast('⚠️ PIN incorrecto');
+    return false;
+  }
+  setAdminUnlocked(true);
+  toast('🔓 Modo administrador activado');
+  return true;
+}
+
+// Cambiar el PIN (solo el administrador, desde Ajustes)
+function changeAdminPin() {
+  if (!isAdmin()) { toast('⚠️ Solo el administrador puede cambiar el PIN'); return; }
+  var actual = prompt('PIN actual:');
+  if (actual === null) return;
+  if (hashPin(String(actual).trim()) !== DB.adminPin) { toast('⚠️ PIN incorrecto'); return; }
+  var nuevo = prompt('Nuevo PIN (4-8 dígitos):');
+  if (nuevo === null) return;
+  nuevo = String(nuevo).trim();
+  if (!/^\d{4,8}$/.test(nuevo)) { toast('⚠️ El PIN debe tener entre 4 y 8 dígitos'); return; }
+  var rep = prompt('Repite el nuevo PIN:');
+  if (rep === null) return;
+  if (String(rep).trim() !== nuevo) { toast('⚠️ Los PIN no coinciden'); return; }
+  DB.adminPin = hashPin(nuevo);
+  save();
+  toast('🔐 PIN actualizado');
+}
+
+// Aviso estándar al intentar una acción reservada
+function denyNotAdmin() {
+  toast('🔒 Solo ' + ADMIN_NAME + ' (administrador) puede hacer esto');
+}
+
+
+// ════════════════════════════════════════════
+// OCULTAR GRUPOS (solo administrador)
+// ════════════════════════════════════════════
+function hiddenGroups() {
+  return Array.isArray(DB.hiddenGroups) ? DB.hiddenGroups : [];
+}
+function isGroupHidden(id) {
+  return hiddenGroups().indexOf(id) >= 0;
+}
+
+function openHideGroups() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  renderHideGroupsList();
+  openModal('m-hide-groups');
+}
+
+function renderHideGroupsList() {
+  var cont = document.getElementById('hide-groups-list');
+  if (!cont) return;
+  var groups = Array.isArray(DB.groups) ? DB.groups : [];
+  if (!groups.length) {
+    cont.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:14px 0">No hay grupos todavía.</div>';
+    return;
+  }
+  var h = '';
+  groups.forEach(function(g) {
+    var hidden = isGroupHidden(g.id);
+    h += '<div class="hide-grp-row" data-gid="' + esc(g.id) + '" style="display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:12px;cursor:pointer;margin-bottom:5px;border:1px solid ' + (hidden ? 'rgba(251,191,36,.35)' : 'var(--border)') + ';background:' + (hidden ? 'rgba(251,191,36,.08)' : 'var(--s2)') + '">';
+    h += '<span style="font-size:22px;flex-shrink:0">' + esc(g.emoji || '📁') + '</span>';
+    h += '<div style="flex:1;min-width:0">';
+    h += '<div style="font-weight:600;color:' + (hidden ? 'var(--muted2)' : 'var(--txt)') + ';' + (hidden ? 'text-decoration:line-through' : '') + '">' + esc(g.name) + '</div>';
+    h += '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + (hidden ? 'Oculto en Inicio' : 'Visible') + '</div>';
+    h += '</div>';
+    h += '<span style="font-size:18px;flex-shrink:0">' + (hidden ? '🙈' : '👁️') + '</span>';
+    h += '</div>';
+  });
+  cont.innerHTML = h;
+
+  cont.querySelectorAll('.hide-grp-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      toggleHideGroup(row.getAttribute('data-gid'));
+    });
+  });
+}
+
+function toggleHideGroup(gid) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
+  var i = DB.hiddenGroups.indexOf(gid);
+  if (i >= 0) DB.hiddenGroups.splice(i, 1);
+  else        DB.hiddenGroups.push(gid);
+  save();
+  renderHideGroupsList();
+  updateHiddenCount();
+  renderHome();
+}
+
+function updateHiddenCount() {
+  var el = document.getElementById('hidden-count');
+  if (!el) return;
+  var n = hiddenGroups().length;
+  el.textContent = n ? (n + ' grupo' + (n===1?'':'s') + ' oculto' + (n===1?'':'s')) : 'Elige qué grupos no se ven en Inicio';
+}
+
+
+// Muestra u oculta las opciones reservadas al administrador
+function applyAdminUI() {
+  var admin = isAdmin();
+
+  // Sección "Grupos" de Ajustes (crear grupo, ocultar grupos, cambiar PIN)
+  var sec = document.getElementById('admin-groups-sec');
+  if (sec) sec.style.display = admin ? 'block' : 'none';
+  updateHiddenCount();
+
+  // Campo "Nuevo amigo" de la pantalla Amigos
+  var ff = document.getElementById('add-friend-field');
+  if (ff) ff.style.display = admin ? 'block' : 'none';
+
+  // Aviso para los no administradores en la pantalla Amigos
+  var note = document.getElementById('friends-admin-note');
+  if (note) note.style.display = admin ? 'none' : 'block';
+}
 
 function renderSettingsMe() {
   // Actualiza la tarjeta compacta de "Tu perfil" en Ajustes
@@ -1408,13 +1645,40 @@ function renderMeSelectorList() {
     row.addEventListener('click', function() {
       var name = row.getAttribute('data-name');
       var cur = myName();
+
+      // Deseleccionarse
       if (cur && name.trim().toLowerCase() === cur.trim().toLowerCase()) {
         setName('');
+        setAdminUnlocked(false);            // al salir, se pierde el modo admin
         toast('Ya no estás identificado');
+        closeModal('m-me-selector');
+        renderSettingsMe();
+        renderAll();
+        return;
+      }
+
+      // Si eliges al ADMINISTRADOR, hace falta el PIN
+      if (name.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) {
+        setName(name);                       // identificar primero (createAdminPin usa save())
+        var ok;
+        if (!hasAdminPin()) {
+          ok = createAdminPin();             // primera vez: crearlo
+        } else {
+          ok = askAdminPin();                // ya existe: pedirlo
+        }
+        if (!ok) {
+          setName(cur || '');                // revertir si no lo introduce
+          setAdminUnlocked(false);
+          renderSettingsMe();
+          renderAll();
+          return;
+        }
       } else {
         setName(name);
+        setAdminUnlocked(false);             // los demás no son admin
         toast('👋 Hola, ' + name);
       }
+
       closeModal('m-me-selector');
       renderSettingsMe();
       renderAll();
@@ -1503,8 +1767,8 @@ function goTab(tab) {
   if (tab==='activity') renderActivity();
   if (tab==='report')   renderReport();
   if (tab==='home')     renderHome();
-  if (tab==='friends')  renderYoModal();
-  if (tab==='settings') { var t='dark'; try{t=localStorage.getItem('sg_theme')||'dark';}catch(e){} updateThemeButtons(t); renderSettingsMe(); paintSyncState(); }
+  if (tab==='friends')  { renderYoModal(); applyAdminUI(); }
+  if (tab==='settings') { var t='dark'; try{t=localStorage.getItem('sg_theme')||'dark';}catch(e){} updateThemeButtons(t); renderSettingsMe(); paintSyncState(); applyAdminUI(); }
 }
 
 // Marca como activo solo el botón de la pantalla actual (en todas las barras)
@@ -1594,11 +1858,13 @@ function catBadge(cid) {
 function renderGastos(g) {
   if (!g.expenses.length) return '<div class="empty"><div class="empty-icon">💸</div><p>Sin gastos todavía.<br>Pulsa <strong>+</strong> para añadir uno.</p></div>';
   const sorted=[...g.expenses].sort((a,b)=>b.date.localeCompare(a.date));
-  const total=g.expenses.reduce((a,e)=>a+e.amount,0);
-  let h=`<div class="stats-grid">
-    <div class="stat-box"><div class="stat-lbl">Total grupo</div><div class="stat-val">${fmt(total)}</div></div>
-    <div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val">${g.expenses.length}</div></div>
-  </div><div class="sec-lbl">Historial</div>`;
+  const total=g.expenses.reduce((a,e)=>a+(e.isSettlement?0:e.amount),0);
+  const nMem = (Array.isArray(g.members)?g.members:[]).length || 1;
+  let h = '<div class="stats-grid cols3">' +
+    '<div class="stat-box"><div class="stat-lbl">Total grupo</div><div class="stat-val">' + fmt(total) + '</div></div>' +
+    '<div class="stat-box"><div class="stat-lbl">Media/persona</div><div class="stat-val">' + fmt(total/nMem) + '</div></div>' +
+    '<div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val">' + g.expenses.length + '</div></div>' +
+  '</div><div class="sec-lbl">Historial</div>';
   sorted.forEach(e=>{
     const pp=e.amount/(e.splitAmong.length||1);
     h+=`<div class="exp-item" onclick="openEditExpense('${e.id}')" style="cursor:pointer;">
@@ -1654,16 +1920,66 @@ function computeBals(g) {
     return { name: m, paid: p[m] || 0, owes: o[m] || 0, net: (p[m] || 0) - (o[m] || 0) };
   });
 }
+
+// Gráfico circular (donut) de lo PAGADO por cada persona
+function buildPaidDonut(bals) {
+  var items = (bals || []).filter(function(b){ return b.paid > 0.005; })
+                          .sort(function(a,b){ return b.paid - a.paid; });
+  if (!items.length) return '';
+
+  var total = items.reduce(function(s,b){ return s + b.paid; }, 0);
+  if (total <= 0) return '';
+
+  var size = 168, r = 58, cx = size/2, cy = size/2, sw = 26;
+  var C = 2 * Math.PI * r;
+  var offset = 0;
+  var arcs = '';
+
+  items.forEach(function(b) {
+    var frac = b.paid / total;
+    var len  = frac * C;
+    var col  = avc(b.name);
+    arcs += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none"' +
+            ' stroke="' + col + '" stroke-width="' + sw + '"' +
+            ' stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) + '"' +
+            ' stroke-dashoffset="' + (-offset).toFixed(2) + '"' +
+            ' transform="rotate(-90 ' + cx + ' ' + cy + ')"></circle>';
+    offset += len;
+  });
+
+  var svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" style="width:168px;height:168px;flex-shrink:0">' +
+    arcs +
+    '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="10" fill="var(--muted)">Total</text>' +
+    '<text x="' + cx + '" y="' + (cy + 13) + '" text-anchor="middle" font-size="15" font-weight="800" fill="var(--txt)" font-family="Outfit, sans-serif">' + fmt(total) + '</text>' +
+    '</svg>';
+
+  // Leyenda
+  var legend = '<div style="flex:1;min-width:0">';
+  items.forEach(function(b) {
+    var col = avc(b.name);
+    var pct = Math.round(b.paid / total * 100);
+    legend += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">' +
+      '<span style="width:10px;height:10px;border-radius:3px;background:' + col + ';flex-shrink:0"></span>' +
+      '<span style="flex:1;min-width:0;font-size:13px;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.name) + '</span>' +
+      '<span style="font-size:12px;color:var(--muted);flex-shrink:0">' + pct + '%</span>' +
+      '<span style="font-family:var(--ff-head);font-weight:700;font-size:13px;color:var(--txt);flex-shrink:0;min-width:58px;text-align:right">' + fmt(b.paid) + '</span>' +
+    '</div>';
+  });
+  legend += '</div>';
+
+  return '<div class="sec-lbl">Quién ha pagado</div>' +
+    '<div class="card" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center">' +
+      svg + legend +
+    '</div>';
+}
+
 function renderBals(g) {
   var bals = computeBals(g);
   var total = (Array.isArray(g.expenses)?g.expenses:[]).reduce(function(a,e){ return a + (e.isSettlement?0:e.amount); }, 0);
   var me = myName();
   var nMembers = (Array.isArray(g.members)?g.members:[]).length || 1;
 
-  var h = '<div class="stats-grid">';
-  h += '<div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val">' + fmt(total) + '</div></div>';
-  h += '<div class="stat-box"><div class="stat-lbl">Media/persona</div><div class="stat-val">' + fmt(total/nMembers) + '</div></div>';
-  h += '</div>';
+  var h = '';
 
   // Tu saldo destacado
   var myb = bals.find(function(b){ return me && b.name.trim().toLowerCase()===me.trim().toLowerCase(); });
@@ -1676,6 +1992,9 @@ function renderBals(g) {
     h += '<div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:' + color + '">' + msg + '</div>';
     h += '</div>';
   }
+
+  // Gráfico circular: quién ha pagado cuánto
+  h += buildPaidDonut(bals);
 
   // Cabecera explicativa
   h += '<div class="sec-lbl">Saldo de cada persona</div>';
@@ -1990,6 +2309,7 @@ function confirmDelGrp() {
 
 function renderAll() {
   updateYoBanner();
+  applyAdminUI();
   renderHome();
   const cur = document.querySelector('.scr.on');
   if (cur?.id==='scr-activity') renderActivity();
@@ -2005,12 +2325,20 @@ function renderHome() {
   const c = document.getElementById('grp-list');
   if (!DB.groups.length) {
     c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>Sin grupos todavía.</p>' +
-      '<button onclick="openModal(\'m-newgrp\')" style="margin-top:14px;background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;cursor:pointer">+ Crear primer grupo</button>' +
-      '<p style="font-size:12px;color:var(--muted);margin-top:14px">También puedes crearlos desde <strong>Ajustes</strong>.<br>Todos verán los grupos al sincronizar.</p></div>';
+      (isAdmin()
+        ? '<button onclick="openModal(\'m-newgrp\')" style="margin-top:14px;background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;cursor:pointer">+ Crear primer grupo</button>'
+        : '<p style="font-size:12px;color:var(--muted);margin-top:12px">🔒 Solo el administrador puede crear grupos.</p>') +
+      '</div>';
     return;
   }
   c.innerHTML = '';
-  DB.groups.forEach(function(g) {
+  // Los grupos ocultados por el administrador no se muestran en Inicio
+  var visibles = DB.groups.filter(function(g){ return !isGroupHidden(g.id); });
+  if (!visibles.length) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">🙈</div><p>No hay grupos visibles.</p></div>';
+    return;
+  }
+  visibles.forEach(function(g) {
     var tot = (Array.isArray(g.expenses)?g.expenses:[]).reduce(function(a,e){ return a + (e && !e.isSettlement ? e.amount : 0); }, 0);
     var me  = myName();
     var myb = computeBals(g).find(function(b){ return me && b.name.trim().toLowerCase()===me.trim().toLowerCase(); });
@@ -2494,6 +2822,7 @@ function getFriends() {
 
 // Añadir amigo nuevo
 function addFriend() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
   const inp = document.getElementById('friend-inp');
   const name = inp.value.trim();
   if (!name) return;
@@ -2503,7 +2832,8 @@ function addFriend() {
     inp.value = ''; return;
   }
   DB.friends.push(name);
-  // Limpiar tombstone si este amigo se había borrado antes
+  // Revivirlo: limpiar su tombstone (local y, vía merge, también el del servidor)
+  revivedFriends[name] = true;
   if (Array.isArray(DB.deleted)) {
     DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + name; });
   }
@@ -2519,6 +2849,7 @@ function friendKd(e) {
 
 // Borrar amigo de la lista maestra
 function renamePerson(oldName) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
   var nuevo = prompt('Nuevo nombre para "' + oldName + '":', oldName);
   if (nuevo === null) return;  // cancelado
   nuevo = nuevo.trim();
@@ -2535,10 +2866,14 @@ function renamePerson(oldName) {
   if (Array.isArray(DB.friends)) {
     DB.friends = DB.friends.map(function(f){ return f === oldName ? nuevo : f; });
   }
-  // Limpiar tombstones de ambos nombres
-  if (Array.isArray(DB.deleted)) {
-    DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + oldName && d !== 'fr:' + nuevo; });
-  }
+  // El nombre VIEJO debe desaparecer también en el servidor.
+  // Sin tombstone, mergeDB hace unión de amigos (local + remoto) y, como el
+  // servidor aún tiene el nombre viejo, este reaparecería → DUPLICADO.
+  if (!Array.isArray(DB.deleted)) DB.deleted = [];
+  revivedFriends[nuevo] = true;              // el nombre nuevo vive
+  delete revivedFriends[oldName];            // el viejo ya no
+  DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + nuevo; });
+  if (DB.deleted.indexOf('fr:' + oldName) < 0) DB.deleted.push('fr:' + oldName);
 
   // 2. En cada grupo: miembros, gastos (paidBy, splitAmong), pagos (settled)
   (Array.isArray(DB.groups)?DB.groups:[]).forEach(function(g){
@@ -2586,6 +2921,11 @@ function renamePerson(oldName) {
 
 var pDelPerson = null;   // persona pendiente de borrar
 
+// Nombres que el usuario ha vuelto a crear a propósito tras borrarlos/renombrarlos.
+// El merge une los tombstones de local y remoto, así que sin esto el servidor
+// volvería a "matar" al amigo recién re-creado.
+var revivedFriends = {};
+
 // Cuenta en qué está implicada la persona (gastos pagados, repartos, grupos)
 function personUsage(name) {
   var paid = 0, split = 0, groups = [];
@@ -2605,6 +2945,7 @@ function personUsage(name) {
 }
 
 function askDelPerson(name) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
   pDelPerson = name;
   var u = personUsage(name);
 
@@ -2631,6 +2972,7 @@ function askDelPerson(name) {
 }
 
 function confirmDelPerson() {
+  if (!isAdmin()) { denyNotAdmin(); closeModal('m-del-person'); return; }
   var name = pDelPerson;
   if (!name) return;
 
@@ -2648,7 +2990,8 @@ function confirmDelPerson() {
 
   // Tombstone: que el merge no lo resucite
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
-  DB.deleted.push('fr:' + name);
+  delete revivedFriends[name];               // deja de estar "revivido"
+  if (DB.deleted.indexOf('fr:' + name) < 0) DB.deleted.push('fr:' + name);
 
   // Si era el usuario identificado, desidentificar
   if (myName() === name) {
@@ -2703,6 +3046,8 @@ function renderYoModal() {
     h += '</div>';
     h += '<div class="person-groups">' + esc(grpStr) + '</div>';
     h += '</div>';
+    // Renombrar y borrar: SOLO el administrador
+    if (isAdmin()) {
     // Botón renombrar (lápiz)
     h += '<button class="person-edit" style="flex-shrink:0;background:none;border:none;color:var(--acc4);cursor:pointer;padding:6px;border-radius:8px">';
     h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
@@ -2713,6 +3058,7 @@ function renderYoModal() {
     h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
     h += '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>';
     h += '<path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>';
+    }   // fin de if (isAdmin())
     row.innerHTML = h;
     var editBtn = row.querySelector('.person-edit');
     if (editBtn) {
@@ -2932,6 +3278,7 @@ function addChip() {} // stub — miembros se añaden desde lista Amigos
 function mkd(e) {} // stub
 
 function createGroup() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
   const name = document.getElementById('ng-name').value.trim();
   if (!name) { toast('⚠️ Escribe el nombre del grupo'); return; }
   if (ngMem.length < 2) { toast('⚠️ Selecciona al menos 2 amigos'); return; }
@@ -3074,6 +3421,14 @@ function renderWelcomeList() {
   var cont = document.getElementById('welcome-list');
   if (!cont) return;
   var friends = getFriends();
+
+  // Solo el administrador crea amigos: si ya hay lista, no se permite crear
+  // nombres nuevos desde el onboarding (hay que elegir uno existente).
+  var createBox = document.getElementById('welcome-create');
+  var askAdmin  = document.getElementById('welcome-ask-admin');
+  if (createBox) createBox.style.display = friends.length ? 'none' : 'block';
+  if (askAdmin)  askAdmin.style.display  = friends.length ? 'block' : 'none';
+
   if (!friends.length) {
     cont.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">Aún no hay nadie. Escribe tu nombre abajo para empezar.</div>';
     return;
@@ -3096,7 +3451,15 @@ function renderWelcomeList() {
 }
 
 function welcomeSelectMe(name) {
-  setName(name);
+  // Si es el administrador, hace falta el PIN
+  if (name.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) {
+    setName(name);
+    var ok = hasAdminPin() ? askAdminPin() : createAdminPin();
+    if (!ok) { setName(''); setAdminUnlocked(false); return; }   // sigue en el onboarding
+  } else {
+    setName(name);
+    setAdminUnlocked(false);
+  }
   closeModal('m-welcome');
   renderAll();
   toast('👋 ¡Hola, ' + name + '!');
@@ -3115,6 +3478,7 @@ function welcomeCreateMe() {
   // Crear el amigo y seleccionarlo
   if (!Array.isArray(DB.friends)) DB.friends = [];
   DB.friends.push(name);
+  revivedFriends[name] = true;
   if (Array.isArray(DB.deleted)) {
     DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + name; });
   }
@@ -3454,13 +3818,14 @@ if ('serviceWorker' in navigator) {
       <h2 style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:var(--txt);margin-bottom:6px">¡Bienvenido a SplitGuasa!</h2>
       <p style="font-size:14px;color:var(--muted2);margin-bottom:18px">¿Quién eres? Selecciona tu nombre para empezar.</p>
       <div id="welcome-list" style="text-align:left;max-height:44vh;overflow-y:auto;margin-bottom:14px"></div>
-      <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div id="welcome-create" style="border-top:1px solid var(--border);padding-top:14px">
         <p style="font-size:13px;color:var(--muted2);margin-bottom:8px">¿No estás en la lista?</p>
         <div style="display:flex;gap:8px">
           <input id="welcome-new" type="text" placeholder="Escribe tu nombre" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--txt);font-size:15px;font-family:var(--ff-body)">
           <button onclick="welcomeCreateMe()" style="background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:0 18px;border-radius:11px;cursor:pointer">Crear</button>
         </div>
       </div>
+      <p id="welcome-ask-admin" style="display:none;font-size:12px;color:var(--muted);text-align:center;margin-top:12px">🔒 ¿No apareces? Pide a <strong>Jota</strong> que te añada.</p>
     </div>
   </div>
   <!-- ══ MODAL SELECTOR USUARIO ══ -->
