@@ -85,10 +85,10 @@ html {
   overscroll-behavior: none;
 }
 body {
-  /* Altura: 100dvh se adapta a la barra dinámica de iOS/Android.
-     Los fallbacks anteriores se mantienen para navegadores antiguos. */
-  height: 100vh;
-  height: var(--app-h, 100dvh);
+  /* position:fixed + inset:0 llena EXACTAMENTE el viewport visible,
+     sin depender de cálculos de altura (100vh falla en iOS Safari). */
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
   width: 100%;
   background: var(--bg);
   color: var(--txt);
@@ -96,8 +96,6 @@ body {
   font-size: 15px;
   line-height: 1.5;
   overflow: hidden;
-  position: fixed;
-  top: 0; left: 0; right: 0;
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -1007,25 +1005,7 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
 
 <script>
 
-// ════════════════════════════════════════════
-// FIX ALTURA iOS: ajusta la altura real de la ventana
-// (Safari calcula mal 100vh cuando la barra de direcciones aparece/desaparece)
-// ════════════════════════════════════════════
-(function() {
-  function setAppHeight() {
-    // Usa la altura real visible del viewport
-    var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-h', h + 'px');
-  }
-  setAppHeight();
-  window.addEventListener('resize', setAppHeight);
-  window.addEventListener('orientationchange', function() {
-    setTimeout(setAppHeight, 150);
-  });
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', setAppHeight);
-  }
-})();
+
 
 // ════════════════════════════════════════════
 // FIREBASE — base de datos en tiempo real
