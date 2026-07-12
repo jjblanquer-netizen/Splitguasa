@@ -595,6 +595,7 @@ strong { font-weight: 600; }
 
 /* Botones de la topbar sobre la imagen: cristal translúcido */
 .grp-hero.has-bg .btn-back,
+.grp-hero.has-bg .btn-edit-grp,
 .grp-hero.has-bg .btn-del-grp {
   background: rgba(255,255,255,.16) !important;
   backdrop-filter: blur(10px);
@@ -602,10 +603,12 @@ strong { font-weight: 600; }
   color: #fff !important;
 }
 .grp-hero.has-bg .btn-del-grp { color: #ffb3c0 !important; }
+.grp-hero.has-bg .btn-edit-grp { color: #a7f3e4 !important; }
 .grp-hero.has-bg .topbar-title { color: #fff; text-shadow: 0 1px 5px rgba(0,0,0,.55); }
 
-/* Sin fondo: botón borrar con su color rosado habitual */
+/* Botones de acción de la topbar del grupo */
 .btn-del-grp { background: var(--s3); color: var(--acc3); border: 1px solid rgba(251,113,133,.25); }
+.btn-edit-grp { background: var(--s3); color: var(--acc); border: 1px solid rgba(94,234,212,.25); margin-right: 8px; }
 
 /* Cabecera: emoji a la izquierda del nombre, en fila */
 .grp-hdr { padding: 2px 16px 14px; }
@@ -688,8 +691,7 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
     <div class="sec-lbl">Grupos activos</div>
     <div id="grp-list"></div>
   </div>
-  <button class="fab" onclick="openModal('m-newgrp')">+</button>
-  <nav class="bnav">
+    <nav class="bnav">
     <div class="nav-item on" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
     <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
     <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
@@ -732,6 +734,9 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
     <div class="topbar grp-hero-top">
       <button class="btn-back" onclick="closeGroup()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <span style="flex:1"></span>
+      <button class="btn-icon btn-edit-grp" onclick="openModal('m-edit-members')" title="Editar grupo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
       <button class="btn-icon btn-del-grp" onclick="askDelGrp()" title="Eliminar grupo">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       </button>
@@ -741,10 +746,7 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
         <div class="grp-emoji" id="g-emoji">🏖️</div>
         <div style="min-width:0;flex:1">
           <div class="grp-title" id="g-name">Grupo</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
-            <div class="grp-members-line" id="g-mems"></div>
-            <button class="btn-edit-mem" onclick="openModal('m-edit-members')">+ Editar</button>
-          </div>
+          <div class="grp-members-line" id="g-mems" style="margin-top:2px"></div>
         </div>
       </div>
     </div>
@@ -929,6 +931,16 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
       <div style="flex:1;min-width:0">
         <div id="settings-me-name" style="font-weight:700;font-size:15px;color:var(--txt)">Sin identificar</div>
         <div id="settings-me-sub" style="font-size:12px;color:var(--muted2);margin-top:1px">Toca para elegir quién eres</div>
+      </div>
+      <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Grupos</div>
+    <div class="card" onclick="openModal('m-newgrp')" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc);font-size:22px;font-weight:700">+</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px;color:var(--txt)">Crear nuevo grupo</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:1px">Empieza a compartir gastos</div>
       </div>
       <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
     </div>
@@ -1886,7 +1898,9 @@ function renderHome() {
   renderBanner();
   const c = document.getElementById('grp-list');
   if (!DB.groups.length) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>Sin grupos todavía.<br>Pulsa <strong>+</strong> para crear el primero.<br><br><span style="font-size:12px;color:var(--muted)">Todos verán los grupos al sincronizar.</span></p></div>';
+    c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>Sin grupos todavía.</p>' +
+      '<button onclick="openModal(\'m-newgrp\')" style="margin-top:14px;background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;cursor:pointer">+ Crear primer grupo</button>' +
+      '<p style="font-size:12px;color:var(--muted);margin-top:14px">También puedes crearlos desde <strong>Ajustes</strong>.<br>Todos verán los grupos al sincronizar.</p></div>';
     return;
   }
   c.innerHTML = '';
