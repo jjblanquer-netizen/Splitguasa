@@ -1,5 +1,5 @@
 // SplitGuasa Service Worker
-const CACHE = 'splitguasa-v13';
+const CACHE = 'splitguasa-v14';
 const ASSETS = [
   '/Splitguasa/index-firebase.html',
   '/Splitguasa/manifest-firebase.json',

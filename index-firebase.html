@@ -1001,6 +1001,18 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
       <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
     </div>
 
+    <div class="sec-lbl" style="margin-top:18px">Compartir</div>
+    <div class="card" onclick="shareApp()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc4)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px;color:var(--txt)">Compartir SplitGuasa</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:1px">Invita a tus amigos a la app</div>
+      </div>
+      <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+    </div>
+
     <div class="sec-lbl" style="margin-top:18px">Información</div>
     <div class="card">
       <div onclick="openModal('m-about')" style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;cursor:pointer">
@@ -1420,6 +1432,41 @@ function renderMeSelectorList() {
   });
 }
 
+
+
+// ════════════════════════════════════════════
+// COMPARTIR LA APP
+// ════════════════════════════════════════════
+const APP_URL = 'https://jjblanquer-netizen.github.io/Splitguasa/index-firebase.html';
+
+async function shareApp() {
+  var texto = '💸 Únete a SplitGuasa para repartir los gastos del grupo sin líos.\n\nUn Lannister siempre paga sus deudas 😉';
+
+  // 1) Menú nativo de compartir (WhatsApp, Telegram, etc.) — móviles
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'SplitGuasa',
+        text: texto,
+        url: APP_URL
+      });
+      return;
+    } catch (e) {
+      // El usuario canceló: no hacer nada
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+
+  // 2) Sin menú nativo (escritorio): copiar el enlace al portapapeles
+  try {
+    await navigator.clipboard.writeText(texto + '\n' + APP_URL);
+    toast('🔗 Enlace copiado al portapapeles');
+    return;
+  } catch (e) {}
+
+  // 3) Último recurso: mostrar el enlace para copiarlo a mano
+  prompt('Copia este enlace para compartir SplitGuasa:', APP_URL);
+}
 
 function setTheme(theme) {
   if (theme === 'light') {
