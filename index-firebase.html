@@ -874,6 +874,18 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
   </div>
 </div>
 
+<!-- ══ MODAL: DELETE PERSON ══ -->
+<div class="modal-bg" id="m-del-person" onclick="closeOut(event,'m-del-person')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">⚠️ Eliminar amigo</div>
+    <p id="del-person-txt" style="color:var(--muted2);margin-bottom:6px;font-size:14px;line-height:1.6"></p>
+    <div id="del-person-warn" style="background:rgba(251,113,133,.08);border:1px solid rgba(251,113,133,.2);border-radius:10px;padding:11px 13px;margin-bottom:18px;font-size:13px;color:var(--acc3);line-height:1.5;display:none"></div>
+    <button class="btn-primary" style="background:var(--acc3);margin-bottom:9px" onclick="confirmDelPerson()">Sí, eliminar</button>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-del-person')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
 <!-- ══ MODAL: DELETE GROUP ══ -->
 <div class="modal-bg" id="m-del-grp" onclick="closeOut(event,'m-del-grp')">
   <div class="sheet">
@@ -1570,8 +1582,8 @@ function applyGroupHeaderBg(g) {
   var bgEl = document.getElementById('g-hdr-bg');
   if (!hero || !bgEl) return;
   if (g && g.bg) {
-    bgEl.style.backgroundImage = "url('" + g.bg + "')";
     hero.classList.add('has-bg');
+    applyBgWithRetry(bgEl, g.bg);   // reintenta si la extensión o la red fallan
   } else {
     bgEl.style.backgroundImage = '';
     hero.classList.remove('has-bg');
@@ -2050,7 +2062,8 @@ function renderHome() {
     var hasBg = g.bg ? true : false;
     var bgLayer = '';
     if (hasBg) {
-      bgLayer = '<div class="group-card-bg" style="background-image:url(\'' + esc(g.bg) + '\')"></div><div class="group-card-overlay"></div>';
+      // El fondo se aplica después con applyBgWithRetry (reintenta si falla)
+      bgLayer = '<div class="group-card-bg"></div><div class="group-card-overlay"></div>';
     }
 
     var d = document.createElement('div');
@@ -2079,6 +2092,11 @@ function renderHome() {
       '</div>';
     d.addEventListener('click', function(){ openGroup(g.id); });
     c.appendChild(d);
+    // Cargar el fondo con reintento (extensión incorrecta o red lenta)
+    if (hasBg) {
+      var bgEl = d.querySelector('.group-card-bg');
+      applyBgWithRetry(bgEl, g.bg);
+    }
   });
 }
 
@@ -2565,28 +2583,81 @@ function renamePerson(oldName) {
   toast('✏️ ' + oldName + ' → ' + nuevo);
 }
 
-function askDelPerson(name) {
-  const inGroup = DB.groups.some(g =>
-    g.expenses.some(e => e.paidBy === name || (e.splitAmong||[]).includes(name))
-  );
-  if (inGroup) {
-    toast('⚠️ ' + name + ' tiene gastos — no se puede eliminar');
-    return;
-  }
-  // Quitar de todos los grupos
-  DB.groups.forEach(g => {
-    g.members = g.members.filter(m => m !== name);
+var pDelPerson = null;   // persona pendiente de borrar
+
+// Cuenta en qué está implicada la persona (gastos pagados, repartos, grupos)
+function personUsage(name) {
+  var paid = 0, split = 0, groups = [];
+  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
+    var used = false;
+    (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e) {
+      if (!e) return;
+      if (e.paidBy === name) { paid++; used = true; }
+      var among = Array.isArray(e.splitAmong) ? e.splitAmong : [];
+      if (among.indexOf(name) >= 0) { split++; used = true; }
+    });
+    var mems = Array.isArray(g.members) ? g.members : [];
+    if (mems.indexOf(name) >= 0) used = true;
+    if (used) groups.push(g.name);
   });
-  // Quitar de la lista maestra
-  DB.friends = DB.friends.filter(f => f !== name);
-  // Registrar tombstone para que el merge no lo resucite
+  return { paid: paid, split: split, groups: groups };
+}
+
+function askDelPerson(name) {
+  pDelPerson = name;
+  var u = personUsage(name);
+
+  var txt = document.getElementById('del-person-txt');
+  var warn = document.getElementById('del-person-warn');
+  if (txt) txt.innerHTML = '¿Seguro que quieres eliminar a <strong style="color:var(--txt)">' + esc(name) + '</strong> de la lista de Amigos?';
+
+  if (warn) {
+    if (u.paid > 0 || u.split > 0 || u.groups.length > 0) {
+      var partes = [];
+      if (u.groups.length) partes.push('está en ' + u.groups.length + ' grupo' + (u.groups.length === 1 ? '' : 's') + ' (' + u.groups.map(esc).join(', ') + ')');
+      if (u.paid > 0)  partes.push('pagó ' + u.paid + ' gasto' + (u.paid === 1 ? '' : 's'));
+      if (u.split > 0) partes.push('participa en el reparto de ' + u.split + ' gasto' + (u.split === 1 ? '' : 's'));
+      warn.innerHTML = '<strong>Atención:</strong> ' + esc(name) + ' ' + partes.join(', ') + '.<br><br>' +
+        'Se le quitará de los grupos, pero <strong>sus gastos se conservan</strong> para no descuadrar las cuentas. ' +
+        'Los balances seguirán mostrando su nombre en los gastos antiguos.';
+      warn.style.display = 'block';
+    } else {
+      warn.style.display = 'none';
+    }
+  }
+
+  openModal('m-del-person');
+}
+
+function confirmDelPerson() {
+  var name = pDelPerson;
+  if (!name) return;
+
+  // Quitar de los miembros de todos los grupos (los gastos NO se tocan)
+  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
+    if (Array.isArray(g.members)) {
+      g.members = g.members.filter(function(m){ return m !== name; });
+    }
+  });
+
+  // Quitar de la lista maestra de amigos
+  if (Array.isArray(DB.friends)) {
+    DB.friends = DB.friends.filter(function(f){ return f !== name; });
+  }
+
+  // Tombstone: que el merge no lo resucite
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   DB.deleted.push('fr:' + name);
+
+  // Si era el usuario identificado, desidentificar
   if (myName() === name) {
     localStorage.removeItem('sg_me_fb');
     localStorage.removeItem('sg_me');
   }
+
+  pDelPerson = null;
   save();
+  closeModal('m-del-person');
   renderYoModal();
   renderAll();
   toast('🗑️ ' + name + ' eliminado');
@@ -2679,7 +2750,7 @@ let ngMem = [], ngEmoji = EMOJIS[0];
 // ════════════════════════════════════════════
 const BG_BASE = 'backgrounds/';
 // Formatos soportados (se prueba en orden hasta encontrar el que existe)
-const BG_EXTS = ['webp', 'png', 'jpg'];
+const BG_EXTS = ['webp', 'png', 'jpg'];   // webp primero (formato actual)
 const BG_THEMES = [
   { id: '',         name: 'Sin fondo' },
   { id: 'playa',    name: 'Playa'    },
@@ -2724,6 +2795,39 @@ function bgIdFromUrl(url) {
   var m = String(url).match(/([^/]+)\.(webp|png|jpg|jpeg)$/i);
   return m ? m[1] : '';
 }
+
+// Aplica el fondo a un elemento con REINTENTO:
+// si la URL guardada falla (extensión incorrecta o red), prueba las otras
+// extensiones del mismo tema antes de rendirse.
+function applyBgWithRetry(el, savedUrl) {
+  if (!el || !savedUrl) return;
+  var themeId = bgIdFromUrl(savedUrl);
+
+  // Lista de candidatos: primero la URL guardada, luego el resto de extensiones
+  var candidates = [savedUrl];
+  if (themeId) {
+    BG_EXTS.forEach(function(ext) {
+      var u = BG_BASE + themeId + '.' + ext;
+      if (candidates.indexOf(u) < 0) candidates.push(u);
+    });
+  }
+
+  var i = 0;
+  function tryNext() {
+    if (i >= candidates.length) return;   // ninguna funcionó: se queda sin fondo
+    var url = candidates[i];
+    var img = new Image();
+    img.onload = function() {
+      el.style.backgroundImage = "url('" + url + "')";
+      if (themeId) BG_RESOLVED[themeId] = url;   // recordar la buena
+    };
+    img.onerror = function() { i++; tryNext(); };
+    img.src = url;
+  }
+  tryNext();
+}
+
+
 
 function renderBgGrid(selectedId) {
   buildBgGrid('ng-bg-grid', selectedId, function(id){ ngSelectedBg = id; });
@@ -3034,6 +3138,26 @@ async function init() {
 }
 
 // Migrar liquidaciones antiguas (isSettlement) al nuevo sistema settled[]
+
+// Normaliza las URLs de fondo guardadas al formato actual (.webp).
+// Los grupos creados antes del cambio tienen .png guardado y ese archivo
+// puede ya no existir; reescribimos la extensión al formato principal.
+function normalizeBgUrls(db) {
+  if (!db || !Array.isArray(db.groups)) return false;
+  var changed = false;
+  db.groups.forEach(function(g) {
+    if (!g || !g.bg) return;
+    var id = bgIdFromUrl(g.bg);
+    if (!id) return;
+    var wanted = BG_BASE + id + '.' + BG_EXTS[0];   // backgrounds/<tema>.webp
+    if (g.bg !== wanted) {
+      g.bg = wanted;
+      changed = true;
+    }
+  });
+  return changed;
+}
+
 function migrateSettlements(db) {
   if (!db) return db;
   // Normalizar groups
@@ -3066,6 +3190,8 @@ function migrateSettlements(db) {
     });
     g.expenses = remaining;
   });
+  // Normalizar las URLs de fondo al formato actual (.webp)
+  normalizeBgUrls(db);
   return db;
 }
 

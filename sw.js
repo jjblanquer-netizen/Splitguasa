@@ -1,8 +1,8 @@
 // SplitGuasa Service Worker
-const CACHE = 'splitguasa-v14';
+const CACHE = 'splitguasa-v17';
 const ASSETS = [
   '/Splitguasa/index-firebase.html',
-  '/Splitguasa/manifest-firebase.json',
+  '/Splitguasa/manifest-v2.json',
   '/Splitguasa/icon-192.png',
   '/Splitguasa/icon-512.png'
 ];
@@ -10,7 +10,12 @@ const ASSETS = [
 // Instalar: cachear los archivos base
 self.addEventListener('install', function(e) {
   e.waitUntil(
-    caches.open(CACHE).then(function(c) { return c.addAll(ASSETS); })
+    caches.open(CACHE).then(function(c) {
+      // addAll falla entero si un archivo falta: los añadimos uno a uno
+      return Promise.all(ASSETS.map(function(url) {
+        return c.add(url).catch(function() { /* ignorar el que falle */ });
+      }));
+    })
   );
   self.skipWaiting();
 });
@@ -26,20 +31,37 @@ self.addEventListener('activate', function(e) {
   self.clients.claim();
 });
 
-// Fetch: las peticiones a Firebase SIEMPRE van a la red (datos en vivo).
-// El resto: network-first con fallback a caché (para funcionar offline).
 self.addEventListener('fetch', function(e) {
   var url = e.request.url;
 
-  // Datos de Firebase: siempre red, nunca caché
+  // Datos de Firebase: SIEMPRE red, nunca cache (deben estar al dia)
   if (url.indexOf('firebasedatabase.app') !== -1) {
-    return; // dejar pasar a la red normal
+    return;
   }
 
+  // IMAGENES DE FONDO: cache primero.
+  // Son archivos grandes que no cambian. Si estan en cache, se sirven al
+  // instante sin depender de la red. Esto evita que "a veces no carguen".
+  if (url.indexOf('/backgrounds/') !== -1) {
+    e.respondWith(
+      caches.match(e.request).then(function(cached) {
+        if (cached) return cached;
+        return fetch(e.request).then(function(res) {
+          if (res && res.status === 200) {
+            var copy = res.clone();
+            caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
+          }
+          return res;
+        });
+      })
+    );
+    return;
+  }
+
+  // RESTO: red primero, con respaldo en cache (para funcionar offline)
   e.respondWith(
     fetch(e.request)
       .then(function(res) {
-        // Guardar copia en caché para offline
         if (res && res.status === 200 && e.request.method === 'GET') {
           var copy = res.clone();
           caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
@@ -47,7 +69,6 @@ self.addEventListener('fetch', function(e) {
         return res;
       })
       .catch(function() {
-        // Sin red: servir desde caché
         return caches.match(e.request).then(function(cached) {
           return cached || caches.match('/Splitguasa/index-firebase.html');
         });
