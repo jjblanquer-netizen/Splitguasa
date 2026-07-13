@@ -821,6 +821,21 @@ body.light .profile-card {
 
 /* El tema se aplica antes del primer dibujado (evita el destello) */
 html.pre-light body { background: #f6f7fb; }
+
+/* Botón de reclamar una deuda (junto a "Pagar") */
+.btn-claim {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(129,140,248,.35);
+  background: rgba(129,140,248,.12);
+  color: var(--acc4);
+  cursor: pointer;
+  transition: transform .12s;
+}
+.btn-claim:active { transform: scale(.9); }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -1563,6 +1578,8 @@ function mergeDB(remote, local) {
   (Array.isArray(remote.deleted)?remote.deleted:[]).forEach(function(d){ deleted[d]=true; });
   // Un amigo re-creado a propósito revive: su tombstone deja de aplicar
   Object.keys(revivedFriends).forEach(function(name){ delete deleted['fr:' + name]; });
+  // Un pago re-marcado a propósito también: si no, el servidor lo desmarcaría
+  Object.keys(revivedSettles).forEach(function(t){ delete deleted[t]; });
 
   var result = { v: Math.max(remote.v||0, local.v||0), ts: Date.now(), deleted: Object.keys(deleted) };
 
@@ -1652,12 +1669,17 @@ function mergeGroup(remote, local, deleted) {
   // borrado o renombrado (si no, al renombrar quedarían DUPLICADOS: uno con
   // el nombre viejo del servidor y otro con el nuevo).
   var setByKey = {};
+  var gid = (local && local.id) || (remote && remote.id) || '';
   function addSettled(arr){
     (Array.isArray(arr)?arr:[]).forEach(function(s){
       var k = typeof s === 'string' ? s : (s && s.key);
       if (!k) return;
       var parts = String(k).split('|');
-      if (deleted['fr:' + parts[0]] || deleted['fr:' + parts[1]]) return;  // clave obsoleta
+      // Descartar si referencia a alguien borrado o renombrado
+      if (deleted['fr:' + parts[0]] || deleted['fr:' + parts[1]]) return;
+      // Descartar si el pago se DESMARCÓ a propósito (si no, la unión con el
+      // servidor lo resucitaría y volvería a salir como pagado)
+      if (deleted['set:' + gid + '|' + k]) return;
       setByKey[k] = s;
     });
   }
@@ -2781,7 +2803,78 @@ function renderGastos(g) {
 }
 
 // ─── BALANCES ───
+// Plan de deudas SIN tener en cuenta los pagos marcados.
+// Sirve para saber el importe de un pago antiguo guardado como texto.
+function rawPlan(g) {
+  var bals = computeBalsRaw(g);
+  var d  = bals.filter(function(b){return b.net<-0.005;}).map(function(b){return {name:b.name,amount:Math.abs(b.net)};});
+  var cr = bals.filter(function(b){return b.net>0.005;}).map(function(b){return {name:b.name,amount:b.net};});
+  d.sort(function(a,b){return b.amount-a.amount;});
+  cr.sort(function(a,b){return b.amount-a.amount;});
+  var out = {}, di=0, ci=0;
+  while (di<d.length && ci<cr.length) {
+    var a = Math.min(d[di].amount, cr[ci].amount);
+    if (a > 0.005) out[d[di].name + '|' + cr[ci].name] = a;
+    d[di].amount-=a; cr[ci].amount-=a;
+    if (d[di].amount<0.005) di++;
+    if (cr[ci].amount<0.005) ci++;
+  }
+  return out;
+}
+
+// Ajuste que producen los pagos ya marcados: quien PAGA mejora su saldo,
+// quien COBRA lo empeora. Es dinero que se ha movido de verdad.
+function settleAdjust(g) {
+  var adj = {};
+  var lista = Array.isArray(g.settled) ? g.settled : [];
+  if (!lista.length) return adj;
+
+  var plan = null;   // solo se calcula si hay entradas antiguas (texto)
+
+  lista.forEach(function(s) {
+    var from, to, amount;
+    if (typeof s === 'string') {
+      // Formato antiguo: "Deudor|Acreedor" sin importe → buscarlo en el plan
+      var p = s.split('|');
+      from = p[0]; to = p[1];
+      if (plan === null) plan = rawPlan(g);
+      amount = plan[s] || 0;
+    } else if (s && s.key) {
+      from = s.from; to = s.to;
+      amount = typeof s.amount === 'number' ? s.amount : 0;
+      if (!amount) {
+        if (plan === null) plan = rawPlan(g);
+        amount = plan[s.key] || 0;
+      }
+    } else {
+      return;
+    }
+    if (!from || !to || !amount) return;
+    adj[from] = (adj[from] || 0) + amount;   // ha pagado: su deuda baja
+    adj[to]   = (adj[to]   || 0) - amount;   // ha cobrado: le deben menos
+  });
+  return adj;
+}
+
+// Saldos REALES: gastos + pagos ya realizados.
+// Esto es lo que ven el banner de Inicio, la pestaña Balances y el Informe.
 function computeBals(g) {
+  var bals = computeBalsRaw(g);
+  var adj  = settleAdjust(g);
+  bals.forEach(function(b) {
+    if (adj[b.name]) b.net += adj[b.name];
+  });
+  // Alguien que solo aparece en los pagos y no en los gastos
+  Object.keys(adj).forEach(function(n) {
+    if (!bals.some(function(b){ return b.name === n; })) {
+      bals.push({ name: n, net: adj[n] });
+    }
+  });
+  return bals;
+}
+
+// Saldos solo con los GASTOS (sin descontar los pagos hechos)
+function computeBalsRaw(g) {
   var p = {}, o = {};
   var members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
   var expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses || {});
@@ -2931,70 +3024,96 @@ function renderBals(g) {
 // ─── DEUDAS ───
 // Calcula deudas SOLO con gastos normales (ignora liquidaciones).
 // Las liquidaciones se gestionan aparte como pagos marcados.
+// Deudas que QUEDAN por pagar.
+// Se calcula sobre los saldos YA ajustados con los pagos realizados, así que
+// una deuda marcada como pagada desaparece de aquí (no se queda tachada).
+// Los pagos hechos se muestran aparte, leyéndolos de g.settled.
 function computeDebts(g) {
-  var p={}, o={};
-  var members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members||{});
-  var expenses = Array.isArray(g.expenses) ? g.expenses : Object.values(g.expenses||{});
-  members.forEach(function(m){ p[m]=0; o[m]=0; });
-  // Solo gastos normales (no liquidaciones)
-  expenses.forEach(function(e){
-    if(!e || typeof e.amount!=='number' || e.isSettlement) return;
-    var among = members;
-    if(!(e.paidBy in p)){ p[e.paidBy]=0; o[e.paidBy]=0; }
-    p[e.paidBy]+=e.amount;
-    var s=e.amount/(among.length||1);
-    among.forEach(function(m){ if(!(m in o)){p[m]=p[m]||0;o[m]=0;} o[m]+=s; });
-  });
-  var allP = Array.from(new Set(members.concat(Object.keys(p))));
-  var bals = allP.map(function(m){ return {name:m, net:(p[m]||0)-(o[m]||0)}; });
+  var bals = computeBals(g);   // gastos MENOS pagos ya hechos
+
   var d  = bals.filter(function(b){return b.net<-0.005;}).map(function(b){return {name:b.name,amount:Math.abs(b.net)};});
   var cr = bals.filter(function(b){return b.net>0.005;}).map(function(b){return {name:b.name,amount:b.net};});
   d.sort(function(a,b){return b.amount-a.amount;});
   cr.sort(function(a,b){return b.amount-a.amount;});
-  var txs=[]; var di=0, ci=0;
-  while(di<d.length && ci<cr.length){
-    var a=Math.min(d[di].amount, cr[ci].amount);
-    if(a>0.005){
-      var key = d[di].name + '|' + cr[ci].name;
-      var settled = settledKeys(g.settled).indexOf(key) >= 0;
-      txs.push({from:d[di].name, to:cr[ci].name, amount:a, key:key, settled:settled});
+
+  var txs = [], di = 0, ci = 0;
+  while (di < d.length && ci < cr.length) {
+    var a = Math.min(d[di].amount, cr[ci].amount);
+    if (a > 0.005) {
+      txs.push({
+        from: d[di].name,
+        to: cr[ci].name,
+        amount: a,
+        key: d[di].name + '|' + cr[ci].name,
+        settled: false
+      });
     }
-    d[di].amount-=a; cr[ci].amount-=a;
-    if(d[di].amount<0.005)di++; if(cr[ci].amount<0.005)ci++;
+    d[di].amount -= a; cr[ci].amount -= a;
+    if (d[di].amount < 0.005) di++;
+    if (cr[ci].amount < 0.005) ci++;
   }
   return txs;
 }
-function renderDebts(g) {
-  var txs = computeDebts(g);
-  var me = myName();
-  var isMe = function(n){ return me && n.trim().toLowerCase()===me.trim().toLowerCase(); };
 
-  if (!txs.length) {
+// Pagos YA realizados (para la sección "Pagos realizados")
+function settledList(g) {
+  var lista = Array.isArray(g.settled) ? g.settled : [];
+  var plan = null;
+  var out = [];
+  lista.forEach(function(s) {
+    var from, to, amount, key;
+    if (typeof s === 'string') {
+      var p = s.split('|');
+      from = p[0]; to = p[1]; key = s;
+      if (plan === null) plan = rawPlan(g);
+      amount = plan[s] || 0;
+    } else if (s && s.key) {
+      from = s.from; to = s.to; key = s.key;
+      amount = typeof s.amount === 'number' ? s.amount : 0;
+    } else { return; }
+    if (!from || !to) return;
+    out.push({ from: from, to: to, amount: amount, key: key, settled: true });
+  });
+  return out;
+}
+function renderDebts(g) {
+  var pending = computeDebts(g);    // lo que QUEDA por pagar
+  var paid    = settledList(g);     // lo que YA se ha pagado
+  var me = myName();
+  var soyYo = function(n){ return me && n && n.trim().toLowerCase() === me.trim().toLowerCase(); };
+
+  if (!pending.length && !paid.length) {
     return '<div class="empty"><div class="empty-icon">🎉</div><p>¡Todo liquidado!<br>Sin deudas pendientes.</p></div>';
   }
 
-  var pending = txs.filter(function(t){ return !t.settled; });
-  var paid    = txs.filter(function(t){ return t.settled; });
-  var h = '';
-
   function row(t, isPaid) {
     var fc = avc(t.from);
-    var isd = isMe(t.from);
-    var bc = isPaid ? 'rgba(94,234,212,.2)' : (isd ? 'rgba(251,113,133,.25)' : 'var(--border)');
+    var meDebe   = soyYo(t.to);      // me deben a mí
+    var yoDebo   = soyYo(t.from);    // yo debo
+    var bc = isPaid ? 'rgba(94,234,212,.2)' : (yoDebo ? 'rgba(251,113,133,.25)' : 'var(--border)');
+
     var s = '<div class="debt-row" style="border-color:' + bc + (isPaid ? ';opacity:.65' : '') + '">';
     s += '<div class="avatar" style="background:' + fc + '22;color:' + fc + ';width:30px;height:30px;font-size:11px">' + ini(t.from) + '</div>';
     s += '<div class="debt-txt"' + (isPaid ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>';
     s += '<strong>' + esc(t.from) + '</strong> → <strong>' + esc(t.to) + '</strong></div>';
     s += '<div class="debt-amt"' + (isPaid ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>' + fmt(t.amount) + '</div>';
+
     if (isPaid) {
       s += '<button class="btn-settle btn-pay" data-gid="' + g.id + '" data-key="' + esc(t.key) + '" style="background:rgba(94,234,212,.15);color:var(--acc);border-color:transparent">✓ Pagado</button>';
     } else {
+      // Reclamar: solo tiene sentido si el dinero es PARA MÍ (o soy admin del grupo)
+      if (meDebe) {
+        s += '<button class="btn-claim" data-gid="' + g.id + '" data-key="' + esc(t.key) + '" title="Reclamar por WhatsApp">';
+        s += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+        s += '</button>';
+      }
       s += '<button class="btn-settle btn-pay" data-gid="' + g.id + '" data-key="' + esc(t.key) + '">Pagar</button>';
     }
     s += '</div>';
     return s;
   }
 
+  var h = '';
   if (pending.length) {
     h += '<div class="sec-lbl">Pagos pendientes</div>';
     pending.forEach(function(t){ h += row(t, false); });
@@ -3007,17 +3126,61 @@ function renderDebts(g) {
     h = '<div class="info-box" style="margin-bottom:12px">🎉 ¡Todas las deudas han sido pagadas!</div>' + h;
   }
   h += '<div style="height:8px"></div>';
-  h += '<div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> al transferir. Si te equivocas, pulsa <strong>✓ Pagado</strong> para revertir.</div>';
+  h += '<div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> al transferir; el saldo se actualiza en toda la app. Si te equivocas, pulsa <strong>✓ Pagado</strong> para revertir.</div>';
   return h;
 }
 
-// Delegación de eventos para los botones Pagar/Pagado
+// Reclamar una deuda por WhatsApp (o el medio que elijas)
+function claimDebt(gid, key) {
+  var g = DB.groups.find(function(x){ return x.id === gid; });
+  if (!g) return;
+  var tx = computeDebts(g).filter(function(t){ return t.key === key; })[0];
+  if (!tx) { toast('⚠️ Esa deuda ya no está pendiente'); return; }
+
+  var texto =
+    '💸 ¡Hola ' + tx.from + '!\n\n' +
+    'Te recuerdo que del grupo ' + (g.emoji ? g.emoji + ' ' : '') + '"' + g.name + '" ' +
+    'me debes ' + fmt(tx.amount) + '.\n\n' +
+    '¿Me lo pasas cuando puedas? 🙏\n\n' +
+    'Un Lannister siempre paga sus deudas 😉\n' +
+    APP_URL;
+
+  if (navigator.share) {
+    navigator.share({ title: 'Deuda pendiente', text: texto }).catch(function(e){
+      if (e && e.name === 'AbortError') return;
+      copiarTexto(texto);
+    });
+    return;
+  }
+  copiarTexto(texto);
+}
+
+function copiarTexto(texto) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(texto).then(function(){
+      toast('🔗 Mensaje copiado');
+    }).catch(function(){ prompt('Copia el mensaje:', texto); });
+  } else {
+    prompt('Copia el mensaje:', texto);
+  }
+}
+
+// Delegación de eventos para los botones Pagar/Pagado y Reclamar
 document.addEventListener('click', function(ev) {
-  var btn = ev.target.closest('.btn-pay');
-  if (!btn) return;
-  var gid = btn.getAttribute('data-gid');
-  var key = btn.getAttribute('data-key');
-  if (gid && key) togglePaid(gid, key);
+  var pay = ev.target.closest('.btn-pay');
+  if (pay) {
+    var gid = pay.getAttribute('data-gid');
+    var key = pay.getAttribute('data-key');
+    if (gid && key) togglePaid(gid, key);
+    return;
+  }
+  var claim = ev.target.closest('.btn-claim');
+  if (claim) {
+    ev.stopPropagation();
+    var cg = claim.getAttribute('data-gid');
+    var ck = claim.getAttribute('data-key');
+    if (cg && ck) claimDebt(cg, ck);
+  }
 });
 
 
@@ -3026,14 +3189,25 @@ function togglePaid(gid, key) {
   if (!g) return;
   if (!Array.isArray(g.settled)) g.settled = [];
   // settled puede contener strings (formato viejo) u objetos {key,...}
+  if (!Array.isArray(DB.deleted)) DB.deleted = [];
+  var tomb = 'set:' + gid + '|' + key;     // marca de "este pago se ha desmarcado"
+
   var i = settledIndex(g.settled, key);
   if (i >= 0) {
     var ant = g.settled[i];
     var pa = String(key).split('|');
     logAction('pago', '↩️', 'Desmarcó el pago de ' + pa[0] + ' a ' + pa[1] + (ant && ant.amount ? ' (' + fmt(ant.amount) + ')' : ''), gid);
     g.settled.splice(i, 1);
+    // Sin esta marca, el merge lo resucitaría desde el servidor (que aún lo
+    // tiene) y volvería a aparecer como PAGADO. Era el bug de "no deja revertir".
+    delete revivedSettles[tomb];
+    if (DB.deleted.indexOf(tomb) < 0) DB.deleted.push(tomb);
     toast('↩️ Marcado como pendiente');
   } else {
+    // Al volver a marcarlo como pagado, la marca deja de aplicar (en local Y
+    // en el servidor, gracias a revivedSettles)
+    revivedSettles[tomb] = true;
+    DB.deleted = DB.deleted.filter(function(d){ return d !== tomb; });
     // Guardar con metadatos para mostrarlo en Actividad
     var parts = key.split('|');
     var amount = 0;
@@ -3917,6 +4091,11 @@ var pDelPerson = null;   // persona pendiente de borrar
 // El merge une los tombstones de local y remoto, así que sin esto el servidor
 // volvería a "matar" al amigo recién re-creado.
 var revivedFriends = {};
+
+// Pagos que se han vuelto a marcar como pagados a propósito.
+// El merge une las marcas de borrado de ambos lados, así que sin esto el
+// servidor volvería a "desmarcar" el pago que acabas de marcar.
+var revivedSettles = {};
 
 // Cuenta en qué está implicada la persona (gastos pagados, repartos, grupos)
 function personUsage(name) {
