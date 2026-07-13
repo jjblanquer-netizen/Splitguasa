@@ -938,6 +938,9 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
     <span class="topbar-title">Amigos</span>
   </div>
   <div class="sb">
+    <div id="friends-admin-note" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-top:8px;margin-bottom:10px;font-size:12.5px;color:var(--muted2);line-height:1.5">
+      🔒 Solo el administrador puede añadir o eliminar amigos.
+    </div>
     <div class="field" id="add-friend-field" style="margin-top:4px;display:none">
       <label>Nuevo amigo</label>
       <div class="chip-row">
@@ -2392,7 +2395,7 @@ function renderHome() {
   }
   c.innerHTML = '';
   // Los grupos ocultados por el administrador no se muestran en Inicio
-  var visibles = DB.groups.filter(function(g){ return !isGroupHidden(g.id); });
+  var visibles = visibleGroups();
   if (!visibles.length) {
     c.innerHTML = '<div class="empty"><div class="empty-icon">🙈</div><p>No hay grupos visibles.</p></div>';
     return;
@@ -2465,12 +2468,29 @@ function renderHome() {
   });
 }
 
+
+// Grupos visibles = todos menos los ocultados por el administrador.
+// Se usa en Inicio, Actividad e Informe para que TODAS las vistas coincidan.
+function visibleGroups() {
+  var gs = Array.isArray(DB.groups) ? DB.groups : [];
+  return gs.filter(function(g){ return g && !isGroupHidden(g.id); });
+}
+
+// ¿Este nombre soy yo? (comparación tolerante: mayúsculas y espacios)
+function isMe(name) {
+  var me = myName();
+  return !!me && !!name && name.trim().toLowerCase() === me.trim().toLowerCase();
+}
+
 function renderBanner() {
   let deb=0, ted=0;
   const me = myName();
-  DB.groups.forEach(g => {
+  // Solo los grupos VISIBLES: si no, el banner contaría deudas de grupos
+  // ocultos que el usuario no ve en la lista (incoherente).
+  const vis = visibleGroups();
+  vis.forEach(g => {
     computeBals(g).forEach(b => {
-      if (b.name === me) {
+      if (isMe(b.name)) {                      // comparación tolerante
         if (b.net < -0.005) deb += Math.abs(b.net);
         else if (b.net > 0.005) ted += b.net;
       }
@@ -2478,7 +2498,7 @@ function renderBanner() {
   });
   document.getElementById('b-deb').textContent = fmt(deb);
   document.getElementById('b-ted').textContent = fmt(ted);
-  document.getElementById('b-grp').textContent = DB.groups.length;
+  document.getElementById('b-grp').textContent = vis.length;
   // Saludo personalizado
   const greetEl   = document.getElementById('greeting');
   const greetName = document.getElementById('greeting-name');
@@ -2499,7 +2519,7 @@ function renderActivity() {
   var c = document.getElementById('act-list');
   var all = [];
   // Gastos normales
-  DB.groups.forEach(function(g){
+  visibleGroups().forEach(function(g){
     (Array.isArray(g.expenses)?g.expenses:[]).forEach(function(e){
       if (e && !e.isSettlement) all.push({type:'expense', date:e.date, desc:e.desc, category:e.category, paidBy:e.paidBy, amount:e.amount, gn:g.name, ge:g.emoji});
     });
@@ -2538,14 +2558,15 @@ function renderActivity() {
 // ════════════════════════════════════════════
 function renderReport() {
   const c = document.getElementById('rep-cont');
-  if (!DB.groups.length) {
+  const vis = visibleGroups();
+  if (!vis.length) {
     c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>Crea grupos y añade gastos para ver el informe.</p></div>';
     return;
   }
   const me = myName();
   let h = '';
 
-  DB.groups.forEach(g => {
+  vis.forEach(g => {
     const tot = g.expenses.reduce((a, e) => a + (e && !e.isSettlement ? e.amount : 0), 0);
 
     const bals = computeBals(g);
@@ -2558,14 +2579,15 @@ function renderReport() {
     h += '<div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val" style="font-size:17px">' + g.expenses.length + '</div></div>';
     h += '</div>';
 
-    // Gráfico de barras del grupo (mismo periodo que el filtro global)
-    var gData = getChartDataFrom(Array.isArray(g.expenses) ? g.expenses : []);
+    // Gráfico de barras del grupo con ESCALA PROPIA:
+    // del primer al último gasto del grupo, independiente del filtro global.
+    var gData = getGroupChartData(g.expenses);
     if (gData && gData.values.some(function(v){ return v > 0; })) {
       var gTot = gData.values.reduce(function(a,b){ return a+b; }, 0);
       h += '<div class="sec-lbl" style="margin-top:11px">Gastos por ' + (gData.isMonthly ? 'mes' : 'día') + '</div>';
       h += '<div>' + buildChartSVG(gData, true) + '</div>';
       h += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">' +
-             '<span>' + periodLabel() + '</span>' +
+             '<span>' + niceDate(gData.from) + ' → ' + niceDate(gData.to) + '</span>' +
              '<span>Total: <strong style="color:var(--acc)">' + fmt(gTot) + '</strong></span>' +
            '</div>';
     }
@@ -2645,7 +2667,7 @@ function renderCategoryCard() {
   }
 
   var cm = {}, total = 0;
-  DB.groups.forEach(function(g) {
+  visibleGroups().forEach(function(g) {          // excluye grupos ocultos
     (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e) {
       if (!e || e.isSettlement || typeof e.amount !== 'number' || !e.date) return;
       var d = new Date(String(e.date).slice(0,10) + 'T00:00:00');
@@ -2748,10 +2770,88 @@ function getChartDataFrom(expenses) {
   };
 }
 
+
+// Datos del gráfico de UN grupo, con escala PROPIA:
+// va del día del primer gasto al día del último. No depende del filtro global.
+// Si el rango es largo, agrupa por mes para que las barras sigan siendo legibles.
+function getGroupChartData(expenses) {
+  var all = (Array.isArray(expenses) ? expenses : []).filter(function(e) {
+    return e && !e.isSettlement && typeof e.amount === 'number' && e.date;
+  });
+  if (!all.length) return null;
+
+  // Primer y último día con gasto
+  var dates = all.map(function(e){ return String(e.date).slice(0, 10); }).sort();
+  var first = dates[0];
+  var last  = dates[dates.length - 1];
+
+  function toDate(s) {
+    var p = s.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+  var d1 = toDate(first), d2 = toDate(last);
+  var days = Math.round((d2 - d1) / 86400000) + 1;   // ambos incluidos
+
+  var buckets = {}, order = [];
+
+  // Rango largo (más de 62 días) → agrupar por MES
+  if (days > 62) {
+    var cur = new Date(d1.getFullYear(), d1.getMonth(), 1);
+    var end = new Date(d2.getFullYear(), d2.getMonth(), 1);
+    while (cur <= end) {
+      var mk = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0');
+      buckets[mk] = 0;
+      order.push(mk);
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    all.forEach(function(e) {
+      var k = String(e.date).slice(0, 7);
+      if (k in buckets) buckets[k] += e.amount;
+    });
+    var mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return {
+      values: order.map(function(k){ return buckets[k]; }),
+      labels: order.map(function(k) {
+        var parts = k.split('-');
+        return mn[parseInt(parts[1], 10) - 1];
+      }),
+      isMonthly: true,
+      from: first,
+      to: last
+    };
+  }
+
+  // Rango corto → agrupar por DÍA (incluyendo los días sin gasto)
+  for (var i = 0; i < days; i++) {
+    var dd = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate() + i);
+    var dk = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
+    buckets[dk] = 0;
+    order.push(dk);
+  }
+  all.forEach(function(e) {
+    var k = String(e.date).slice(0, 10);
+    if (k in buckets) buckets[k] += e.amount;
+  });
+  return {
+    values: order.map(function(k){ return buckets[k]; }),
+    labels: order.map(function(k){ return k.slice(8) + '/' + k.slice(5,7); }),
+    isMonthly: false,
+    from: first,
+    to: last
+  };
+}
+
+// "12/07/2026" a partir de "2026-07-12"
+function niceDate(iso) {
+  if (!iso) return '';
+  var p = String(iso).slice(0,10).split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
 // Todos los gastos de todos los grupos
 function allExpenses() {
   var out = [];
-  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
+  visibleGroups().forEach(function(g) {          // excluye grupos ocultos
     (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e){ out.push(e); });
   });
   return out;
