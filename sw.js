@@ -1,5 +1,5 @@
 // SplitGuasa Service Worker
-const CACHE = 'splitguasa-v55';
+const CACHE = 'splitguasa-v56';
 const ASSETS = [
   '/Splitguasa/',
   '/Splitguasa/index.html',
