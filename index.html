@@ -837,6 +837,191 @@ html.pre-light body { background: #f6f7fb; }
   transition: transform .12s;
 }
 .btn-claim:active { transform: scale(.9); }
+
+/* ══════════════════════════════════════════════════
+   HOME AVANZADA — un solo grupo, con selector
+   ══════════════════════════════════════════════════ */
+
+/* Banner: la foto del grupo es la identidad de la pantalla */
+.hv-banner {
+  position: relative;
+  height: 186px;
+  background-size: cover;
+  background-position: center;
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 12px 14px 16px;
+}
+.hv-banner::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(10,11,15,.72) 0%, rgba(10,11,15,.15) 34%,
+    rgba(10,11,15,.55) 70%, rgba(10,11,15,.96) 100%);
+}
+body.light .hv-banner::after {
+  background: linear-gradient(180deg,
+    rgba(0,0,0,.55) 0%, rgba(0,0,0,.1) 34%,
+    rgba(0,0,0,.35) 70%, rgba(246,247,251,.96) 100%);
+}
+.hv-banner > * { position: relative; z-index: 2; }
+
+/* Grupo sin foto: emoji gigante translúcido en vez de un hueco vacío */
+.hv-eco {
+  position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+  font-size: 120px; opacity: .09; z-index: 1; pointer-events: none;
+}
+.hv-nom {
+  font-family: var(--ff-head); font-weight: 800; font-size: 28px;
+  letter-spacing: -.02em; line-height: 1.1; color: #fff;
+  text-shadow: 0 2px 18px rgba(0,0,0,.6);
+}
+.hv-gente {
+  font-size: 12.5px; color: rgba(255,255,255,.82); margin-top: 4px;
+  text-shadow: 0 1px 10px rgba(0,0,0,.7);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hv-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(10,11,15,.55); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px; padding: 5px 11px; margin-top: 9px;
+  font-size: 11.5px; font-weight: 600; color: #fff;
+}
+
+/* Chip para cambiar de grupo: cristal sobre la foto */
+.hv-chip {
+  flex: 1; display: flex; align-items: center; gap: 9px;
+  background: rgba(10,11,15,.5); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 13px; padding: 9px 13px; cursor: pointer;
+  color: #fff; min-width: 0;
+}
+.hv-chip:active { border-color: var(--acc); }
+.hv-chip-nom {
+  font-family: var(--ff-head); font-weight: 700; font-size: 15px;
+  flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hv-ico {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px;
+  background: rgba(10,11,15,.5); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.15); color: #fff;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+
+/* Saldo: sale de la foto y monta sobre ella, sólido para que el número cante */
+.hv-saldo {
+  margin: -16px 16px 0; padding: 20px;
+  border-radius: 20px; position: relative; z-index: 3;
+  background: var(--surface);
+  border: 1px solid rgba(94,234,212,.24);
+  box-shadow: 0 -8px 30px rgba(10,11,15,.7);
+}
+body.light .hv-saldo { box-shadow: 0 -8px 30px rgba(0,0,0,.12); }
+.hv-saldo-lbl {
+  font-size: 11px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--acc); margin-bottom: 5px;
+}
+.hv-saldo-num {
+  font-family: var(--ff-head); font-weight: 800; font-size: 40px;
+  line-height: 1; letter-spacing: -.02em;
+}
+.hv-saldo-det { font-size: 13px; color: var(--txt2); margin-top: 9px; line-height: 1.6; }
+.hv-saldo-det b { color: var(--txt); }
+.hv-acts { display: flex; gap: 8px; margin-top: 16px; }
+.hv-btn {
+  flex: 1; padding: 11px; border-radius: 11px;
+  border: 1px solid var(--border); background: var(--s2); color: var(--txt);
+  font-family: var(--ff-head); font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.hv-btn.pri { background: var(--acc); color: #04221d; border-color: var(--acc); }
+.hv-btn:active { transform: scale(.97); }
+
+/* Cifras del grupo */
+.hv-cifras { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 14px 16px 0; }
+.hv-cifra {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 13px 6px; text-align: center;
+}
+.hv-cifra-n { font-family: var(--ff-head); font-weight: 800; font-size: 16px; color: var(--txt); }
+.hv-cifra-l { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* Secciones */
+.hv-sec { margin: 22px 16px 0; }
+.hv-sec-h { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.hv-sec-t { font-family: var(--ff-head); font-weight: 800; font-size: 16px; color: var(--txt); }
+.hv-sec-m { font-size: 11.5px; color: var(--muted); cursor: pointer; }
+.hv-sec-m:active { color: var(--acc); }
+
+/* ── EL PODIO: las alturas SON los importes, no un adorno ── */
+.hv-podio {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 18px; padding: 20px 16px 0;
+}
+.hv-gradas { display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+.hv-puesto { flex: 1; max-width: 96px; display: flex; flex-direction: column; align-items: center; }
+.hv-medalla { font-size: 21px; margin-bottom: 5px; }
+.hv-cara {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-head); font-weight: 800; font-size: 15px; color: #0a0b0f;
+  margin-bottom: 7px; border: 2px solid var(--surface);
+}
+.hv-pnom {
+  font-size: 11.5px; font-weight: 600; color: var(--txt2); margin-bottom: 2px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hv-peur { font-family: var(--ff-head); font-weight: 800; font-size: 14px; margin-bottom: 8px; }
+.hv-grada {
+  width: 100%; border-radius: 9px 9px 0 0;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 7px; font-family: var(--ff-head); font-weight: 800; font-size: 15px;
+  color: rgba(255,255,255,.4);
+}
+.hv-resto {
+  border-top: 1px solid var(--border); margin-top: 2px; padding: 11px 2px;
+  display: flex; justify-content: space-between; font-size: 12px; color: var(--muted2);
+}
+.hv-resto b { color: var(--txt2); font-weight: 600; }
+
+/* Gastos más caros / movimientos */
+.hv-fila {
+  display: flex; align-items: center; gap: 11px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 13px; padding: 11px 13px; margin-bottom: 7px; cursor: pointer;
+}
+.hv-pos {
+  width: 20px; font-family: var(--ff-head); font-weight: 800; font-size: 13px;
+  color: var(--muted); flex-shrink: 0; text-align: center;
+}
+.hv-fico {
+  width: 34px; height: 34px; border-radius: 10px; background: var(--s2);
+  display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+}
+.hv-ftxt { flex: 1; min-width: 0; }
+.hv-fd {
+  font-size: 13.5px; font-weight: 600; color: var(--txt);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hv-fs { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.hv-fe { font-family: var(--ff-head); font-weight: 800; font-size: 15px; color: var(--acc2); flex-shrink: 0; }
+
+.hv-mov { display: flex; align-items: center; gap: 11px; padding: 11px 2px; border-bottom: 1px solid var(--border); }
+.hv-mov:last-child { border-bottom: none; }
+
+/* Selector de grupo (hoja) */
+.hv-gitem {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border-radius: 13px; cursor: pointer;
+  border: 1px solid transparent; margin-bottom: 6px;
+}
+.hv-gitem.on { background: rgba(94,234,212,.08); border-color: rgba(94,234,212,.3); }
+.hv-gem {
+  width: 40px; height: 40px; border-radius: 11px; background: var(--s2);
+  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+.hv-gt { flex: 1; min-width: 0; }
+.hv-gn { font-weight: 700; font-size: 14.5px; color: var(--txt); }
+.hv-gs { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.hv-gb { font-family: var(--ff-head); font-weight: 800; font-size: 13.5px; flex-shrink: 0; }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -862,20 +1047,27 @@ html.pre-light body { background: #f6f7fb; }
 
 <!-- ══ HOME ══ -->
 <div class="scr on" id="scr-home">
-  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.4</span></div>
+
+  <!-- ══ HOME CLÁSICA (la de siempre) ══ -->
+  <div id="home-clasica">
+    <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.4</span></div>
     <div id="greeting" style="display:none;padding:0 16px 10px;">
-    <div style="font-family:var(--ff-head);font-size:20px;font-weight:800;color:var(--txt)">Hola, <span id="greeting-name" style="color:var(--acc)"></span> 👋</div>
-  </div>
-  <div class="banner">
-    <div class="ban-item"><div class="ban-lbl">Debes</div><div class="ban-val" id="b-deb" style="color:var(--acc3)">0,00 €</div></div>
-    <div class="ban-item"><div class="ban-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
-    <div class="ban-item"><div class="ban-lbl">Grupos</div><div class="ban-val" id="b-grp">0</div></div>
+      <div style="font-family:var(--ff-head);font-size:20px;font-weight:800;color:var(--txt)">Hola, <span id="greeting-name" style="color:var(--acc)"></span> 👋</div>
+    </div>
+    <div class="banner">
+      <div class="ban-item"><div class="ban-lbl">Debes</div><div class="ban-val" id="b-deb" style="color:var(--acc3)">0,00 €</div></div>
+      <div class="ban-item"><div class="ban-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
+      <div class="ban-item"><div class="ban-lbl">Grupos</div><div class="ban-val" id="b-grp">0</div></div>
+    </div>
+    <div class="sb">
+      <div class="sec-lbl sec-lbl-home">Grupos activos</div>
+      <div id="grp-list"></div>
+    </div>
   </div>
 
-  <div class="sb">
-    <div class="sec-lbl sec-lbl-home">Grupos activos</div>
-    <div id="grp-list"></div>
-  </div>
+  <!-- ══ HOME AVANZADA (un solo grupo, con selector) ══ -->
+  <div id="home-avanzada" style="display:none"></div>
+
   </div>
 
 <!-- ══ ACTIVITY ══ -->
@@ -1045,6 +1237,17 @@ html.pre-light body { background: #f6f7fb; }
   </div>
 </div>
 
+<!-- ══ MODAL: ELEGIR GRUPO DE LA HOME ══ -->
+<div class="modal-bg" id="m-home-grp" onclick="closeOut(event,'m-home-grp')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Cambiar de grupo</div>
+    <div id="home-grp-list" style="max-height:56vh;overflow-y:auto;margin-bottom:12px"></div>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-home-grp')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
 <!-- ══ MODAL: HISTORIAL DE ACTIVIDAD ══ -->
 <div class="modal-bg" id="m-history" onclick="closeOut(event,'m-history')">
   <div class="sheet">
@@ -1201,6 +1404,24 @@ html.pre-light body { background: #f6f7fb; }
         <div style="font-size:12px;color:var(--muted2);margin-top:1px">Los datos se guardan en la nube</div>
       </div>
       <button id="sbtn-sync" onclick="manualSync()" style="flex-shrink:0">↻ Sync</button>
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Inicio</div>
+    <div class="card" style="padding:5px">
+      <div style="display:flex;gap:6px">
+        <button id="home-cla-btn" onclick="setHomeStyle('clasica')" class="theme-btn on">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="7" rx="1"/><rect x="3" y="14" width="18" height="7" rx="1"/></svg>
+          <span>Clásica</span>
+        </button>
+        <button id="home-avz-btn" onclick="setHomeStyle('avanzada')" class="theme-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6-6.3 4.6L7.9 13.8 2 9.4h7.6z"/></svg>
+          <span>Avanzada</span>
+        </button>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);padding:8px 8px 4px;line-height:1.5">
+        <strong style="color:var(--txt2)">Clásica</strong>: la lista de todos tus grupos.<br>
+        <strong style="color:var(--txt2)">Avanzada</strong>: un grupo a fondo, con podio y rankings.
+      </p>
     </div>
 
     <div class="sec-lbl" style="margin-top:18px">Apariencia</div>
@@ -2742,8 +2963,11 @@ function closeOut(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 // ════════════════════════════════════════════
 // GROUP DETAIL
 // ════════════════════════════════════════════
-function openGroup(id) {
-  curGid=id; curTab='gastos';
+// tab (opcional): 'gastos' | 'balances' | 'deudas'. Si no se pasa, abre Gastos,
+// así las llamadas antiguas siguen funcionando igual.
+function openGroup(id, tab) {
+  var t = (tab === 'balances' || tab === 'deudas') ? tab : 'gastos';
+  curGid=id; curTab=t;
   const g=grp(); if(!g) return;
   document.getElementById('g-emoji').textContent  = g.emoji;
   document.getElementById('g-name').textContent   = g.name;
@@ -2751,7 +2975,7 @@ function openGroup(id) {
   applyGroupHeaderBg(g);
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
   document.getElementById('scr-grp').classList.add('on');
-  switchTab('gastos');
+  switchTab(t);
 }
 
 // Pinta (o quita) la imagen de fondo en la cabecera del grupo
@@ -3420,7 +3644,461 @@ function renderAll() {
 // ════════════════════════════════════════════
 // HOME
 // ════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════
+// HOME AVANZADA — un solo grupo, con selector
+// ──────────────────────────────────────────────────
+// Preferencia PERSONAL de cada usuario (como el tema): vive en el móvil,
+// no en la base de datos. Cada uno elige cómo quiere ver su Inicio.
+// ══════════════════════════════════════════════════
+
+function homeStyle() {
+  try { return localStorage.getItem('sg_home') === 'avanzada' ? 'avanzada' : 'clasica'; }
+  catch (e) { return 'clasica'; }
+}
+
+function setHomeStyle(estilo) {
+  var v = (estilo === 'avanzada') ? 'avanzada' : 'clasica';
+  try { localStorage.setItem('sg_home', v); } catch (e) {}
+  updateHomeButtons(v);
+  renderHome();
+  toast(v === 'avanzada' ? '✨ Inicio avanzado' : '📋 Inicio clásico');
+}
+
+function updateHomeButtons(v) {
+  var a = document.getElementById('home-cla-btn');
+  var b = document.getElementById('home-avz-btn');
+  if (a) a.className = 'theme-btn' + (v === 'clasica'  ? ' on' : '');
+  if (b) b.className = 'theme-btn' + (v === 'avanzada' ? ' on' : '');
+}
+
+// ── Grupo que se muestra en la Home avanzada ──
+function homeGid() {
+  var vis = visibleGroups();
+  if (!vis.length) return null;
+  var guardado = '';
+  try { guardado = localStorage.getItem('sg_home_gid') || ''; } catch (e) {}
+  // Si el grupo guardado sigue existiendo y visible, ese
+  if (guardado && vis.some(function(g){ return g.id === guardado; })) return guardado;
+  // Si no (lo borraron u ocultaron), el de actividad más reciente
+  return grupoMasReciente(vis).id;
+}
+
+function setHomeGid(gid) {
+  try { localStorage.setItem('sg_home_gid', gid); } catch (e) {}
+  closeModal('m-home-grp');
+  renderHome();
+}
+
+// El grupo con el gasto más nuevo (o el primero, si ninguno tiene gastos)
+function grupoMasReciente(lista) {
+  var mejor = lista[0], mejorT = -1;
+  lista.forEach(function(g) {
+    (g.expenses || []).forEach(function(e) {
+      var t = new Date(e.addedAt || e.date || 0).getTime();
+      if (t > mejorT) { mejorT = t; mejor = g; }
+    });
+  });
+  return mejor;
+}
+
+// ── Cuánto ha pagado cada persona (para el podio) ──
+function aportaciones(g) {
+  var tot = {};
+  (g.members || []).forEach(function(m){ tot[m] = 0; });
+  (g.expenses || []).forEach(function(e) {
+    if (!e || e.isSettlement) return;
+    var p = e.paidBy;
+    if (!p) return;
+    tot[p] = (tot[p] || 0) + (Number(e.amount) || 0);
+  });
+  return Object.keys(tot)
+    .map(function(n){ return { name: n, total: tot[n] }; })
+    .sort(function(a,b){ return b.total - a.total; });
+}
+
+// ══ RENDER PRINCIPAL ══
+function renderHomeAvanzada() {
+  var cont = document.getElementById('home-avanzada');
+  if (!cont) return;
+
+  var vis = visibleGroups();
+  if (!vis.length) {
+    cont.innerHTML = '<div class="home-hdr"><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div>' +
+      '<div class="empty" style="padding:40px 20px"><div class="empty-icon">👥</div>' +
+      '<p>Sin grupos todavía.</p>' +
+      (isAdmin()
+        ? '<button onclick="openModal(\'m-newgrp\')" style="margin-top:14px;background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;cursor:pointer">+ Crear primer grupo</button>'
+        : '<p style="font-size:12px;color:var(--muted);margin-top:12px">🔒 Solo el administrador puede crear grupos.</p>') +
+      '</div>';
+    return;
+  }
+
+  var gid = homeGid();
+  var g = vis.filter(function(x){ return x.id === gid; })[0] || vis[0];
+
+  var h = '';
+  h += bloqueBanner(g, vis.length);
+  h += bloqueSaldo(g);
+  h += bloqueCifras(g);
+  h += bloquePodio(g);
+  h += bloqueCaros(g);
+  h += bloqueCategorias(g);
+  h += bloqueUltimos(g);
+  h += '<div class="pb"></div>';
+
+  cont.innerHTML = h;
+
+  // La foto se aplica después (con verificación y reintento)
+  var ban = document.getElementById('hv-banner');
+  if (ban && g.bg) applyBgWithRetry(ban, g.bg);
+}
+
+// ── 1. Banner con la foto del grupo + selector ──
+function bloqueBanner(g, nGrupos) {
+  var gente = (g.members || []).join(' · ');
+  var nExp  = (g.expenses || []).filter(function(e){ return e && !e.isSettlement; }).length;
+  var total = (g.expenses || []).reduce(function(a,e){
+    return a + ((e && !e.isSettlement) ? (Number(e.amount)||0) : 0);
+  }, 0);
+
+  // Sin foto: degradado + el emoji del grupo, gigante y translúcido
+  var estilo = g.bg
+      ? ''
+      : 'background:linear-gradient(135deg,#1e2a45 0%,#0f1119 100%)';
+
+  var h = '<div class="hv-banner" id="hv-banner" style="' + estilo + '">';
+  if (!g.bg) h += '<div class="hv-eco">' + esc(g.emoji || '📁') + '</div>';
+
+  h += '<div style="display:flex;gap:9px;align-items:center">';
+  h +=   '<div class="hv-chip" onclick="openHomeGrp()">';
+  h +=     '<span style="font-size:18px">' + esc(g.emoji || '📁') + '</span>';
+  h +=     '<span class="hv-chip-nom">' + esc(g.name) + '</span>';
+  if (nGrupos > 1) h += '<span style="font-size:10px;opacity:.6">▼</span>';
+  h +=   '</div>';
+  h +=   '<div class="hv-ico" onclick="openGroup(\'' + g.id + '\')" title="Abrir el grupo">';
+  h +=     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+  h +=   '</div>';
+  h += '</div>';
+
+  h += '<div>';
+  h +=   '<div class="hv-nom">' + esc(g.name) + '</div>';
+  h +=   '<div class="hv-gente">' + esc(gente) + '</div>';
+  h +=   '<div class="hv-pill"><span style="width:6px;height:6px;border-radius:50%;background:var(--acc2)"></span>' +
+           nExp + ' gasto' + (nExp === 1 ? '' : 's') + ' · ' + fmt(total) + '</div>';
+  h += '</div>';
+  h += '</div>';
+  return h;
+}
+
+// ── 2. Tu saldo: la razón por la que se abre la app ──
+function bloqueSaldo(g) {
+  var me = myName();
+  var pend = computeDebts(g);
+
+  var debo = pend.filter(function(t){ return isMe(t.from); });   // yo debo
+  var meDeben = pend.filter(function(t){ return isMe(t.to); });  // me deben
+
+  var totDebo = debo.reduce(function(a,t){ return a + t.amount; }, 0);
+  var totDeben = meDeben.reduce(function(a,t){ return a + t.amount; }, 0);
+
+  var h = '<div class="hv-saldo">';
+
+  if (!me) {
+    h += '<div class="hv-saldo-lbl" style="color:var(--muted2)">Sin identificar</div>';
+    h += '<div class="hv-saldo-num" style="color:var(--txt2);font-size:22px">¿Quién eres?</div>';
+    h += '<div class="hv-saldo-det">Introduce tu código desde Ajustes para ver tu saldo.</div>';
+    h += '</div>';
+    return h;
+  }
+
+  if (totDeben > 0.005) {
+    h += '<div class="hv-saldo-lbl">Te deben</div>';
+    h += '<div class="hv-saldo-num" style="color:var(--acc)">' + fmt(totDeben) + '</div>';
+    h += '<div class="hv-saldo-det">' +
+         meDeben.map(function(t){ return '<b>' + esc(t.from) + '</b> · ' + fmt(t.amount); }).join('<br>') +
+         '</div>';
+  } else if (totDebo > 0.005) {
+    h += '<div class="hv-saldo-lbl" style="color:var(--acc3)">Debes</div>';
+    h += '<div class="hv-saldo-num" style="color:var(--acc3)">' + fmt(totDebo) + '</div>';
+    h += '<div class="hv-saldo-det">' +
+         debo.map(function(t){ return 'A <b>' + esc(t.to) + '</b> · ' + fmt(t.amount); }).join('<br>') +
+         '</div>';
+  } else if ((g.members || []).indexOf(me) < 0) {
+    h += '<div class="hv-saldo-lbl" style="color:var(--muted2)">No estás en este grupo</div>';
+    h += '<div class="hv-saldo-num" style="color:var(--txt2);font-size:24px">Solo mirando</div>';
+    h += '<div class="hv-saldo-det">Puedes consultarlo, pero no participas en los gastos.</div>';
+  } else {
+    h += '<div class="hv-saldo-lbl">Tu saldo</div>';
+    h += '<div class="hv-saldo-num" style="color:var(--txt)">Todo en paz 🎉</div>';
+    h += '<div class="hv-saldo-det">No debes nada y no te deben nada.</div>';
+  }
+
+  h += '<div class="hv-acts">';
+  h +=   '<button class="hv-btn pri" onclick="openGroup(\'' + g.id + '\',\'deudas\')">Ver deudas</button>';
+  h +=   '<button class="hv-btn" onclick="addExpenseFrom(\'' + g.id + '\')">Añadir gasto</button>';
+  h += '</div>';
+  h += '</div>';
+  return h;
+}
+
+// ── 3. Cifras del grupo ──
+function bloqueCifras(g) {
+  var exps = (g.expenses || []).filter(function(e){ return e && !e.isSettlement; });
+  var total = exps.reduce(function(a,e){ return a + (Number(e.amount)||0); }, 0);
+  var nm = (g.members || []).length || 1;
+
+  var h = '<div class="hv-cifras">';
+  h += '<div class="hv-cifra"><div class="hv-cifra-n">' + fmt(total) + '</div><div class="hv-cifra-l">Total</div></div>';
+  h += '<div class="hv-cifra"><div class="hv-cifra-n">' + fmt(total/nm) + '</div><div class="hv-cifra-l">Por persona</div></div>';
+  h += '<div class="hv-cifra"><div class="hv-cifra-n">' + exps.length + '</div><div class="hv-cifra-l">Gasto' + (exps.length===1?'':'s') + '</div></div>';
+  h += '</div>';
+  return h;
+}
+
+
+// ── 4. EL PODIO: quién ha puesto más ──
+// Las alturas de las gradas son PROPORCIONALES a lo aportado: el podio es el
+// dato, no un adorno. Con menos de 3 personas se degrada con elegancia.
+function bloquePodio(g) {
+  var ap = aportaciones(g).filter(function(p){ return p.total > 0.005; });
+  if (ap.length < 2) return '';   // con una sola persona no hay competición
+
+  var total = ap.reduce(function(a,p){ return a + p.total; }, 0);
+  if (total < 0.01) return '';
+
+  var h = '<div class="hv-sec">';
+  h += '<div class="hv-sec-h"><div class="hv-sec-t">Quién ha puesto más</div>' +
+       '<div class="hv-sec-m">de ' + fmt(total) + '</div></div>';
+  h += '<div class="hv-podio">';
+  h += '<div class="hv-gradas">';
+
+  var top = ap.slice(0, 3);
+  var max = top[0].total;
+
+  // Orden visual del podio: 2º · 1º · 3º (el ganador, en el centro y más alto)
+  var orden = top.length >= 3 ? [1, 0, 2] : (top.length === 2 ? [1, 0] : [0]);
+  var medallas = ['🥇', '🥈', '🥉'];
+  var colores  = ['var(--acc2)', '#94a3b8', '#c2764a'];
+  var degrad   = [
+    'linear-gradient(180deg,#fbbf24 0%,rgba(251,191,36,.15) 100%)',
+    'linear-gradient(180deg,#94a3b8 0%,rgba(148,163,184,.13) 100%)',
+    'linear-gradient(180deg,#c2764a 0%,rgba(194,118,74,.13) 100%)'
+  ];
+
+  orden.forEach(function(i) {
+    var p = top[i];
+    if (!p) return;
+    // Altura proporcional al importe (mínimo 30px para que se vea)
+    var alt = Math.max(30, Math.round(78 * (p.total / max)));
+    h += '<div class="hv-puesto">';
+    h +=   '<div class="hv-medalla">' + medallas[i] + '</div>';
+    h +=   '<div class="hv-cara" style="background:' + avc(p.name) + '">' + ini(p.name) + '</div>';
+    h +=   '<div class="hv-pnom">' + esc(p.name) + '</div>';
+    h +=   '<div class="hv-peur" style="color:' + colores[i] + '">' + fmt(p.total) + '</div>';
+    h +=   '<div class="hv-grada" style="height:' + alt + 'px;background:' + degrad[i] + '">' + (i+1) + '</div>';
+    h += '</div>';
+  });
+
+  h += '</div>';
+
+  // La pulla: quién ha puesto menos (solo si hay más de 3)
+  if (ap.length > 3) {
+    var ultimo = ap[ap.length - 1];
+    h += '<div class="hv-resto"><span>Y el que menos: <b>' + esc(ultimo.name) + '</b></span>' +
+         '<span><b>' + fmt(ultimo.total) + '</b></span></div>';
+  } else {
+    h += '<div style="height:14px"></div>';
+  }
+
+  h += '</div></div>';
+  return h;
+}
+
+// ── 5. Los gastos más caros ──
+function bloqueCaros(g) {
+  var exps = (g.expenses || [])
+    .filter(function(e){ return e && !e.isSettlement && (Number(e.amount) || 0) > 0; })
+    .slice()
+    .sort(function(a,b){ return (Number(b.amount)||0) - (Number(a.amount)||0); });
+
+  if (!exps.length) return '';
+
+  var top = exps.slice(0, 3);
+  var h = '<div class="hv-sec">';
+  h += '<div class="hv-sec-h"><div class="hv-sec-t">Los más caros</div>';
+  if (exps.length > 3) {
+    h += '<div class="hv-sec-m" onclick="openGroup(\'' + g.id + '\',\'gastos\')">Ver los ' + exps.length + ' →</div>';
+  }
+  h += '</div>';
+
+  top.forEach(function(e, i) {
+    var cat = CATS.filter(function(c){ return c.id === e.category; })[0];
+    h += '<div class="hv-fila" onclick="openGroup(\'' + g.id + '\',\'gastos\')">';
+    h +=   '<div class="hv-pos">' + (i+1) + '</div>';
+    h +=   '<div class="hv-fico">' + (cat ? cat.e : '💸') + '</div>';
+    h +=   '<div class="hv-ftxt">';
+    h +=     '<div class="hv-fd">' + esc(e.desc || 'Sin descripción') + '</div>';
+    h +=     '<div class="hv-fs">' + esc(e.paidBy || '?') + ' · ' + niceDate(e.date) + '</div>';
+    h +=   '</div>';
+    h +=   '<div class="hv-fe">' + fmt(Number(e.amount) || 0) + '</div>';
+    h += '</div>';
+  });
+
+  h += '</div>';
+  return h;
+}
+
+// ── 6. En qué se va el dinero (donut de categorías) ──
+function bloqueCategorias(g) {
+  var exps = (g.expenses || []).filter(function(e){ return e && !e.isSettlement; });
+  if (!exps.length) return '';
+
+  var porCat = {};
+  exps.forEach(function(e) {
+    var id = e.category || 'otros';
+    porCat[id] = (porCat[id] || 0) + (Number(e.amount) || 0);
+  });
+
+  var total = Object.keys(porCat).reduce(function(a,k){ return a + porCat[k]; }, 0);
+  if (total < 0.01) return '';
+
+  var lista = Object.keys(porCat)
+    .map(function(k) {
+      var c = CATS.filter(function(x){ return x.id === k; })[0];
+      return { id: k, e: c ? c.e : '📦', n: c ? c.n : 'Otros', v: porCat[k] };
+    })
+    .sort(function(a,b){ return b.v - a.v; })
+    .slice(0, 4);
+
+  var COL = ['#5eead4', '#fbbf24', '#818cf8', '#fb7185'];
+  var R = 15.9, CIRC = 2 * Math.PI * R;
+
+  var h = '<div class="hv-sec">';
+  h += '<div class="hv-sec-h"><div class="hv-sec-t">En qué se va el dinero</div></div>';
+  h += '<div class="hv-podio" style="padding:18px;display:flex;align-items:center;gap:18px">';
+
+  // Donut
+  h += '<svg width="108" height="108" viewBox="0 0 42 42" style="flex-shrink:0">';
+  h += '<circle cx="21" cy="21" r="' + R + '" fill="none" stroke="var(--s2)" stroke-width="5.5"/>';
+  var acum = 0;
+  lista.forEach(function(c, i) {
+    var pct = (c.v / total) * 100;
+    var dash = (pct / 100) * CIRC;
+    h += '<circle cx="21" cy="21" r="' + R + '" fill="none" stroke="' + COL[i] + '" stroke-width="5.5" ' +
+         'stroke-dasharray="' + dash.toFixed(2) + ' ' + (CIRC - dash).toFixed(2) + '" ' +
+         'stroke-dashoffset="' + (CIRC * 0.25 - acum).toFixed(2) + '" stroke-linecap="butt"/>';
+    acum += dash;
+  });
+  h += '<text x="21" y="20" text-anchor="middle" font-size="5" font-weight="800" fill="var(--txt)" font-family="Outfit">' +
+       Math.round(total) + '€</text>';
+  h += '<text x="21" y="25" text-anchor="middle" font-size="2.9" fill="var(--muted)" font-family="Inter">total</text>';
+  h += '</svg>';
+
+  // Leyenda
+  h += '<div style="flex:1;display:flex;flex-direction:column;gap:9px;min-width:0">';
+  lista.forEach(function(c, i) {
+    var pct = Math.round((c.v / total) * 100);
+    h += '<div style="display:flex;align-items:center;gap:8px;font-size:12.5px">';
+    h +=   '<span style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:' + COL[i] + '"></span>';
+    h +=   '<span style="flex:1;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + c.e + ' ' + esc(c.n) + '</span>';
+    h +=   '<span style="font-family:var(--ff-head);font-weight:700;color:var(--muted2);font-size:12px">' + pct + '%</span>';
+    h += '</div>';
+  });
+  h += '</div>';
+
+  h += '</div></div>';
+  return h;
+}
+
+// ── 7. Lo último (3 movimientos) ──
+function bloqueUltimos(g) {
+  var exps = (g.expenses || [])
+    .filter(function(e){ return e && !e.isSettlement; })
+    .slice()
+    .sort(function(a,b) {
+      var ta = new Date(a.addedAt || a.date || 0).getTime();
+      var tb = new Date(b.addedAt || b.date || 0).getTime();
+      return tb - ta;
+    })
+    .slice(0, 3);
+
+  if (!exps.length) return '';
+
+  var h = '<div class="hv-sec">';
+  h += '<div class="hv-sec-h"><div class="hv-sec-t">Lo último</div>' +
+       '<div class="hv-sec-m" onclick="goTab(\'activity\')">Ver todo →</div></div>';
+  h += '<div class="hv-podio" style="padding:4px 14px">';
+
+  exps.forEach(function(e) {
+    var cat = CATS.filter(function(c){ return c.id === e.category; })[0];
+    h += '<div class="hv-mov">';
+    h +=   '<div class="hv-fico">' + (cat ? cat.e : '💸') + '</div>';
+    h +=   '<div class="hv-ftxt">';
+    h +=     '<div class="hv-fd">' + esc(e.desc || 'Sin descripción') + '</div>';
+    h +=     '<div class="hv-fs">Pagó ' + esc(e.paidBy || '?') + ' · ' + niceDate(e.date) + '</div>';
+    h +=   '</div>';
+    h +=   '<div class="hv-fe">' + fmt(Number(e.amount) || 0) + '</div>';
+    h += '</div>';
+  });
+
+  h += '</div></div>';
+  return h;
+}
+
+// Abrir el grupo y lanzar directamente el formulario de nuevo gasto
+function addExpenseFrom(gid) {
+  openGroup(gid, 'gastos');
+  setTimeout(function(){ openAddExpense(); }, 220);   // tras la transición de pantalla
+}
+
+// ── Selector de grupo (hoja) ──
+function openHomeGrp() {
+  var vis = visibleGroups();
+  if (vis.length < 2) { toast('Solo tienes un grupo'); return; }
+
+  var actual = homeGid();
+  var me = myName();
+  var cont = document.getElementById('home-grp-list');
+  if (!cont) return;
+
+  var h = '';
+  vis.forEach(function(g) {
+    var pend = computeDebts(g);
+    var debo  = pend.filter(function(t){ return isMe(t.from); }).reduce(function(a,t){ return a+t.amount; }, 0);
+    var deben = pend.filter(function(t){ return isMe(t.to);   }).reduce(function(a,t){ return a+t.amount; }, 0);
+
+    var sub, col, val;
+    if (deben > 0.005)      { sub = 'Te deben ' + fmt(deben); col = 'var(--acc)';  val = fmt(deben); }
+    else if (debo > 0.005)  { sub = 'Debes ' + fmt(debo);     col = 'var(--acc3)'; val = '−' + fmt(debo); }
+    else                    { sub = 'Todo liquidado';         col = 'var(--muted)'; val = fmt(0); }
+
+    h += '<div class="hv-gitem' + (g.id === actual ? ' on' : '') + '" onclick="setHomeGid(\'' + g.id + '\')">';
+    h +=   '<div class="hv-gem">' + esc(g.emoji || '📁') + '</div>';
+    h +=   '<div class="hv-gt"><div class="hv-gn">' + esc(g.name) + '</div>' +
+           '<div class="hv-gs">' + sub + '</div></div>';
+    h +=   (g.id === actual
+              ? '<span style="color:var(--acc);font-size:15px">✓</span>'
+              : '<span class="hv-gb" style="color:' + col + '">' + val + '</span>');
+    h += '</div>';
+  });
+
+  cont.innerHTML = h;
+  openModal('m-home-grp');
+}
+
 function renderHome() {
+  var avanzada = (homeStyle() === 'avanzada');
+  var ca = document.getElementById('home-clasica');
+  var av = document.getElementById('home-avanzada');
+  if (ca) ca.style.display = avanzada ? 'none'  : 'block';
+  if (av) av.style.display = avanzada ? 'block' : 'none';
+
+  if (avanzada) { renderHomeAvanzada(); return; }
+  renderHomeClasica();
+}
+
+function renderHomeClasica() {
   renderBanner();
   const c = document.getElementById('grp-list');
   if (!DB.groups.length) {
@@ -4653,6 +5331,7 @@ function maybeShowWelcome() {
 
 async function init() {
   loadTheme();
+  updateHomeButtons(homeStyle());
   DB = { groups: [], v: 0 };
   setActiveNav('home');
 
