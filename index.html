@@ -848,12 +848,18 @@ html.pre-light body { background: #f6f7fb; }
      inferior la funde con la tarjeta del saldo, que monta encima. Esa fusión es
      el efecto que buscamos: la foto no "termina", se disuelve en el saldo. */
   position: relative;
-  height: 208px;              /* el doble fundido se come los extremos */
+  height: 226px;
   margin-top: -4px;           /* pega con el saludo: se funden */
   background-size: cover;
   background-position: center;
-  display: flex; flex-direction: column; justify-content: space-between;
-  padding: 22px 16px 28px;    /* el botón baja para no flotar sobre el fundido */
+
+  /* El nombre se CENTRA en la franja limpia de la foto, no se pega abajo.
+     Con space-between acababa aplastado contra la tarjeta del saldo, justo
+     donde el degradado es más denso. El padding inferior compensa los 22px
+     que la tarjeta monta encima. */
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: flex-start;
+  padding: 0 18px 38px;
 }
 .hv-banner::after {
   content: ''; position: absolute; inset: 0;
@@ -862,11 +868,11 @@ html.pre-light body { background: #f6f7fb; }
      el corte recto de arriba era lo que quedaba forzado. */
   background: linear-gradient(180deg,
     rgba(10,11,15,1)   0%,
-    rgba(10,11,15,.55) 7%,
-    rgba(10,11,15,.14) 20%,
-    rgba(10,11,15,.06) 34%,
-    rgba(10,11,15,.38) 62%,
-    rgba(10,11,15,.82) 84%,
+    rgba(10,11,15,.52) 7%,
+    rgba(10,11,15,.10) 19%,
+    rgba(10,11,15,.04) 32%,
+    rgba(10,11,15,.30) 58%,
+    rgba(10,11,15,.78) 82%,
     rgba(10,11,15,1)   100%);
 }
 body.light .hv-banner::after {
@@ -887,19 +893,19 @@ body.light .hv-banner::after {
   font-size: 120px; opacity: .09; z-index: 1; pointer-events: none;
 }
 .hv-nom {
-  font-family: var(--ff-head); font-weight: 800; font-size: 34px;
-  letter-spacing: -.025em; line-height: 1.05; color: #fff;
-  text-shadow: 0 2px 20px rgba(0,0,0,.7);
+  font-family: var(--ff-head); font-weight: 800; font-size: 36px;
+  letter-spacing: -.03em; line-height: 1; color: #fff;
+  /* Doble sombra: una cerrada para el contorno, otra amplia para despegarlo
+     de la foto sin ensuciarla con un degradado más opaco. */
+  text-shadow: 0 1px 3px rgba(0,0,0,.5), 0 4px 28px rgba(0,0,0,.75);
 }
-.hv-gente {
-  font-size: 12.5px; color: rgba(255,255,255,.82); margin-top: 4px;
-  text-shadow: 0 1px 10px rgba(0,0,0,.7);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
+
 
 
 .hv-ico {
-  width: 40px; height: 40px; flex-shrink: 0; border-radius: 12px;
+  /* Fuera del flujo: así el nombre puede centrarse sin que el botón lo empuje */
+  position: absolute; top: 14px; right: 14px; z-index: 4;
+  width: 40px; height: 40px; border-radius: 12px;
   background: rgba(10,11,15,.5); backdrop-filter: blur(12px);
   border: 1px solid rgba(255,255,255,.15); color: #fff;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -1053,6 +1059,44 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
 /* El saludo, como antetítulo del grupo */
 
 
+
+/* ── El grupo, compuesto como un cartel de viaje ── */
+.hv-titulo {
+  position: relative; z-index: 2;
+  animation: hvEntra .5s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes hvEntra {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hv-titulo { animation: none; }
+}
+
+/* Medallón: el emoji del grupo en cristal esmerilado, como un sello.
+   Antes el emoji iba pegado al nombre y se leía como un carácter más;
+   así tiene entidad propia y ancla la composición. */
+.hv-medallon {
+  width: 54px; height: 54px;
+  border-radius: 17px;
+  background: rgba(255,255,255,.13);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 27px; line-height: 1;
+  margin-bottom: 13px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.22);
+}
+
+/* La gente, un peldaño por debajo del nombre */
+.hv-gente {
+  font-size: 13px; color: rgba(255,255,255,.78);
+  margin-top: 7px; font-weight: 500;
+  text-shadow: 0 1px 10px rgba(0,0,0,.85);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 100%;
+}
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -3881,9 +3925,8 @@ function bloqueBanner(g, nGrupos) {
   var h = '<div class="hv-banner" id="hv-banner" style="' + estilo + '">';
   if (!g.bg) h += '<div class="hv-eco">' + esc(g.emoji || '📁') + '</div>';
 
-  // Arriba solo el botón de cambiar grupo: la marca ya vive en la cabecera,
-  // así que la foto se queda para ella sola.
-  h += '<div style="display:flex;justify-content:flex-end">';
+  // El botón flota en la esquina, fuera del flujo: así el nombre puede
+  // centrarse en la foto sin que nada lo empuje.
   if (nGrupos > 1) {
     h += '<div class="hv-ico" onclick="openHomeGrp()" title="Cambiar de grupo">';
     h +=   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -3891,14 +3934,14 @@ function bloqueBanner(g, nGrupos) {
            '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
     h += '</div>';
   }
+
+  // ── El grupo, compuesto como un cartel: medallón + nombre + gente ──
+  h += '<div class="hv-titulo">';
+  h +=   '<div class="hv-medallon">' + esc(g.emoji || '📁') + '</div>';
+  h +=   '<div class="hv-nom">' + esc(g.name) + '</div>';
+  h +=   '<div class="hv-gente">' + esc(gente) + '</div>';
   h += '</div>';
 
-  // Abajo: el grupo, en grande
-  h += '<div>';
-  h +=   '<div class="hv-nom">' + esc(g.emoji || '') + ' ' + esc(g.name) + '</div>';
-  h +=   '<div class="hv-gente">' + esc(gente) + '</div>';
-  // Sin pastilla de "N gastos · Total": lo dicen las cajas de justo debajo.
-  h += '</div>';
   h += '</div>';
   return h;
 }
