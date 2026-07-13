@@ -845,7 +845,7 @@ html.pre-light body { background: #f6f7fb; }
 /* Banner: la foto del grupo es la identidad de la pantalla */
 .hv-banner {
   position: relative;
-  height: 186px;
+  height: 218px;              /* +32px: ahora lleva marca, lema, versión y saludo */
   background-size: cover;
   background-position: center;
   display: flex; flex-direction: column; justify-content: space-between;
@@ -854,8 +854,8 @@ html.pre-light body { background: #f6f7fb; }
 .hv-banner::after {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(180deg,
-    rgba(10,11,15,.72) 0%, rgba(10,11,15,.15) 34%,
-    rgba(10,11,15,.55) 70%, rgba(10,11,15,.96) 100%);
+    rgba(10,11,15,.82) 0%, rgba(10,11,15,.30) 26%, rgba(10,11,15,.12) 40%,
+    rgba(10,11,15,.58) 72%, rgba(10,11,15,.97) 100%);
 }
 body.light .hv-banner::after {
   background: linear-gradient(180deg,
@@ -1030,6 +1030,35 @@ body.light .hv-saldo { box-shadow: 0 -8px 30px rgba(0,0,0,.12); }
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
+
+/* Identidad de la app dentro del banner: la firma, no la protagonista.
+   Semitransparente para no competir con el nombre del grupo, que va abajo. */
+.hv-marca {
+  font-family: var(--ff-head); font-weight: 800; font-size: 16px;
+  color: #fff; letter-spacing: -.01em; line-height: 1.2;
+  text-shadow: 0 1px 12px rgba(0,0,0,.75);
+}
+.hv-lema {
+  font-size: 10.5px; color: rgba(255,255,255,.6); margin-top: 1px;
+  text-shadow: 0 1px 8px rgba(0,0,0,.8);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hv-ver {
+  font-family: var(--ff-head); font-size: 11px; font-weight: 700;
+  color: rgba(255,255,255,.75);
+  background: rgba(10,11,15,.5); backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.15);
+  padding: 5px 9px; border-radius: 8px; cursor: pointer;
+  transition: color .15s;
+}
+.hv-ver:active { color: var(--acc); }
+
+/* El saludo, como antetítulo del grupo */
+.hv-hola {
+  font-size: 13px; color: var(--acc); margin-bottom: 3px;
+  font-weight: 500; text-shadow: 0 1px 10px rgba(0,0,0,.8);
+}
+.hv-hola b { font-weight: 800; }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -3831,30 +3860,40 @@ function bloqueBanner(g, nGrupos) {
   var total = (g.expenses || []).reduce(function(a,e){
     return a + ((e && !e.isSettlement) ? (Number(e.amount)||0) : 0);
   }, 0);
+  var me = myName();
 
   // Sin foto: degradado + el emoji del grupo, gigante y translúcido
-  var estilo = g.bg
-      ? ''
-      : 'background:linear-gradient(135deg,#1e2a45 0%,#0f1119 100%)';
+  var estilo = g.bg ? '' : 'background:linear-gradient(135deg,#1e2a45 0%,#0f1119 100%)';
 
   var h = '<div class="hv-banner" id="hv-banner" style="' + estilo + '">';
   if (!g.bg) h += '<div class="hv-eco">' + esc(g.emoji || '📁') + '</div>';
 
-  // El nombre del grupo ya sale EN GRANDE abajo: repetirlo arriba en un chip
-  // ancho era redundante y se comía el banner. Basta un botón para cambiar.
-  // La flecha de "entrar al grupo" también sobraba: la hace "Ver detalle".
-  h += '<div style="display:flex;justify-content:flex-end">';
+  // ── Arriba: identidad de la app (aprovecha el degradado oscuro del banner) ──
+  // Va en pequeño y semitransparente: es la firma, no la protagonista.
+  // La protagonista es el grupo, que va abajo en grande.
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">';
+  h +=   '<div style="min-width:0">';
+  h +=     '<div class="hv-marca">SplitGuasa 💸</div>';
+  h +=     '<div class="hv-lema">Un Lannister siempre paga sus deudas</div>';
+  h +=   '</div>';
+  h +=   '<div style="display:flex;gap:7px;align-items:center;flex-shrink:0">';
+  h +=     '<span class="hv-ver" onclick="openModal(\'m-about\')">v1.4</span>';
   if (nGrupos > 1) {
-    h += '<div class="hv-ico" onclick="openHomeGrp()" title="Cambiar de grupo">';
-    h +=   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-           '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
-           '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
-    h += '</div>';
+    h +=   '<div class="hv-ico" onclick="openHomeGrp()" title="Cambiar de grupo">';
+    h +=     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+             '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+             '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+    h +=   '</div>';
   }
+  h +=   '</div>';
   h += '</div>';
 
+  // ── Abajo: el saludo como antetítulo, y el grupo en grande ──
   h += '<div>';
-  h +=   '<div class="hv-nom">' + esc(g.name) + '</div>';
+  if (me) {
+    h += '<div class="hv-hola">Hola, <b>' + esc(me) + '</b> 👋</div>';
+  }
+  h +=   '<div class="hv-nom">' + esc(g.emoji || '') + ' ' + esc(g.name) + '</div>';
   h +=   '<div class="hv-gente">' + esc(gente) + '</div>';
   h +=   '<div class="hv-pill"><span style="width:6px;height:6px;border-radius:50%;background:var(--acc2)"></span>' +
            nExp + ' gasto' + (nExp === 1 ? '' : 's') + ' · ' + fmt(total) + '</div>';
