@@ -844,23 +844,31 @@ html.pre-light body { background: #f6f7fb; }
 
 /* Banner: la foto del grupo es la identidad de la pantalla */
 .hv-banner {
+  /* La marca ya vive en la cabecera, así que el banner solo carga con el grupo:
+     puede ser más bajo y dejar sitio a la foto. */
   position: relative;
-  height: 218px;              /* +32px: ahora lleva marca, lema, versión y saludo */
+  height: 168px;
+  margin: 2px 16px 0;
+  border-radius: 20px;
+  overflow: hidden;
   background-size: cover;
   background-position: center;
   display: flex; flex-direction: column; justify-content: space-between;
-  padding: 12px 14px 16px;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--border);
 }
 .hv-banner::after {
   content: ''; position: absolute; inset: 0;
+  /* Solo lo justo: un velo tenue arriba (para el botón) y peso abajo (para el
+     nombre). El centro de la foto queda limpio. */
   background: linear-gradient(180deg,
-    rgba(10,11,15,.82) 0%, rgba(10,11,15,.30) 26%, rgba(10,11,15,.12) 40%,
-    rgba(10,11,15,.58) 72%, rgba(10,11,15,.97) 100%);
+    rgba(10,11,15,.42) 0%, rgba(10,11,15,.06) 30%,
+    rgba(10,11,15,.45) 62%, rgba(10,11,15,.88) 100%);
 }
 body.light .hv-banner::after {
   background: linear-gradient(180deg,
-    rgba(0,0,0,.55) 0%, rgba(0,0,0,.1) 34%,
-    rgba(0,0,0,.35) 70%, rgba(246,247,251,.96) 100%);
+    rgba(0,0,0,.42) 0%, rgba(0,0,0,.06) 30%,
+    rgba(0,0,0,.35) 62%, rgba(0,0,0,.72) 100%);
 }
 .hv-banner > * { position: relative; z-index: 2; }
 
@@ -870,7 +878,7 @@ body.light .hv-banner::after {
   font-size: 120px; opacity: .09; z-index: 1; pointer-events: none;
 }
 .hv-nom {
-  font-family: var(--ff-head); font-weight: 800; font-size: 28px;
+  font-family: var(--ff-head); font-weight: 800; font-size: 26px;
   letter-spacing: -.02em; line-height: 1.1; color: #fff;
   text-shadow: 0 2px 18px rgba(0,0,0,.6);
 }
@@ -898,13 +906,11 @@ body.light .hv-banner::after {
 
 /* Saldo: sale de la foto y monta sobre ella, sólido para que el número cante */
 .hv-saldo {
-  margin: -16px 16px 0; padding: 20px;
-  border-radius: 20px; position: relative; z-index: 3;
+  margin: 0 16px; padding: 20px;
+  border-radius: 20px;
   background: var(--surface);
   border: 1px solid rgba(94,234,212,.24);
-  box-shadow: 0 -8px 30px rgba(10,11,15,.7);
 }
-body.light .hv-saldo { box-shadow: 0 -8px 30px rgba(0,0,0,.12); }
 .hv-saldo-lbl {
   font-size: 11px; font-weight: 700; letter-spacing: .09em;
   text-transform: uppercase; color: var(--acc); margin-bottom: 5px;
@@ -1033,32 +1039,14 @@ body.light .hv-saldo { box-shadow: 0 -8px 30px rgba(0,0,0,.12); }
 
 /* Identidad de la app dentro del banner: la firma, no la protagonista.
    Semitransparente para no competir con el nombre del grupo, que va abajo. */
-.hv-marca {
-  font-family: var(--ff-head); font-weight: 800; font-size: 16px;
-  color: #fff; letter-spacing: -.01em; line-height: 1.2;
-  text-shadow: 0 1px 12px rgba(0,0,0,.75);
-}
-.hv-lema {
-  font-size: 10.5px; color: rgba(255,255,255,.6); margin-top: 1px;
-  text-shadow: 0 1px 8px rgba(0,0,0,.8);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.hv-ver {
-  font-family: var(--ff-head); font-size: 11px; font-weight: 700;
-  color: rgba(255,255,255,.75);
-  background: rgba(10,11,15,.5); backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,.15);
-  padding: 5px 9px; border-radius: 8px; cursor: pointer;
-  transition: color .15s;
-}
-.hv-ver:active { color: var(--acc); }
+
+
+
+
 
 /* El saludo, como antetítulo del grupo */
-.hv-hola {
-  font-size: 13px; color: var(--acc); margin-bottom: 3px;
-  font-weight: 500; text-shadow: 0 1px 10px rgba(0,0,0,.8);
-}
-.hv-hola b { font-weight: 800; }
+
+
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -3838,7 +3826,9 @@ function renderHomeAvanzada() {
   var g = vis.filter(function(x){ return x.id === gid; })[0] || vis[0];
 
   var h = '';
+  h += bloqueCabecera();      // SplitGuasa 💸 + lema + versión (idéntica a la clásica)
   h += bloqueBanner(g, vis.length);
+  h += bloqueHola();          // Hola, Jota 👋
   h += bloqueSaldo(g);
   h += bloqueCifras(g);
   h += bloqueCategorias(g);   // En qué se va el dinero
@@ -3854,13 +3844,34 @@ function renderHomeAvanzada() {
 }
 
 // ── 1. Banner con la foto del grupo + selector ──
+
+// ── Cabecera: EXACTAMENTE la misma que en la Home clásica ──
+// Reutiliza la clase .home-hdr, así no hay dos estilos que mantener.
+function bloqueCabecera() {
+  var h = '<div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">';
+  h +=   '<div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div>';
+  h +=   '<span onclick="openModal(\'m-about\')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0">v1.4</span>';
+  h += '</div>';
+  return h;
+}
+
+// ── Saludo: justo antes de la caja del saldo ──
+function bloqueHola() {
+  var me = myName();
+  if (!me) return '';
+  return '<div style="padding:2px 16px 12px">' +
+           '<div style="font-family:var(--ff-head);font-size:20px;font-weight:800;color:var(--txt)">' +
+             'Hola, <span style="color:var(--acc)">' + esc(me) + '</span> 👋' +
+           '</div>' +
+         '</div>';
+}
+
 function bloqueBanner(g, nGrupos) {
   var gente = (g.members || []).join(' · ');
   var nExp  = (g.expenses || []).filter(function(e){ return e && !e.isSettlement; }).length;
   var total = (g.expenses || []).reduce(function(a,e){
     return a + ((e && !e.isSettlement) ? (Number(e.amount)||0) : 0);
   }, 0);
-  var me = myName();
 
   // Sin foto: degradado + el emoji del grupo, gigante y translúcido
   var estilo = g.bg ? '' : 'background:linear-gradient(135deg,#1e2a45 0%,#0f1119 100%)';
@@ -3868,31 +3879,20 @@ function bloqueBanner(g, nGrupos) {
   var h = '<div class="hv-banner" id="hv-banner" style="' + estilo + '">';
   if (!g.bg) h += '<div class="hv-eco">' + esc(g.emoji || '📁') + '</div>';
 
-  // ── Arriba: identidad de la app (aprovecha el degradado oscuro del banner) ──
-  // Va en pequeño y semitransparente: es la firma, no la protagonista.
-  // La protagonista es el grupo, que va abajo en grande.
-  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">';
-  h +=   '<div style="min-width:0">';
-  h +=     '<div class="hv-marca">SplitGuasa 💸</div>';
-  h +=     '<div class="hv-lema">Un Lannister siempre paga sus deudas</div>';
-  h +=   '</div>';
-  h +=   '<div style="display:flex;gap:7px;align-items:center;flex-shrink:0">';
-  h +=     '<span class="hv-ver" onclick="openModal(\'m-about\')">v1.4</span>';
+  // Arriba solo el botón de cambiar grupo: la marca ya vive en la cabecera,
+  // así que la foto se queda para ella sola.
+  h += '<div style="display:flex;justify-content:flex-end">';
   if (nGrupos > 1) {
-    h +=   '<div class="hv-ico" onclick="openHomeGrp()" title="Cambiar de grupo">';
-    h +=     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-             '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
-             '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
-    h +=   '</div>';
+    h += '<div class="hv-ico" onclick="openHomeGrp()" title="Cambiar de grupo">';
+    h +=   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+           '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+           '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+    h += '</div>';
   }
-  h +=   '</div>';
   h += '</div>';
 
-  // ── Abajo: el saludo como antetítulo, y el grupo en grande ──
+  // Abajo: el grupo, en grande
   h += '<div>';
-  if (me) {
-    h += '<div class="hv-hola">Hola, <b>' + esc(me) + '</b> 👋</div>';
-  }
   h +=   '<div class="hv-nom">' + esc(g.emoji || '') + ' ' + esc(g.name) + '</div>';
   h +=   '<div class="hv-gente">' + esc(gente) + '</div>';
   h +=   '<div class="hv-pill"><span style="width:6px;height:6px;border-radius:50%;background:var(--acc2)"></span>' +
