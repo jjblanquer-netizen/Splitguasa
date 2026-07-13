@@ -3790,8 +3790,16 @@ function setHomeGidFromSettings(gid) {
 }
 
 function homeStyle() {
-  try { return localStorage.getItem('sg_home') === 'avanzada' ? 'avanzada' : 'clasica'; }
-  catch (e) { return 'clasica'; }
+  var elegido = null;
+  try { elegido = localStorage.getItem('sg_home'); } catch (e) {}
+
+  // Si la persona ha elegido a propósito, su decisión manda siempre.
+  if (elegido === 'avanzada' || elegido === 'clasica') return elegido;
+
+  // Nunca ha elegido: con UN SOLO grupo la Clásica no tiene sentido (sería una
+  // lista de un único elemento), así que arranca en Avanzada. En cuanto entre
+  // en más grupos, vuelve a la Clásica por defecto.
+  return (visibleGroups().length === 1) ? 'avanzada' : 'clasica';
 }
 
 function setHomeStyle(estilo) {
@@ -4213,7 +4221,9 @@ function openHomeGrp() {
 }
 
 function renderHome() {
-  var avanzada = (homeStyle() === 'avanzada');
+  var estilo = homeStyle();
+  var avanzada = (estilo === 'avanzada');
+  updateHomeButtons(estilo);   // el estilo puede cambiar solo al entrar/salir de grupos
   var ca = document.getElementById('home-clasica');
   var av = document.getElementById('home-avanzada');
   if (ca) ca.style.display = avanzada ? 'none'  : 'flex';   // flex, para que el .sb de dentro scrolle
