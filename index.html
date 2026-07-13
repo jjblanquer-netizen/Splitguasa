@@ -100,7 +100,12 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
-@supports (height: 100dvh) { html, body { height: 100dvh; } }
+/* OJO: NO poner aquí height:100dvh (ni 100vh) en html/body.
+   El body ya llena el viewport exacto con position:fixed + top/bottom:0.
+   Al arrancar, dvh/vh devuelven una altura MAYOR que la pantalla visible
+   (el navegador aún no ha asentado sus barras): el body se pasa de alto y la
+   barra de navegación queda FUERA de la vista. Al volver de otra app se
+   recalcula y "aparece". Ese fue el bug. */
 
 /* ─── APP SHELL ─────────────────────────────────────────────────── */
 #app {

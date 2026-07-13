@@ -1,5 +1,5 @@
 // SplitGuasa Service Worker
-const CACHE = 'splitguasa-v47';
+const CACHE = 'splitguasa-v49';
 const ASSETS = [
   '/Splitguasa/',
   '/Splitguasa/index.html',
@@ -8,41 +8,46 @@ const ASSETS = [
   '/Splitguasa/icon-512.png'
 ];
 
-// Instalar: cachear los archivos base
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE).then(function(c) {
-      // addAll falla entero si un archivo falta: los añadimos uno a uno
       return Promise.all(ASSETS.map(function(url) {
-        return c.add(url).catch(function() { /* ignorar el que falle */ });
+        return c.add(url).catch(function() {});
       }));
     })
   );
   self.skipWaiting();
 });
 
-// Activar: limpiar cachés antiguas
+// Al activar: BORRAR todas las caches anteriores.
+// Es lo que elimina la copia vieja de index-firebase.html que las PWA ya
+// instaladas seguian sirviendo (por eso veian la app antigua).
 self.addEventListener('activate', function(e) {
   e.waitUntil(
     caches.keys().then(function(keys) {
       return Promise.all(keys.filter(function(k) { return k !== CACHE; })
         .map(function(k) { return caches.delete(k); }));
+    }).then(function() {
+      return self.clients.claim();
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', function(e) {
   var url = e.request.url;
 
-  // Datos de Firebase: SIEMPRE red, nunca cache (deben estar al dia)
-  if (url.indexOf('firebasedatabase.app') !== -1) {
+  // Datos de Firebase: SIEMPRE red
+  if (url.indexOf('firebasedatabase.app') !== -1) return;
+
+  // index-firebase.html es ahora una REDIRECCION.
+  // NUNCA servirla de cache: si no, las PWA instaladas seguirian abriendo
+  // la copia antigua de la app que quedo guardada en esa ruta.
+  if (url.indexOf('index-firebase.html') !== -1) {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }));
     return;
   }
 
-  // IMAGENES DE FONDO: cache primero.
-  // Son archivos grandes que no cambian. Si estan en cache, se sirven al
-  // instante sin depender de la red. Esto evita que "a veces no carguen".
+  // Imagenes de fondo: cache primero (son grandes y no cambian)
   if (url.indexOf('/backgrounds/') !== -1) {
     e.respondWith(
       caches.match(e.request).then(function(cached) {
@@ -59,7 +64,7 @@ self.addEventListener('fetch', function(e) {
     return;
   }
 
-  // RESTO: red primero, con respaldo en cache (para funcionar offline)
+  // Resto: red primero, cache como respaldo (para funcionar sin conexion)
   e.respondWith(
     fetch(e.request)
       .then(function(res) {
