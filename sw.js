@@ -1,5 +1,5 @@
 // SplitGuasa Service Worker
-const CACHE = 'splitguasa-v58';
+const CACHE = 'splitguasa-v60';
 const ASSETS = [
   '/Splitguasa/',
   '/Splitguasa/index.html',
@@ -60,6 +60,29 @@ self.addEventListener('fetch', function(e) {
           return res;
         });
       })
+    );
+    return;
+  }
+
+  // Navegaciones (cargar la pagina): SIEMPRE red fresca, saltandose incluso la
+  // cache HTTP del navegador. Si no, GitHub Pages puede devolver un index.html
+  // viejo durante minutos y la app parece no actualizarse.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request, { cache: 'reload' })
+        .then(function(res) {
+          if (res && res.status === 200) {
+            var copy = res.clone();
+            caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
+          }
+          return res;
+        })
+        .catch(function() {
+          // Sin conexion: servir lo ultimo que tengamos guardado
+          return caches.match(e.request).then(function(cached) {
+            return cached || caches.match('/Splitguasa/');
+          });
+        })
     );
     return;
   }

@@ -844,31 +844,30 @@ html.pre-light body { background: #f6f7fb; }
 
 /* Banner: la foto del grupo es la identidad de la pantalla */
 .hv-banner {
-  /* La marca ya vive en la cabecera, así que el banner solo carga con el grupo:
-     puede ser más bajo y dejar sitio a la foto. */
+  /* A sangre (sin márgenes ni bordes): la foto llega a los lados y el degradado
+     inferior la funde con la tarjeta del saldo, que monta encima. Esa fusión es
+     el efecto que buscamos: la foto no "termina", se disuelve en el saldo. */
   position: relative;
-  height: 168px;
-  margin: 2px 16px 0;
-  border-radius: 20px;
-  overflow: hidden;
+  height: 190px;
+  margin-top: 2px;
   background-size: cover;
   background-position: center;
   display: flex; flex-direction: column; justify-content: space-between;
-  padding: 12px 14px 14px;
-  border: 1px solid var(--border);
+  padding: 12px 16px 26px;
 }
 .hv-banner::after {
   content: ''; position: absolute; inset: 0;
-  /* Solo lo justo: un velo tenue arriba (para el botón) y peso abajo (para el
-     nombre). El centro de la foto queda limpio. */
+  /* Velo tenue arriba (para el botón), centro limpio, y peso creciente abajo
+     hasta el color del fondo: así la foto se DISUELVE en la tarjeta del saldo
+     en vez de cortarse en seco. */
   background: linear-gradient(180deg,
-    rgba(10,11,15,.42) 0%, rgba(10,11,15,.06) 30%,
-    rgba(10,11,15,.45) 62%, rgba(10,11,15,.88) 100%);
+    rgba(10,11,15,.40) 0%, rgba(10,11,15,.05) 26%,
+    rgba(10,11,15,.35) 58%, rgba(10,11,15,.80) 82%, rgba(10,11,15,1) 100%);
 }
 body.light .hv-banner::after {
   background: linear-gradient(180deg,
-    rgba(0,0,0,.42) 0%, rgba(0,0,0,.06) 30%,
-    rgba(0,0,0,.35) 62%, rgba(0,0,0,.72) 100%);
+    rgba(0,0,0,.40) 0%, rgba(0,0,0,.05) 26%,
+    rgba(0,0,0,.30) 58%, rgba(246,247,251,.75) 88%, rgba(246,247,251,1) 100%);
 }
 .hv-banner > * { position: relative; z-index: 2; }
 
@@ -878,7 +877,7 @@ body.light .hv-banner::after {
   font-size: 120px; opacity: .09; z-index: 1; pointer-events: none;
 }
 .hv-nom {
-  font-family: var(--ff-head); font-weight: 800; font-size: 26px;
+  font-family: var(--ff-head); font-weight: 800; font-size: 27px;
   letter-spacing: -.02em; line-height: 1.1; color: #fff;
   text-shadow: 0 2px 18px rgba(0,0,0,.6);
 }
@@ -906,11 +905,14 @@ body.light .hv-banner::after {
 
 /* Saldo: sale de la foto y monta sobre ella, sólido para que el número cante */
 .hv-saldo {
-  margin: 0 16px; padding: 20px;
-  border-radius: 20px;
+  /* Sube 22px sobre el banner: la foto y el saldo se funden en un solo bloque */
+  margin: -22px 16px 0; padding: 20px;
+  border-radius: 20px; position: relative; z-index: 3;
   background: var(--surface);
   border: 1px solid rgba(94,234,212,.24);
+  box-shadow: 0 -10px 34px rgba(10,11,15,.75);
 }
+body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
 .hv-saldo-lbl {
   font-size: 11px; font-weight: 700; letter-spacing: .09em;
   text-transform: uppercase; color: var(--acc); margin-bottom: 5px;
@@ -3827,9 +3829,9 @@ function renderHomeAvanzada() {
 
   var h = '';
   h += bloqueCabecera();      // SplitGuasa 💸 + lema + versión (idéntica a la clásica)
+  h += bloqueHola();          // Hola, Jota 👋  (antes del grupo, como en la clásica)
   h += bloqueBanner(g, vis.length);
-  h += bloqueHola();          // Hola, Jota 👋
-  h += bloqueSaldo(g);
+  h += bloqueSaldo(g);        // monta sobre la foto: los dos se funden
   h += bloqueCifras(g);
   h += bloqueCategorias(g);   // En qué se va el dinero
   h += bloquePodio(g);        // Quién ha puesto más
@@ -5782,11 +5784,64 @@ init();
 
 <script>
 if ('serviceWorker' in navigator) {
+  // ════════════════════════════════════════════════════════════
+  // ACTUALIZACIÓN AUTOMÁTICA
+  // ────────────────────────────────────────────────────────────
+  // Una PWA instalada NO siempre navega al abrirla: muchas veces solo se
+  // reanuda desde memoria. Sin navegación, el navegador nunca comprueba si
+  // hay Service Worker nuevo, y la app se queda congelada en la versión vieja
+  // para siempre. (En el navegador cada F5 sí es una navegación: por eso allí
+  // sí se actualizaba.)
+  //
+  // Solución: pedir la comprobación a mano, y recargar cuando llegue la nueva.
+  // ════════════════════════════════════════════════════════════
+  var swReg = null;
+  var recargando = false;   // evita bucles de recarga
+
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('/Splitguasa/sw.js', { scope: '/Splitguasa/' })
-      .then(function(reg) { console.log('SW registrado:', reg.scope); })
+      .then(function(reg) {
+        swReg = reg;
+        console.log('SW registrado:', reg.scope);
+
+        // ¿Hay una versión nueva instalándose?
+        reg.addEventListener('updatefound', function() {
+          var nuevo = reg.installing;
+          if (!nuevo) return;
+          nuevo.addEventListener('statechange', function() {
+            // 'installed' + ya había un SW controlando = es una ACTUALIZACIÓN,
+            // no la primera instalación
+            if (nuevo.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('Versión nueva lista');
+              // El SW hace skipWaiting(), así que tomará el control solo.
+              // El evento controllerchange (abajo) se encargará de recargar.
+            }
+          });
+        });
+      })
       .catch(function(err) { console.warn('SW error:', err); });
   });
+
+  // Cuando el SW nuevo toma el control, recargar para estrenar la versión
+  navigator.serviceWorker.addEventListener('controllerchange', function() {
+    if (recargando) return;
+    recargando = true;
+    console.log('Actualizando a la versión nueva…');
+    window.location.reload();
+  });
+
+  // Comprobar si hay versión nueva CADA VEZ que la app vuelve a primer plano.
+  // Esto es lo que arregla la PWA instalada: aunque no navegue, preguntamos.
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible' && swReg) {
+      swReg.update().catch(function(){});
+    }
+  });
+
+  // Y también cada 30 minutos, por si la app se queda abierta mucho tiempo
+  setInterval(function() {
+    if (swReg) swReg.update().catch(function(){});
+  }, 30 * 60 * 1000);
 }
 </script>
   <!-- ══ BANNER INSTALAR APP ══ -->
