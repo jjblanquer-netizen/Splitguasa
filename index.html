@@ -1087,6 +1087,10 @@ body.light .hv-saldo { box-shadow: 0 -8px 30px rgba(0,0,0,.12); }
   <!-- ══ HOME AVANZADA (un solo grupo, con selector) ══ -->
   <div id="home-avanzada" style="display:none"></div>
 
+  <!-- Añadir gasto al grupo que se está viendo. Solo en modo Avanzada:
+       en la Clásica no hay "un grupo actual" al que añadirlo. -->
+  <button class="fab" id="home-fab" style="display:none" onclick="addExpenseHome()">+</button>
+
   </div>
 
 <!-- ══ ACTIVITY ══ -->
@@ -3819,11 +3823,10 @@ function renderHomeAvanzada() {
   h += bloqueBanner(g, vis.length);
   h += bloqueSaldo(g);
   h += bloqueCifras(g);
-  h += bloquePodio(g);
-  h += bloqueCaros(g);
-  h += bloqueCategorias(g);
-  h += bloqueUltimos(g);
-  h += '<div class="pb"></div>';
+  h += bloqueCategorias(g);   // En qué se va el dinero
+  h += bloquePodio(g);        // Quién ha puesto más
+  h += bloqueUltimos(g);      // Últimos gastos
+  h += '<div style="height:90px"></div>';   // hueco para el botón + y la barra
 
   cont.innerHTML = h;
 
@@ -3912,9 +3915,9 @@ function bloqueSaldo(g) {
     h += '<div class="hv-saldo-det">No debes nada y no te deben nada.</div>';
   }
 
+  // Un solo botón: añadir gasto se hace con el botón + de abajo a la derecha
   h += '<div class="hv-acts">';
-  h +=   '<button class="hv-btn pri" onclick="openGroup(\'' + g.id + '\',\'deudas\')">Ver deudas</button>';
-  h +=   '<button class="hv-btn" onclick="addExpenseFrom(\'' + g.id + '\')">Añadir gasto</button>';
+  h +=   '<button class="hv-btn pri" onclick="openGroup(\'' + g.id + '\',\'deudas\')">Ver detalle</button>';
   h += '</div>';
   h += '</div>';
   return h;
@@ -3935,7 +3938,7 @@ function bloqueCifras(g) {
 }
 
 
-// ── 4. EL PODIO: quién ha puesto más ──
+// ── 5. EL PODIO: quién ha puesto más ──
 // Las alturas de las gradas son PROPORCIONALES a lo aportado: el podio es el
 // dato, no un adorno. Con menos de 3 personas se degrada con elegancia.
 function bloquePodio(g) {
@@ -3993,41 +3996,7 @@ function bloquePodio(g) {
   return h;
 }
 
-// ── 5. Los gastos más caros ──
-function bloqueCaros(g) {
-  var exps = (g.expenses || [])
-    .filter(function(e){ return e && !e.isSettlement && (Number(e.amount) || 0) > 0; })
-    .slice()
-    .sort(function(a,b){ return (Number(b.amount)||0) - (Number(a.amount)||0); });
-
-  if (!exps.length) return '';
-
-  var top = exps.slice(0, 3);
-  var h = '<div class="hv-sec">';
-  h += '<div class="hv-sec-h"><div class="hv-sec-t">Los más caros</div>';
-  if (exps.length > 3) {
-    h += '<div class="hv-sec-m" onclick="openGroup(\'' + g.id + '\',\'gastos\')">Ver los ' + exps.length + ' →</div>';
-  }
-  h += '</div>';
-
-  top.forEach(function(e, i) {
-    var cat = CATS.filter(function(c){ return c.id === e.category; })[0];
-    h += '<div class="hv-fila" onclick="openGroup(\'' + g.id + '\',\'gastos\')">';
-    h +=   '<div class="hv-pos">' + (i+1) + '</div>';
-    h +=   '<div class="hv-fico">' + (cat ? cat.e : '💸') + '</div>';
-    h +=   '<div class="hv-ftxt">';
-    h +=     '<div class="hv-fd">' + esc(e.desc || 'Sin descripción') + '</div>';
-    h +=     '<div class="hv-fs">' + esc(e.paidBy || '?') + ' · ' + niceDate(e.date) + '</div>';
-    h +=   '</div>';
-    h +=   '<div class="hv-fe">' + fmt(Number(e.amount) || 0) + '</div>';
-    h += '</div>';
-  });
-
-  h += '</div>';
-  return h;
-}
-
-// ── 6. En qué se va el dinero (donut de categorías) ──
+// ── 4. En qué se va el dinero (donut de categorías) ──
 function bloqueCategorias(g) {
   var exps = (g.expenses || []).filter(function(e){ return e && !e.isSettlement; });
   if (!exps.length) return '';
@@ -4089,7 +4058,7 @@ function bloqueCategorias(g) {
   return h;
 }
 
-// ── 7. Lo último (3 movimientos) ──
+// ── 6. Últimos gastos ──
 function bloqueUltimos(g) {
   var exps = (g.expenses || [])
     .filter(function(e){ return e && !e.isSettlement; })
@@ -4104,7 +4073,7 @@ function bloqueUltimos(g) {
   if (!exps.length) return '';
 
   var h = '<div class="hv-sec">';
-  h += '<div class="hv-sec-h"><div class="hv-sec-t">Lo último</div>' +
+  h += '<div class="hv-sec-h"><div class="hv-sec-t">Últimos gastos</div>' +
        '<div class="hv-sec-m" onclick="goTab(\'activity\')">Ver todo →</div></div>';
   h += '<div class="hv-podio" style="padding:4px 14px">';
 
@@ -4124,8 +4093,11 @@ function bloqueUltimos(g) {
   return h;
 }
 
-// Abrir el grupo y lanzar directamente el formulario de nuevo gasto
-function addExpenseFrom(gid) {
+// Añadir un gasto al grupo que se está viendo en la Home avanzada.
+// Abre el grupo y lanza el formulario directamente.
+function addExpenseHome() {
+  var gid = homeGid();
+  if (!gid) { toast('⚠️ No hay ningún grupo'); return; }
   openGroup(gid, 'gastos');
   setTimeout(function(){ openAddExpense(); }, 220);   // tras la transición de pantalla
 }
@@ -4171,6 +4143,10 @@ function renderHome() {
   var av = document.getElementById('home-avanzada');
   if (ca) ca.style.display = avanzada ? 'none'  : 'flex';   // flex, para que el .sb de dentro scrolle
   if (av) av.style.display = avanzada ? 'block' : 'none';
+
+  // El botón + solo tiene sentido en la Avanzada, y si hay un grupo que ver
+  var fab = document.getElementById('home-fab');
+  if (fab) fab.style.display = (avanzada && visibleGroups().length) ? 'flex' : 'none';
 
   if (avanzada) { renderHomeAvanzada(); return; }
   renderHomeClasica();
