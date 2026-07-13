@@ -1018,10 +1018,17 @@ body.light .profile-card {
     <div class="sheet-handle"></div>
     <div class="sheet-title">🕐 Historial de actividad</div>
 
-    <div class="rep-filters" id="history-tabs" style="display:none;margin-bottom:12px">
+    <div class="rep-filters" id="history-tabs" style="display:none;margin-bottom:10px">
       <button class="rep-filter on" id="hist-tab-me"  onclick="toggleLogScope(false)">Solo yo</button>
       <button class="rep-filter"    id="hist-tab-all" onclick="toggleLogScope(true)">Todos</button>
     </div>
+
+    <div class="field" style="margin-bottom:10px">
+      <select id="hist-type" onchange="setLogType(this.value)"
+              style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;color:var(--txt);font-size:14px;font-family:var(--ff-body);cursor:pointer"></select>
+    </div>
+
+    <div id="history-count" style="font-size:11.5px;color:var(--muted);margin-bottom:8px"></div>
 
     <div id="history-list" style="max-height:58vh;overflow-y:auto;margin-bottom:14px"></div>
     <button class="btn-secondary" style="width:100%" onclick="closeModal('m-history')">Cerrar</button>
@@ -1862,8 +1869,18 @@ function logList() {
   return DB.log;
 }
 
+// Tipos de acción (para el filtro del historial)
+const LOG_TYPES = [
+  { id: 'all',    label: 'Todo',     icon: '📋' },
+  { id: 'gasto',  label: 'Gastos',   icon: '💸' },
+  { id: 'pago',   label: 'Pagos',    icon: '✅' },
+  { id: 'grupo',  label: 'Grupos',   icon: '📁' },
+  { id: 'amigo',  label: 'Amigos',   icon: '👤' },
+  { id: 'acceso', label: 'Accesos',  icon: '🔑' }
+];
+
 // Registra una acción. Se llama ANTES de save().
-function logAction(icon, texto, gid) {
+function logAction(tipo, icon, texto, gid) {
   var me = myName();
   if (!me) return;                      // sin identificar, no se registra
   var l = logList();
@@ -1871,6 +1888,7 @@ function logAction(icon, texto, gid) {
     id:   'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     ts:   Date.now(),
     who:  me,
+    type: tipo || 'otro',
     icon: icon,
     txt:  texto,
     gid:  gid || ''
@@ -1905,17 +1923,47 @@ function logWhen(ts) {
 }
 
 var logShowAll = false;   // el admin puede alternar entre "solo yo" y "todos"
+var logType    = 'all';   // filtro por tipo de acción
 var pistaAdmin = null;    // salvavidas al migrar: código del admin de este móvil
 
 function openHistory() {
   logShowAll = false;
+  logType    = 'all';
+  buildLogTypeSelect();
   renderHistory();
   openModal('m-history');
+}
+
+// Rellena el desplegable con el número de acciones de cada tipo
+function buildLogTypeSelect() {
+  var sel = document.getElementById('hist-type');
+  if (!sel) return;
+
+  // Contar solo dentro del ámbito visible (solo yo / todos)
+  var base = logList().filter(function(e) {
+    return (isAdmin() && logShowAll) ? true : isMe(e.who);
+  });
+
+  var h = '';
+  LOG_TYPES.forEach(function(t) {
+    var n = (t.id === 'all')
+        ? base.length
+        : base.filter(function(e){ return e.type === t.id; }).length;
+    h += '<option value="' + t.id + '"' + (logType === t.id ? ' selected' : '') + '>' +
+         t.icon + '  ' + t.label + ' (' + n + ')</option>';
+  });
+  sel.innerHTML = h;
+}
+
+function setLogType(t) {
+  logType = t || 'all';
+  renderHistory();
 }
 
 function toggleLogScope(all) {
   if (all && !isAdmin()) { denyNotAdmin(); return; }
   logShowAll = !!all;
+  buildLogTypeSelect();   // los contadores cambian según el ámbito
   renderHistory();
 }
 
@@ -1933,17 +1981,35 @@ function renderHistory() {
 
   var me = myName();
   var todos = logList().slice();
+
+  // Ámbito: solo yo / todos (admin)
   var items = (isAdmin() && logShowAll)
       ? todos
       : todos.filter(function(e){ return e && isMe(e.who); });
 
+  // Filtro por tipo de acción
+  if (logType && logType !== 'all') {
+    items = items.filter(function(e){ return e && e.type === logType; });
+  }
+
   items.sort(function(a,b){ return (b.ts||0) - (a.ts||0); });   // lo más reciente arriba
 
+  // Contador
+  var cnt = document.getElementById('history-count');
+  if (cnt) {
+    cnt.textContent = items.length
+      ? items.length + ' acción' + (items.length === 1 ? '' : 'es')
+      : '';
+  }
+
   if (!items.length) {
+    var filtrando = (logType && logType !== 'all');
     cont.innerHTML = '<div class="empty" style="padding:26px 10px">' +
       '<div class="empty-icon">🕐</div>' +
-      '<p>Todavía no hay actividad registrada.</p>' +
-      '<p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">El historial se empieza a guardar desde ahora:<br>gastos, pagos, grupos y cambios de amigos.</p>' +
+      (filtrando
+        ? '<p>Sin acciones de este tipo.</p>'
+        : '<p>Todavía no hay actividad registrada.</p>' +
+          '<p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">El historial se empieza a guardar desde ahora:<br>gastos, pagos, grupos, amigos y accesos.</p>') +
       '</div>';
     return;
   }
@@ -2089,6 +2155,10 @@ async function submitCode(modo) {
   setName(name);
   // Marca de que este móvil ya ha pasado por el sistema de códigos
   try { localStorage.setItem('sg_auth_v', AUTH_VERSION); } catch(e) {}
+
+  // Registrar el acceso (logAction usa myName(), por eso va DESPUÉS de setName)
+  logAction('acceso', '🔑', modo === 'welcome' ? 'Accedió a la aplicación' : 'Cambió de usuario y accedió', '');
+  save();
   closeModal(modo === 'welcome' ? 'm-welcome' : 'm-code-switch');
   clearCode(boxId);
   renderSettingsMe();
@@ -2237,7 +2307,7 @@ function saveProfile() {
   if (nuevo !== epTarget) cambios.push('nombre → ' + nuevo);
   if (codigo !== personCode(epTarget)) cambios.push('código');
   if (epRole !== personRole(epTarget)) cambios.push('rol → ' + (epRole === 'admin' ? 'Administrador' : 'Estándar'));
-  logAction('⚙️', 'Editó el perfil de ' + epTarget + (cambios.length ? ' (' + cambios.join(', ') + ')' : ''), '');
+  logAction('amigo', '⚙️', 'Editó el perfil de ' + epTarget + (cambios.length ? ' (' + cambios.join(', ') + ')' : ''), '');
 
   epTarget = null;
   save();
@@ -2743,7 +2813,7 @@ function togglePaid(gid, key) {
   if (i >= 0) {
     var ant = g.settled[i];
     var pa = String(key).split('|');
-    logAction('↩️', 'Desmarcó el pago de ' + pa[0] + ' a ' + pa[1] + (ant && ant.amount ? ' (' + fmt(ant.amount) + ')' : ''), gid);
+    logAction('pago', '↩️', 'Desmarcó el pago de ' + pa[0] + ' a ' + pa[1] + (ant && ant.amount ? ' (' + fmt(ant.amount) + ')' : ''), gid);
     g.settled.splice(i, 1);
     toast('↩️ Marcado como pendiente');
   } else {
@@ -2753,7 +2823,7 @@ function togglePaid(gid, key) {
     var txs = computeDebts(g);
     for (var k=0; k<txs.length; k++) { if (txs[k].key===key) { amount=txs[k].amount; break; } }
     g.settled.push({ key:key, from:parts[0], to:parts[1], amount:amount, date:tod() });
-    logAction('✅', 'Marcó como pagada la deuda de ' + parts[0] + ' a ' + parts[1] + ' (' + fmt(amount) + ')', gid);
+    logAction('pago', '✅', 'Marcó como pagada la deuda de ' + parts[0] + ' a ' + parts[1] + ' (' + fmt(amount) + ')', gid);
     toast('✅ Marcado como pagado');
   }
   save();
@@ -2864,7 +2934,7 @@ function saveExpense() {
   if (!Array.isArray(targetGrp.expenses)) targetGrp.expenses = [];
 
   if (editExpenseId) {
-    logAction('✏️', 'Editó el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ')', g.id);
+    logAction('gasto', '✏️', 'Editó el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ')', g.id);
     // MODO EDICIÓN — actualizar gasto existente
     const idx = targetGrp.expenses.findIndex(e=>e.id===editExpenseId);
     if (idx >= 0) {
@@ -2878,7 +2948,7 @@ function saveExpense() {
     }
     editExpenseId = null;
   } else {
-    logAction('💸', 'Añadió el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ') pagado por ' + paidBy, g.id);
+    logAction('gasto', '💸', 'Añadió el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ') pagado por ' + paidBy, g.id);
     // MODO NUEVO
     targetGrp.expenses.push({id:uid(),desc:desc||'Gasto',amount,paidBy,category:selCat,date,splitAmong,addedBy:myName(),addedAt:new Date().toISOString()});
     toast('💾 Gasto guardado');
@@ -2892,7 +2962,7 @@ function confirmDel() {
   const g=grp(); if(!g||!pDelId) return;
   const borrado = g.expenses.filter(e=>e.id===pDelId)[0];
   if (borrado) {
-    logAction('🗑️', 'Borró el gasto "' + (borrado.desc || 'Sin descripción') + '" (' + fmt(borrado.amount||0) + ')', g.id);
+    logAction('gasto', '🗑️', 'Borró el gasto "' + (borrado.desc || 'Sin descripción') + '" (' + fmt(borrado.amount||0) + ')', g.id);
   }
   g.expenses=g.expenses.filter(e=>e.id!==pDelId);
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
@@ -2917,7 +2987,7 @@ function askDelGrp() {
 function confirmDelGrp() {
   if (!pDelGid) return;
   var borrado = DB.groups.filter(function(g){ return g.id===pDelGid; })[0];
-  if (borrado) logAction('🗑️', 'Borró el grupo "' + borrado.name + '"', '');
+  if (borrado) logAction('grupo', '🗑️', 'Borró el grupo "' + borrado.name + '"', '');
   DB.groups = DB.groups.filter(function(g){ return g.id!==pDelGid; });
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   DB.deleted.push('grp:'+pDelGid);
@@ -3553,7 +3623,7 @@ function addFriend() {
 
   // Código de acceso automático, único, y rol estándar
   peopleMap()[name] = { code: genCode(), role: 'user' };
-  logAction('👤', 'Añadió a ' + name + ' como amigo', '');
+  logAction('amigo', '👤', 'Añadió a ' + name + ' como amigo', '');
 
   revivedFriends[name] = true;
   if (Array.isArray(DB.deleted)) {
@@ -3693,7 +3763,7 @@ function confirmDelPerson() {
     DB.friends = DB.friends.filter(function(f){ return f !== name; });
   }
   delete peopleMap()[name];
-  logAction('🚫', 'Eliminó a ' + name + ' de Amigos', '');
+  logAction('amigo', '🚫', 'Eliminó a ' + name + ' de Amigos', '');
 
   // Tombstone: que el merge no lo resucite
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
@@ -4005,7 +4075,7 @@ function createGroup() {
     const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
     if (url) g.bg = url;
     DB.groups.unshift(g);
-    logAction('📁', 'Creó el grupo "' + name + '"', g.id);
+    logAction('grupo', '📁', 'Creó el grupo "' + name + '"', g.id);
   save();
     closeModal('m-newgrp');
     toast('✅ Grupo "' + name + '" creado');
@@ -4101,7 +4171,7 @@ function saveMembers() {
   // Resolver la URL real del fondo (extensión correcta) antes de guardar
   resolveBgUrl(emSelectedBg, function(url) {
     if (url) g.bg = url; else delete g.bg;
-    logAction('👥', 'Editó los miembros del grupo "' + g.name + '"', g.id);
+    logAction('grupo', '👥', 'Editó los miembros del grupo "' + g.name + '"', g.id);
     save();
     closeModal('m-edit-members');
     var memsEl = document.getElementById('g-mems');
@@ -4129,6 +4199,20 @@ function getAllPersons() {
 // ════════════════════════════════════════════
 // ONBOARDING: identificarse la primera vez
 // ════════════════════════════════════════════
+// Registra que el usuario ha abierto la app, como mucho una vez al día
+// (si no, cada apertura llenaría el historial de ruido).
+function logAppOpen() {
+  var me = myName();
+  if (!me) return;
+  var hoy = tod();
+  var ya = false;
+  try { ya = localStorage.getItem('sg_open_log') === hoy + '|' + me; } catch(e) {}
+  if (ya) return;
+  logAction('acceso', '📱', 'Abrió la aplicación', '');
+  try { localStorage.setItem('sg_open_log', hoy + '|' + me); } catch(e) {}
+  save();
+}
+
 function maybeShowWelcome() {
   var me = myName();
 
@@ -4152,7 +4236,11 @@ function maybeShowWelcome() {
   // Si el usuario guardado ya no existe (fue borrado), desidentificar también
   if (me && getFriends().indexOf(me) < 0) { setName(''); me = ''; }
 
-  if (!me) openCodeModal('welcome');    // pedir el código
+  if (!me) {
+    openCodeModal('welcome');           // pedir el código
+  } else {
+    logAppOpen();                       // ya identificado: registrar la apertura
+  }
 }
 
 
