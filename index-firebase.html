@@ -2175,12 +2175,20 @@ function renderHistory() {
     var g = (Array.isArray(DB.groups) ? DB.groups : []).filter(function(x){ return x.id === e.gid; })[0];
     var mio = isMe(e.who);
     h += '<div style="display:flex;gap:11px;padding:11px 2px;border-bottom:1px solid var(--border)">';
-    h += '<div style="width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">' + esc(e.icon || '•') + '</div>';
+    // Icono de la acción + punto con el color del autor (para distinguirlos de un vistazo)
+    h += '<div style="position:relative;flex-shrink:0">';
+    h += '<div style="width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px">' + esc(e.icon || '•') + '</div>';
+    h += '<span style="position:absolute;bottom:-2px;right:-3px;width:15px;height:15px;border-radius:50%;background:' + (mio ? 'var(--acc)' : avc(e.who)) + ';border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#0a0b0f;font-family:var(--ff-head)">' + esc((e.who || '?').charAt(0).toUpperCase()) + '</span>';
+    h += '</div>';
     h += '<div style="flex:1;min-width:0">';
     h += '<div style="font-size:13.5px;color:var(--txt);line-height:1.45">' + esc(e.txt || '') + '</div>';
     h += '<div style="font-size:11.5px;color:var(--muted);margin-top:3px">';
-    if (!mio) {
-      h += '<span style="color:' + avc(e.who) + ';font-weight:700">' + esc(e.who) + '</span> · ';
+    // SIEMPRE se indica quién lo hizo. Antes solo se mostraba el nombre de los
+    // demás, y no quedaba claro de quién eran las líneas sin nombre.
+    if (mio) {
+      h += '<span style="color:var(--acc);font-weight:700">Tú</span> · ';
+    } else {
+      h += '<span style="color:' + avc(e.who) + ';font-weight:700">' + esc(e.who || '?') + '</span> · ';
     }
     h += logWhen(e.ts);
     if (g) h += ' · ' + esc(g.emoji || '') + ' ' + esc(g.name);
