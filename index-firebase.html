@@ -2089,6 +2089,39 @@ function markCodeError(contId, errId, msg) {
   if (e) { e.innerHTML = msg; e.style.display = 'block'; }
 }
 
+
+// Si el enlace trae el código (?c=ABC123), lo rellenamos solo.
+// Así, tanto si se abre en el navegador como si Android lanza la app instalada,
+// la persona no tiene que teclear nada.
+function codeFromUrl() {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    var c = (p.get('c') || p.get('code') || '').trim().toUpperCase();
+    if (/^[A-Z0-9]{6}$/.test(c)) return c;
+  } catch (e) {}
+  return '';
+}
+
+// Borra el código de la barra de direcciones (para que no quede a la vista
+// ni se guarde en el historial del navegador)
+function cleanUrl() {
+  try {
+    if (window.location.search) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+  } catch (e) {}
+}
+
+// Escribe un código en las casillas
+function fillCodeBoxes(contId, code) {
+  var cont = document.getElementById(contId);
+  if (!cont || !code) return;
+  var boxes = cont.querySelectorAll('.code-box');
+  for (var i = 0; i < boxes.length && i < code.length; i++) {
+    boxes[i].value = code.charAt(i);
+  }
+}
+
 // Abre el modal del código: modo 'welcome' (primera vez) o 'switch' (cambiar)
 function openCodeModal(modo) {
   if (modo === 'welcome') {
@@ -2096,6 +2129,14 @@ function openCodeModal(modo) {
     clearCode('welcome-code-boxes');
     var we = document.getElementById('welcome-code-err');
     if (we) we.style.display = 'none';
+
+    // Código incluido en el enlace: lo rellenamos y entramos solos
+    var urlCode = codeFromUrl();
+    if (urlCode) {
+      fillCodeBoxes('welcome-code-boxes', urlCode);
+      cleanUrl();
+      setTimeout(function(){ submitCode('welcome'); }, 400);
+    }
     // Salvavidas del administrador que venía de la versión anterior
     var hint = document.getElementById('welcome-admin-hint');
     if (hint) {
@@ -2181,11 +2222,16 @@ async function shareAccess() {
     return;
   }
 
+  // El código va DENTRO del enlace: al abrirlo, la app entra sola.
+  // Funciona igual si Android lanza la app ya instalada.
+  var enlace = APP_URL + '?c=' + codigo;
+
   var texto =
     '💸 ¡Hola' + (nombre ? ', ' + nombre : '') + '! Te uno a SplitGuasa, ' +
     'la app donde llevamos los gastos del grupo.\n\n' +
-    '1️⃣ Abre este enlace:\n' + APP_URL + '\n\n' +
-    '2️⃣ Introduce tu código de acceso:\n' + codigo + '\n\n' +
+    '👉 Entra aquí (ya lleva tu código):\n' + enlace + '\n\n' +
+    '🔑 Tu código, por si te lo pide:\n' + codigo + '\n\n' +
+    'Si ya tienes la app instalada, ábrela y escribe el código.\n\n' +
     'Un Lannister siempre paga sus deudas 😉';
 
   // 1) Menú nativo del móvil (WhatsApp, Telegram…)
