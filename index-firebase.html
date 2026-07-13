@@ -829,7 +829,7 @@ body.light .profile-card {
 
 <!-- ══ HOME ══ -->
 <div class="scr on" id="scr-home">
-  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.3</span></div>
+  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.4</span></div>
     <div id="greeting" style="display:none;padding:0 16px 10px;">
     <div style="font-family:var(--ff-head);font-size:20px;font-weight:800;color:var(--txt)">Hola, <span id="greeting-name" style="color:var(--acc)"></span> 👋</div>
   </div>
@@ -1654,6 +1654,15 @@ function save() {
 // es un candado para evitar suplantaciones accidentales entre amigos.
 // ════════════════════════════════════════════
 const ADMIN_NAME = 'Jota';          // administrador por defecto al migrar
+
+// Versión del sistema de acceso. Si el móvil no tiene esta marca, significa que
+// venía de una versión ANTERIOR (identificado sin código) → se le desidentifica
+// y se le obliga a introducir su código.
+const AUTH_VERSION = 'v14';
+
+// Código inicial del administrador. Solo se usa si aún NO tiene código
+// (no pisa uno ya existente). Se puede cambiar desde su perfil.
+const ADMIN_SEED_CODE = '173117';
 const CODE_LEN   = 6;
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sin O/0/I/1 (se confunden)
 
@@ -1712,7 +1721,13 @@ function ensurePeople() {
   var cambios = false;
   getFriends().forEach(function(n) {
     if (!m[n] || typeof m[n] !== 'object') { m[n] = {}; cambios = true; }
-    if (!m[n].code) { m[n].code = genCode(); cambios = true; }
+    if (!m[n].code) {
+      // Al administrador por defecto se le asigna su código conocido;
+      // al resto, uno aleatorio.
+      var esJota = n.trim().toLowerCase() === ADMIN_NAME.toLowerCase();
+      m[n].code = esJota ? ADMIN_SEED_CODE : genCode();
+      cambios = true;
+    }
     if (m[n].role !== 'admin' && m[n].role !== 'user') {
       // Jota es administrador por defecto; el resto, estándar
       m[n].role = (n.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) ? 'admin' : 'user';
@@ -1890,6 +1905,7 @@ function logWhen(ts) {
 }
 
 var logShowAll = false;   // el admin puede alternar entre "solo yo" y "todos"
+var pistaAdmin = null;    // salvavidas al migrar: código del admin de este móvil
 
 function openHistory() {
   logShowAll = false;
@@ -2014,6 +2030,17 @@ function openCodeModal(modo) {
     clearCode('welcome-code-boxes');
     var we = document.getElementById('welcome-code-err');
     if (we) we.style.display = 'none';
+    // Salvavidas del administrador que venía de la versión anterior
+    var hint = document.getElementById('welcome-admin-hint');
+    if (hint) {
+      if (pistaAdmin && pistaAdmin.code) {
+        hint.innerHTML = '👑 Este móvil era de <strong>' + esc(pistaAdmin.nombre) + '</strong> (administrador).<br>' +
+                         'Tu código es <strong style="font-family:var(--ff-head);letter-spacing:2px;font-size:16px;color:var(--acc)">' + esc(pistaAdmin.code) + '</strong>';
+        hint.style.display = 'block';
+      } else {
+        hint.style.display = 'none';
+      }
+    }
     openModal('m-welcome');
     setTimeout(function(){
       var f = document.querySelector('#welcome-code-boxes .code-box');
@@ -2060,6 +2087,8 @@ async function submitCode(modo) {
   }
 
   setName(name);
+  // Marca de que este móvil ya ha pasado por el sistema de códigos
+  try { localStorage.setItem('sg_auth_v', AUTH_VERSION); } catch(e) {}
   closeModal(modo === 'welcome' ? 'm-welcome' : 'm-code-switch');
   clearCode(boxId);
   renderSettingsMe();
@@ -4101,10 +4130,29 @@ function getAllPersons() {
 // ONBOARDING: identificarse la primera vez
 // ════════════════════════════════════════════
 function maybeShowWelcome() {
-  // Si el usuario guardado ya no existe (borrado), desidentificar
   var me = myName();
+
+  // ── Migración desde versiones anteriores ──
+  // Antes bastaba con elegir tu nombre de una lista. Ahora hace falta código.
+  // Si este móvil no tiene la marca de la versión nueva, se le desidentifica
+  // para que introduzca su código, aunque ya estuviera "dentro".
+  var marca = '';
+  try { marca = localStorage.getItem('sg_auth_v') || ''; } catch(e) {}
+  if (marca !== AUTH_VERSION) {
+    // Salvavidas: si este móvil ya era del ADMINISTRADOR bajo las reglas
+    // antiguas, le enseñamos su código. Si no, se quedaría fuera de su propia
+    // app sin forma de ver los códigos que acaban de generarse.
+    if (me && personRole(me) === 'admin') {
+      pistaAdmin = { nombre: me, code: personCode(me) };
+    }
+    setName('');
+    me = '';
+  }
+
+  // Si el usuario guardado ya no existe (fue borrado), desidentificar también
   if (me && getFriends().indexOf(me) < 0) { setName(''); me = ''; }
-  if (!me) openCodeModal('welcome');    // primera vez: pedir el código
+
+  if (!me) openCodeModal('welcome');    // pedir el código
 }
 
 
@@ -4448,6 +4496,7 @@ if ('serviceWorker' in navigator) {
       <img id="welcome-logo" src="icon-192.png" alt="SplitGuasa" style="width:96px;height:96px;border-radius:24px;margin:10px auto 14px;display:block;box-shadow:0 8px 28px rgba(0,0,0,.35)">
       <h2 style="font-family:var(--ff-head);font-weight:800;font-size:24px;color:var(--txt);margin-bottom:6px">SplitGuasa</h2>
       <p style="font-size:14px;color:var(--muted2);margin-bottom:22px;line-height:1.5">Introduce tu <strong style="color:var(--txt2)">código de acceso</strong><br>para entrar con tu usuario.</p>
+      <div id="welcome-admin-hint" style="display:none;background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--txt2);line-height:1.6"></div>
       <div class="code-boxes" id="welcome-code-boxes"></div>
       <div id="welcome-code-err" style="display:none;color:var(--acc3);font-size:13px;margin-top:12px;line-height:1.5"></div>
       <button class="btn-primary" style="margin-top:20px" onclick="submitCode('welcome')">Entrar</button>
