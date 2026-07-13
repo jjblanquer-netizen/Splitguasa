@@ -1448,9 +1448,14 @@ async function pruneLog(entries) {
 // Lee el historial (solo cuando se abre la pantalla)
 async function fbLogRead() {
   try {
+    // Límite de 10 s: si el servidor no responde, no dejamos la pantalla colgada
+    var ctrl = new AbortController();
+    var corte = setTimeout(function(){ ctrl.abort(); }, 10000);
+
     const res = await fetch(FB_LOG_URL + '?_=' + Date.now(), {
-      headers: { 'Cache-Control': 'no-cache' }, mode: 'cors'
+      headers: { 'Cache-Control': 'no-cache' }, mode: 'cors', signal: ctrl.signal
     });
+    clearTimeout(corte);
     if (!res.ok) return [];
     const raw = await res.json();
     if (!raw || typeof raw !== 'object') return [];
@@ -1994,6 +1999,16 @@ function applyAdminUI() {
 // Solo se descarga al abrir la pantalla, así que su tamaño no afecta a la
 // agilidad de la app en el uso diario.
 
+// Tipos de acción (para el filtro del historial)
+const LOG_TYPES = [
+  { id: 'all',    label: 'Todo',    icon: '📋' },
+  { id: 'gasto',  label: 'Gastos',  icon: '💸' },
+  { id: 'pago',   label: 'Pagos',   icon: '✅' },
+  { id: 'grupo',  label: 'Grupos',  icon: '📁' },
+  { id: 'amigo',  label: 'Amigos',  icon: '👤' },
+  { id: 'acceso', label: 'Accesos', icon: '🔑' }
+];
+
 // Cola de acciones pendientes de enviar (se mandan agrupadas)
 var LOG_QUEUE = [];
 // Historial descargado (solo cuando se abre la pantalla)
@@ -2051,17 +2066,25 @@ async function openHistory() {
   logShowAll = false;
   logType    = 'all';
 
-  // Mostrar el modal ya, con un aviso de carga
   var cont = document.getElementById('history-list');
   if (cont) cont.innerHTML = '<div class="empty" style="padding:26px 10px"><div class="empty-icon">⏳</div><p>Cargando historial…</p></div>';
   openModal('m-history');
 
-  // El historial se descarga SOLO aquí (no en cada sincronización)
-  await fbLogFlush();          // enviar lo que tengamos pendiente
-  LOG_CACHE = await fbLogRead();
-
-  // Podar los accesos caducados (los gastos y pagos NO se tocan nunca)
-  LOG_CACHE = await pruneLog(LOG_CACHE);
+  // TODO envuelto: si algo falla (red, servidor), la pantalla NO se queda
+  // colgada en "Cargando…" para siempre; se muestra el error y lo que haya.
+  try {
+    await fbLogFlush();                        // enviar lo pendiente
+    LOG_CACHE = await fbLogRead();             // descargar (con límite de tiempo)
+    LOG_CACHE = await pruneLog(LOG_CACHE);     // podar accesos caducados
+  } catch (err) {
+    console.error('historial:', err);
+    if (cont) {
+      cont.innerHTML = '<div class="empty" style="padding:26px 10px">' +
+        '<div class="empty-icon">⚠️</div><p>No se pudo cargar el historial.</p>' +
+        '<p style="font-size:12px;color:var(--muted);margin-top:8px">Revisa tu conexión e inténtalo de nuevo.</p></div>';
+    }
+    return;
+  }
 
   buildLogTypeSelect();
   renderHistory();
