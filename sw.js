@@ -1,7 +1,8 @@
 // SplitGuasa Service Worker
-const CACHE = 'splitguasa-v45';
+const CACHE = 'splitguasa-v47';
 const ASSETS = [
-  '/Splitguasa/index-firebase.html',
+  '/Splitguasa/',
+  '/Splitguasa/index.html',
   '/Splitguasa/manifest-v2.json',
   '/Splitguasa/icon-192.png',
   '/Splitguasa/icon-512.png'
@@ -70,7 +71,7 @@ self.addEventListener('fetch', function(e) {
       })
       .catch(function() {
         return caches.match(e.request).then(function(cached) {
-          return cached || caches.match('/Splitguasa/index-firebase.html');
+          return cached || caches.match('/Splitguasa/');
         });
       })
   );

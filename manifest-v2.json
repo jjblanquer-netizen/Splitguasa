@@ -2,7 +2,7 @@
   "name": "SplitGuasa",
   "short_name": "SplitGuasa",
   "description": "Divide gastos compartidos con amigos sin complicaciones",
-  "start_url": "/Splitguasa/index-firebase.html",
+  "start_url": "/Splitguasa/",
   "scope": "/Splitguasa/",
   "display": "standalone",
   "background_color": "#0a0b0f",

@@ -72,7 +72,7 @@ body.light .banner {
   border-color: rgba(13,148,136,.18);
 }
 body.light .ban-item + .ban-item { border-left-color: rgba(0,0,0,.08); }
-body.light #sbar { background: var(--s2); }
+body.light 
 body.light .fab { box-shadow: 0 4px 18px rgba(13,148,136,.35); }
 
 /* ─── RESET ────────────────────────────────────────────────────── */
@@ -80,12 +80,15 @@ body.light .fab { box-shadow: 0 4px 18px rgba(13,148,136,.35); }
 input, select, button, textarea { -webkit-appearance: none; appearance: none; font-family: var(--ff-body); }
 
 html {
-  height: 100%; height: -webkit-fill-available;
+  height: 100%;
   background: var(--bg);
   overscroll-behavior: none;
 }
 body {
-  height: 100vh; height: -webkit-fill-available;
+  /* position:fixed + inset:0 llena EXACTAMENTE el viewport visible,
+     sin depender de cálculos de altura (100vh falla en iOS Safari). */
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
   width: 100%;
   background: var(--bg);
   color: var(--txt);
@@ -93,7 +96,6 @@ body {
   font-size: 15px;
   line-height: 1.5;
   overflow: hidden;
-  position: fixed;
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -108,17 +110,19 @@ body {
   background: var(--bg);
   overflow: hidden;
 }
+/* El loading también a pantalla completa */
+#loading { height: 100%; }
 
 /* ─── SCREENS ───────────────────────────────────────────────────── */
 .scr { display: none; flex-direction: column; flex: 1; overflow: hidden; }
 .scr.on { display: flex; animation: fadeUp .2s ease; }
-@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+/* Solo fundido: un transform aquí capturaría al FAB (position:fixed) y lo arrastraría */
+@keyframes fadeUp { from { opacity:0; } to { opacity:1; } }
 
 /* ─── SCROLL AREA ───────────────────────────────────────────────── */
 .sb {
   flex: 1; overflow-y: auto; overflow-x: hidden;
-  padding: 0 16px;
-  padding-bottom: calc(24px + var(--sab));
+  padding: 0 16px 24px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
@@ -153,18 +157,58 @@ body {
 
 /* ─── BOTTOM NAV ────────────────────────────────────────────────── */
 .bnav {
-  display: flex; justify-content: space-around; align-items: center;
-  background: var(--surface); border-top: 1px solid var(--border);
-  padding: 8px 0; padding-bottom: calc(8px + var(--sab));
-  flex-shrink: 0; z-index: 10;
+  /* Barra de pestañas con ALTURA EXPLÍCITA:
+     56px de contenido + el área segura de iOS (indicador de inicio).
+     Con box-sizing:border-box, el padding-bottom queda DENTRO de la altura,
+     así el área de iconos siempre mide exactamente 56px. */
+  height: calc(56px + var(--sab));
+  padding-bottom: var(--sab);
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  /* Aspecto de barra de app: ligera elevación sobre el contenido */
+  box-shadow: 0 -1px 12px rgba(0,0,0,.28);
 }
+body.light .bnav { box-shadow: 0 -1px 10px rgba(0,0,0,.06); }
+
 .nav-item {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  cursor: pointer; padding: 4px 16px; color: var(--muted); min-width: 60px;
+  /* Cada botón = exactamente 1/5 del ancho. Nunca cambia de tamaño. */
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;                 /* ocupa los 56px de contenido */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--muted);
+  transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
 }
+
+.nav-item span {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .1px;
+  line-height: 1;
+  white-space: nowrap;          /* nunca parte en dos líneas */
+}
+
+/* El estado activo SOLO cambia el color: nunca tamaño, peso ni posición */
 .nav-item.on { color: var(--acc); }
-.nav-item svg { width: 22px; height: 22px; }
-.nav-item span { font-size: 11px; font-weight: 500; letter-spacing: .2px; }
+
+
+.nav-item svg { width: 22px; height: 22px; flex-shrink: 0; display: block; }
+
+
+/* El estado activo SOLO cambia el color: nunca el tamaño ni el peso */
+
+
 
 /* ─── SYNC BAR ──────────────────────────────────────────────────── */
 #sbar {
@@ -173,17 +217,19 @@ body {
   font-family: var(--ff-body); font-size: 12px; font-weight: 500;
   transition: background .3s;
 }
-#sbar.ok  { background: rgba(94,234,212,.06); color: var(--acc); }
-#sbar.syn { background: rgba(251,191,36,.07);  color: var(--acc2); }
-#sbar.err { background: rgba(251,113,133,.07); color: var(--acc3); }
 .sdot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .sdot.pulse { animation: dotpulse 1.1s infinite; }
 @keyframes dotpulse { 0%,100%{opacity:1} 50%{opacity:.2} }
 #sbtn-sync {
-  font-size: 11px; font-weight: 600; color: var(--muted2);
-  cursor: pointer; padding: 3px 8px; border-radius: 6px;
-  background: rgba(255,255,255,.05); border: 1px solid var(--border);
+  font-family: var(--ff-head); font-size: 12px; font-weight: 700;
+  color: var(--acc); cursor: pointer; padding: 8px 14px; border-radius: 10px;
+  background: rgba(94,234,212,.12); border: 1px solid rgba(94,234,212,.3);
+  transition: all .13s;
 }
+#sbtn-sync:active { transform: scale(.95); }
+body.light #sbtn-sync { background: rgba(13,148,136,.12); }
+/* El punto de estado hereda el color del estado (ok/err/syn) */
+.sdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 
 /* ─── HOME HEADER ───────────────────────────────────────────────── */
 .home-hdr {
@@ -199,7 +245,7 @@ body {
 
 /* ─── BANNER ────────────────────────────────────────────────────── */
 .banner {
-  margin: 0 16px 14px;
+  margin: 0 16px 8px;
   background: linear-gradient(135deg, #0f2420 0%, #111829 100%);
   border: 1px solid rgba(94,234,212,.14); border-radius: var(--r);
   padding: 14px; display: flex;
@@ -217,13 +263,22 @@ body {
 
 /* ─── GROUP CARD ────────────────────────────────────────────────── */
 .group-card {
-  background: var(--s2); border: 1px solid var(--border);
-  border-radius: 18px; margin-bottom: 14px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 18px; margin-bottom: 16px;
   cursor: pointer; position: relative; overflow: hidden;
   transition: transform .15s, border-color .15s, box-shadow .15s;
   min-height: 150px;
   display: flex; flex-direction: column; justify-content: flex-end;
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
 }
+/* Con imagen: borde claro para separarla del fondo negro */
+.group-card.has-bg {
+  border-color: rgba(255,255,255,.18);
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+body.light .group-card { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+body.light .group-card.has-bg { border-color: rgba(0,0,0,.15); }
 .group-card:active { transform: scale(.985); border-color: var(--acc); }
 /* Imagen de fondo (Fase 3) */
 .group-card-bg {
@@ -278,6 +333,8 @@ body {
 .group-card.has-bg .group-avatars .av-mini { border-color: rgba(255,255,255,.3); }
 .group-members-txt { font-size: 13px; color: var(--muted2); margin-left: 8px; }
 .group-total { font-family: var(--ff-head); font-weight: 800; font-size: 19px; color: var(--acc); }
+.group-total-sub { font-size: 10px; color: var(--muted2); margin-top: -1px; }
+.group-card.has-bg .group-total-sub { color: rgba(255,255,255,.75); text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 
 /* ─── EXPENSE ITEM ──────────────────────────────────────────────── */
 .exp-item {
@@ -592,6 +649,7 @@ strong { font-weight: 600; }
 
 /* Botones de la topbar sobre la imagen: cristal translúcido */
 .grp-hero.has-bg .btn-back,
+.grp-hero.has-bg .btn-edit-grp,
 .grp-hero.has-bg .btn-del-grp {
   background: rgba(255,255,255,.16) !important;
   backdrop-filter: blur(10px);
@@ -599,10 +657,12 @@ strong { font-weight: 600; }
   color: #fff !important;
 }
 .grp-hero.has-bg .btn-del-grp { color: #ffb3c0 !important; }
+.grp-hero.has-bg .btn-edit-grp { color: #a7f3e4 !important; }
 .grp-hero.has-bg .topbar-title { color: #fff; text-shadow: 0 1px 5px rgba(0,0,0,.55); }
 
-/* Sin fondo: botón borrar con su color rosado habitual */
+/* Botones de acción de la topbar del grupo */
 .btn-del-grp { background: var(--s3); color: var(--acc3); border: 1px solid rgba(251,113,133,.25); }
+.btn-edit-grp { background: var(--s3); color: var(--acc); border: 1px solid rgba(94,234,212,.25); margin-right: 8px; }
 
 /* Cabecera: emoji a la izquierda del nombre, en fila */
 .grp-hdr { padding: 2px 16px 14px; }
@@ -631,10 +691,141 @@ strong { font-weight: 600; }
 }
 
 /* Tabs separados del hero */
-.grp-tabs { margin-top: 14px; }
+.grp-tabs { margin-top: 20px; }
 /* Más aire bajo la cabecera para que la imagen respire */
-.grp-hdr { padding: 2px 16px 22px; }
+.grp-hdr { padding: 4px 16px 30px; }
+
+/* Filtros de periodo del informe */
+.rep-filters { display: flex; gap: 6px; margin: 10px 0 12px; }
+.rep-filter {
+  flex: 1; padding: 7px 0; border-radius: 9px;
+  background: var(--s2); border: 1px solid var(--border);
+  color: var(--muted2); font-family: var(--ff-head);
+  font-weight: 700; font-size: 12px; cursor: pointer;
+  transition: all .13s;
+}
+.rep-filter.on {
+  background: rgba(94,234,212,.12); border-color: var(--acc); color: var(--acc);
+}
+body.light .rep-filter.on { background: rgba(13,148,136,.12); }
+
+/* Título "Grupos activos" en Home: más visible y pegado al banner */
+.sec-lbl-home {
+  color: var(--txt);          /* blanco en oscuro, negro en claro */
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  margin: 2px 0 10px;         /* menos aire arriba */
+}
+
+/* Rejilla de 3 estadísticas (pestaña Gastos del grupo) */
+.stats-grid.cols3 { grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.stats-grid.cols3 .stat-box { padding: 11px 6px; text-align: center; }
+.stats-grid.cols3 .stat-val { font-size: 15px; }
+.stats-grid.cols3 .stat-lbl { font-size: 9.5px; letter-spacing: .3px; }
+
+/* ── Casillas del código de acceso (6 huecos) ── */
+.code-boxes { display: flex; gap: 8px; justify-content: center; }
+.code-box {
+  width: 44px; height: 56px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+  font-family: var(--ff-head);
+  font-weight: 800;
+  font-size: 23px;
+  color: var(--txt);
+  text-transform: uppercase;
+  caret-color: var(--acc);
+  transition: border-color .15s, background .15s;
+}
+.code-box:focus { outline: none; border-color: var(--acc); background: rgba(94,234,212,.07); }
+.code-box.err   { border-color: var(--acc3); background: rgba(251,113,133,.07); }
+@media (max-width: 360px) { .code-box { width: 38px; height: 50px; font-size: 20px; } }
+
+/* ── Selector de rol (Estándar / Administrador) ── */
+.role-btn {
+  flex: 1;
+  padding: 13px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  color: var(--muted2);
+  font-family: var(--ff-head);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.role-btn.on {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #04221d;
+}
+
+/* ── Tarjeta de perfil destacada en Ajustes ── */
+.profile-card {
+  background: linear-gradient(135deg, #0f2420 0%, #16233d 100%);
+  border: 1px solid rgba(94,234,212,.2);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 4px;
+}
+body.light .profile-card {
+  background: linear-gradient(135deg, #e6f7f4 0%, #eef1f8 100%);
+  border-color: rgba(13,148,136,.2);
+}
+.profile-actions { display: flex; gap: 9px; margin-top: 14px; }
+.profile-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  color: var(--txt2);
+  font-family: var(--ff-head);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.profile-btn:active { transform: scale(.97); }
+
+/* Botones de tema: horizontales y bajos (antes ocupaban demasiado) */
+.theme-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 8px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 11px;
+  color: var(--muted2);
+  font-family: var(--ff-head);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.theme-btn.on {
+  border-color: var(--acc);
+  background: rgba(94,234,212,.1);
+  color: var(--txt);
+}
+.theme-btn.on svg { color: var(--acc); }
+
+/* El tema se aplica antes del primer dibujado (evita el destello) */
+html.pre-light body { background: #f6f7fb; }
 </style>
+<script>
+// Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
+(function() {
+  try {
+    var t = localStorage.getItem('sg_theme') || 'dark';
+    if (t === 'light') document.documentElement.classList.add('pre-light');
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
@@ -650,15 +841,8 @@ strong { font-weight: 600; }
 
 <!-- ══ HOME ══ -->
 <div class="scr on" id="scr-home">
-  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.2</span></div>
-  <div id="sbar" class="ok">
-    <div style="display:flex;align-items:center;gap:8px">
-      <div class="sdot" id="sdot"></div>
-      <span id="stxt" style="font-size:12px">Conectado</span>
-    </div>
-    <span id="sbtn-sync" onclick="manualSync()">↻ Sync</span>
-  </div>
-  <div id="greeting" style="display:none;padding:0 16px 10px;">
+  <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.4</span></div>
+    <div id="greeting" style="display:none;padding:0 16px 10px;">
     <div style="font-family:var(--ff-head);font-size:20px;font-weight:800;color:var(--txt)">Hola, <span id="greeting-name" style="color:var(--acc)"></span> 👋</div>
   </div>
   <div class="banner">
@@ -668,43 +852,21 @@ strong { font-weight: 600; }
   </div>
 
   <div class="sb">
-    <div class="sec-lbl">Grupos activos</div>
+    <div class="sec-lbl sec-lbl-home">Grupos activos</div>
     <div id="grp-list"></div>
   </div>
-  <button class="fab" onclick="openModal('m-newgrp')">+</button>
-  <nav class="bnav">
-    <div class="nav-item on" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
-    <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
-    <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
-    <div class="nav-item" class="nav-yo" onclick="goTab('friends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
-    <div class="nav-item" onclick="goTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></div>
-  </nav>
-</div>
+  </div>
 
 <!-- ══ ACTIVITY ══ -->
 <div class="scr" id="scr-activity">
   <div class="topbar"><button class="btn-back" onclick="goTab('home')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button><span class="topbar-title">Actividad</span></div>
   <div class="sb"><div id="act-list"></div></div>
-  <nav class="bnav">
-    <div class="nav-item" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
-    <div class="nav-item on" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
-    <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
-    <div class="nav-item" class="nav-yo" onclick="goTab('friends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
-    <div class="nav-item" onclick="goTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></div>
-  </nav>
 </div>
 
 <!-- ══ REPORT ══ -->
 <div class="scr" id="scr-report">
   <div class="topbar"><button class="btn-back" onclick="goTab('home')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button><span class="topbar-title">Informe Global</span></div>
   <div class="sb" id="rep-cont"></div>
-  <nav class="bnav">
-    <div class="nav-item" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
-    <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
-    <div class="nav-item on" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
-    <div class="nav-item" class="nav-yo" onclick="goTab('friends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
-    <div class="nav-item" onclick="goTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></div>
-  </nav>
 </div>
 
 <!-- ══ GROUP DETAIL ══ -->
@@ -715,6 +877,9 @@ strong { font-weight: 600; }
     <div class="topbar grp-hero-top">
       <button class="btn-back" onclick="closeGroup()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
       <span style="flex:1"></span>
+      <button class="btn-icon btn-edit-grp" onclick="openModal('m-edit-members')" title="Editar grupo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
       <button class="btn-icon btn-del-grp" onclick="askDelGrp()" title="Eliminar grupo">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       </button>
@@ -724,10 +889,7 @@ strong { font-weight: 600; }
         <div class="grp-emoji" id="g-emoji">🏖️</div>
         <div style="min-width:0;flex:1">
           <div class="grp-title" id="g-name">Grupo</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
-            <div class="grp-members-line" id="g-mems"></div>
-            <button class="btn-edit-mem" onclick="openModal('m-edit-members')">+ Editar</button>
-          </div>
+          <div class="grp-members-line" id="g-mems" style="margin-top:2px"></div>
         </div>
       </div>
     </div>
@@ -739,13 +901,6 @@ strong { font-weight: 600; }
   </div>
   <div class="sb" id="gtab-cont" style="padding-bottom:calc(140px + var(--sab))"></div>
   <button class="fab" onclick="openAddExpense()">+</button>
-  <nav class="bnav">
-    <div class="nav-item" onclick="closeGroup();goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
-    <div class="nav-item" onclick="closeGroup();goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
-    <div class="nav-item" onclick="closeGroup();goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
-    <div class="nav-item nav-yo" onclick="closeGroup();goTab('friends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
-    <div class="nav-item" onclick="goTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></div>
-  </nav>
 </div>
 
 
@@ -809,6 +964,116 @@ strong { font-weight: 600; }
   </div>
 </div>
 
+<!-- ══ MODAL: EDITAR PERFIL DE USUARIO (admin) ══ -->
+<div class="modal-bg" id="m-edit-profile" onclick="closeOut(event,'m-edit-profile')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="text-align:center">Editar perfil</div>
+
+    <div id="ep-avatar" class="avatar" style="width:66px;height:66px;margin:6px auto 20px;font-size:26px"></div>
+
+    <div class="field">
+      <label>Nombre</label>
+      <input id="ep-name" type="text" autocomplete="off" autocapitalize="words" placeholder="Nombre">
+    </div>
+
+    <div class="field">
+      <label>Código de acceso (6 caracteres)</label>
+      <div style="display:flex;gap:8px">
+        <input id="ep-code" type="text" maxlength="6" autocomplete="off" autocapitalize="characters"
+               placeholder="ABC123"
+               style="flex:1;font-family:var(--ff-head);font-weight:800;font-size:19px;letter-spacing:4px;text-transform:uppercase;text-align:center">
+        <button onclick="regenCode()" title="Generar nuevo código"
+                style="background:var(--s2);border:1px solid var(--border);color:var(--acc);border-radius:11px;padding:0 15px;cursor:pointer;font-size:17px">🎲</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5">Este es el código que la persona usará para entrar. Compártelo solo con ella.</p>
+    </div>
+
+    <div class="field" id="ep-role-field">
+      <label>Rol</label>
+      <div style="display:flex;gap:9px">
+        <button id="ep-role-user" onclick="setEpRole('user')" class="role-btn">Estándar</button>
+        <button id="ep-role-admin" onclick="setEpRole('admin')" class="role-btn">Administrador</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5">Los administradores pueden crear y borrar amigos y grupos, y cambiar roles.</p>
+    </div>
+
+    <button id="ep-share" onclick="shareAccess()"
+            style="width:100%;margin-top:4px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:9px;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.35);color:var(--acc4);font-family:var(--ff-head);font-weight:700;font-size:14px;padding:13px;border-radius:12px;cursor:pointer">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Enviar acceso a esta persona
+    </button>
+
+    <button class="btn-primary" onclick="saveProfile()">Guardar</button>
+    <button class="btn-secondary" style="width:100%;margin-top:9px" onclick="closeModal('m-edit-profile')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CAMBIAR DE USUARIO (por código) ══ -->
+<div class="modal-bg" id="m-code-switch" onclick="closeOut(event,'m-code-switch')">
+  <div class="sheet" style="text-align:center">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="text-align:center">🔑 Cambiar de usuario</div>
+    <p style="font-size:13.5px;color:var(--muted2);margin-bottom:20px;line-height:1.5">Introduce el código del usuario<br>con el que quieres entrar.</p>
+    <div class="code-boxes" id="switch-code-boxes"></div>
+    <div id="switch-code-err" style="display:none;color:var(--acc3);font-size:13px;margin-top:12px;line-height:1.5"></div>
+    <button class="btn-primary" style="margin-top:20px" onclick="submitCode('switch')">Entrar</button>
+    <button class="btn-secondary" style="width:100%;margin-top:9px" onclick="closeModal('m-code-switch')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: HISTORIAL DE ACTIVIDAD ══ -->
+<div class="modal-bg" id="m-history" onclick="closeOut(event,'m-history')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🕐 Historial de actividad</div>
+
+    <div class="rep-filters" id="history-tabs" style="display:none;margin-bottom:10px">
+      <button class="rep-filter on" id="hist-tab-me"  onclick="toggleLogScope(false)">Solo yo</button>
+      <button class="rep-filter"    id="hist-tab-all" onclick="toggleLogScope(true)">Todos</button>
+    </div>
+
+    <div class="field" style="margin-bottom:10px">
+      <select id="hist-type" onchange="setLogType(this.value)"
+              style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;color:var(--txt);font-size:14px;font-family:var(--ff-body);cursor:pointer"></select>
+    </div>
+
+    <div id="history-count" style="font-size:11.5px;color:var(--muted);margin-bottom:8px"></div>
+
+    <div id="history-list" style="max-height:54vh;overflow-y:auto;margin-bottom:10px"></div>
+    <p style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.5">
+      Gastos, pagos y grupos se guardan siempre.<br>Los accesos se conservan 60 días.
+    </p>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-history')">Cerrar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: OCULTAR GRUPOS (admin) ══ -->
+<div class="modal-bg" id="m-hide-groups" onclick="closeOut(event,'m-hide-groups')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🙈 Ocultar grupos</div>
+    <p style="color:var(--muted2);margin-bottom:14px;font-size:13px;line-height:1.5">Los grupos ocultos no aparecerán en Inicio <strong>para nadie</strong>. Sus datos se conservan.</p>
+    <div id="hide-groups-list" style="max-height:50vh;overflow-y:auto;margin-bottom:14px"></div>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-hide-groups')">Hecho</button>
+    <div class="pb"></div>
+  </div>
+</div>
+<!-- ══ MODAL: DELETE PERSON ══ -->
+<div class="modal-bg" id="m-del-person" onclick="closeOut(event,'m-del-person')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">⚠️ Eliminar amigo</div>
+    <p id="del-person-txt" style="color:var(--muted2);margin-bottom:6px;font-size:14px;line-height:1.6"></p>
+    <div id="del-person-warn" style="background:rgba(251,113,133,.08);border:1px solid rgba(251,113,133,.2);border-radius:10px;padding:11px 13px;margin-bottom:18px;font-size:13px;color:var(--acc3);line-height:1.5;display:none"></div>
+    <button class="btn-primary" style="background:var(--acc3);margin-bottom:9px" onclick="confirmDelPerson()">Sí, eliminar</button>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-del-person')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
 <!-- ══ MODAL: DELETE GROUP ══ -->
 <div class="modal-bg" id="m-del-grp" onclick="closeOut(event,'m-del-grp')">
   <div class="sheet">
@@ -862,7 +1127,10 @@ strong { font-weight: 600; }
     <span class="topbar-title">Amigos</span>
   </div>
   <div class="sb">
-    <div class="field" style="margin-top:4px">
+    <div id="friends-admin-note" style="display:none;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-top:8px;margin-bottom:10px;font-size:12.5px;color:var(--muted2);line-height:1.5">
+      🔒 Solo el administrador puede añadir o eliminar amigos.
+    </div>
+    <div class="field" id="add-friend-field" style="margin-top:4px;display:none">
       <label>Nuevo amigo</label>
       <div class="chip-row">
         <input id="friend-inp" type="text" placeholder="Nombre..." autocomplete="off" autocapitalize="words" onkeydown="friendKd(event)">
@@ -875,13 +1143,6 @@ strong { font-weight: 600; }
       Añade personas con el campo de arriba.
     </div>
   </div>
-  <nav class="bnav">
-    <div class="nav-item" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
-    <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
-    <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
-    <div class="nav-item on nav-yo" onclick="goTab('friends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
-    <div class="nav-item" onclick="goTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></div>
-  </nav>
 </div>
 <!-- ══ AJUSTES SCREEN ══ -->
 <div class="scr" id="scr-settings">
@@ -890,28 +1151,95 @@ strong { font-weight: 600; }
     <span class="topbar-title">Ajustes</span>
   </div>
   <div class="sb">
-    <div class="sec-lbl" style="margin-top:6px">Apariencia</div>
-    <div class="card" style="padding:6px">
-      <div style="display:flex;gap:8px">
-        <button id="theme-dark-btn" onclick="setTheme('dark')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;background:var(--s2);border:2px solid var(--acc);border-radius:14px;cursor:pointer;transition:all .15s">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--acc)"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          <span style="font-family:var(--ff-head);font-weight:700;font-size:14px;color:var(--txt)">Oscuro</span>
-          <span id="theme-dark-check" style="font-size:11px;color:var(--acc);font-weight:600">✓ Activado</span>
+    <div class="sec-lbl" style="margin-top:6px">Tu perfil</div>
+    <div class="profile-card" id="settings-me-card">
+      <div style="display:flex;align-items:center;gap:13px">
+        <div id="settings-me-avatar" class="avatar" style="width:54px;height:54px;flex-shrink:0;font-size:21px"></div>
+        <div style="flex:1;min-width:0">
+          <div id="settings-me-name" style="font-family:var(--ff-head);font-weight:800;font-size:20px;color:var(--txt);line-height:1.2">Sin identificar</div>
+          <div id="settings-me-sub" style="font-size:12.5px;color:var(--muted2);margin-top:3px">Introduce tu código para entrar</div>
+        </div>
+      </div>
+      <div class="profile-actions" id="settings-me-actions">
+        <button class="profile-btn" onclick="openCodeModal('switch')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Cambiar de usuario
         </button>
-        <button id="theme-light-btn" onclick="setTheme('light')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;background:var(--s2);border:2px solid var(--border);border-radius:14px;cursor:pointer;transition:all .15s">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted2)"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <span style="font-family:var(--ff-head);font-weight:700;font-size:14px;color:var(--txt)">Claro</span>
-          <span id="theme-light-check" style="font-size:11px;color:var(--muted);font-weight:600">Activar</span>
+        <button class="profile-btn" id="settings-me-edit" onclick="openEditProfile(myName())" style="display:none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar
         </button>
       </div>
     </div>
 
-    <div class="sec-lbl" style="margin-top:18px">Tu perfil</div>
-    <div class="card" id="settings-me-card" onclick="openMeSelector()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
-      <div id="settings-me-avatar" class="avatar" style="width:44px;height:44px;flex-shrink:0"></div>
+    <div class="sec-lbl" style="margin-top:18px">Sincronización</div>
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <div class="sdot" id="sdot" style="flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
-        <div id="settings-me-name" style="font-weight:700;font-size:15px;color:var(--txt)">Sin identificar</div>
-        <div id="settings-me-sub" style="font-size:12px;color:var(--muted2);margin-top:1px">Toca para elegir quién eres</div>
+        <div id="stxt" style="font-weight:600;font-size:14px;color:var(--txt)">Conectado</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:1px">Los datos se guardan en la nube</div>
+      </div>
+      <button id="sbtn-sync" onclick="manualSync()" style="flex-shrink:0">↻ Sync</button>
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Apariencia</div>
+    <div class="card" style="padding:5px">
+      <div style="display:flex;gap:6px">
+        <button id="theme-dark-btn" onclick="setTheme('dark')" class="theme-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span>Oscuro</span>
+        </button>
+        <button id="theme-light-btn" onclick="setTheme('light')" class="theme-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <span>Claro</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="admin-groups-sec" style="display:none">
+      <div class="sec-lbl" style="margin-top:18px">Administración <span style="color:var(--acc2);font-size:9px">· ADMIN</span></div>
+      <div class="card" onclick="openModal('m-newgrp')" style="cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:9px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc);font-size:22px;font-weight:700">+</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--txt)">Crear nuevo grupo</div>
+          <div style="font-size:12px;color:var(--muted2);margin-top:1px">Empieza a compartir gastos</div>
+        </div>
+        <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+      </div>
+      <div class="card" onclick="openHideGroups()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc2)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:15px;color:var(--txt)">Ocultar grupos</div>
+          <div id="hidden-count" style="font-size:12px;color:var(--muted2);margin-top:1px">Elige qué grupos no se ven en Inicio</div>
+        </div>
+        <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+      </div>
+
+      
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Historial</div>
+    <div class="card" onclick="openHistory()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px;color:var(--txt)">Mi actividad</div>
+        <div id="history-sub" style="font-size:12px;color:var(--muted2);margin-top:1px">Todo lo que has hecho en la app</div>
+      </div>
+      <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Compartir</div>
+    <div class="card" onclick="shareApp()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc4)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px;color:var(--txt)">Compartir SplitGuasa</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:1px">Invita a tus amigos a la app</div>
       </div>
       <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
     </div>
@@ -924,14 +1252,17 @@ strong { font-weight: 600; }
       </div>
     </div>
   </div>
-  <nav class="bnav">
-    <div class="nav-item" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
-    <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
-    <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
-    <div class="nav-item nav-yo" onclick="goTab('friends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
-    <div class="nav-item on" onclick="goTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></div>
-  </nav>
 </div>
+
+<!-- ══ BARRA DE NAVEGACIÓN (única, compartida por todas las pantallas) ══ -->
+<nav class="bnav">
+  <div class="nav-item" onclick="goTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Inicio</span></div>
+  <div class="nav-item" onclick="goTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span>Actividad</span></div>
+  <div class="nav-item" onclick="goTab('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Informe</span></div>
+  <div class="nav-item nav-yo" onclick="goTab('friends')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-yo-lbl">Amigos</span></div>
+  <div class="nav-item" onclick="goTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Ajustes</span></div>
+</nav>
+
 
 <!-- ══ MODAL: ABOUT ══ -->
 <div class="modal-bg" id="m-about" onclick="closeOut(event,'m-about')">
@@ -940,7 +1271,7 @@ strong { font-weight: 600; }
     <div style="text-align:center;padding:10px 0 24px">
       <img src="data:image/webp;base64,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" alt="SG" style="width:88px;height:88px;border-radius:20px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,.3)">
       <div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:var(--txt);margin-bottom:4px">SplitGuasa</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Versión 1.2</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Versión 1.3</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -957,10 +1288,18 @@ strong { font-weight: 600; }
 </div><!-- /app -->
 
 <script>
+
+
+
 // ════════════════════════════════════════════
 // FIREBASE — base de datos en tiempo real
 // ════════════════════════════════════════════
-const FB_URL = 'https://splitguasa-default-rtdb.europe-west1.firebasedatabase.app/data.json';
+const FB_URL = 'https://splitguasa-default-rtdb.europe-west1.firebasedatabase.app/data.json'
+// El historial vive en una RUTA APARTE. Antes iba dentro de data.json y se
+// descargaba entero cada 10 segundos (~100 KB → 36 MB/hora). Ahora solo se
+// lee al abrir la pantalla de Historial, y se escribe añadiendo (PATCH),
+// sin releer ni reenviar todo.
+const FB_LOG_URL = 'https://splitguasa-default-rtdb.europe-west1.firebasedatabase.app/log.json';
 
 // ════════════════════════════════════════════
 // CATEGORÍAS (20)
@@ -1025,13 +1364,23 @@ function toast(msg, ms=2800) {
 // ════════════════════════════════════════════
 // SYNC STATUS BAR
 // ════════════════════════════════════════════
+var lastSyncState = { st: 'ok', msg: 'Conectado' };
+
 function ss(st, msg) {
-  const bar = document.getElementById('sbar');
+  lastSyncState = { st: st, msg: msg };
+  paintSyncState();
+}
+
+function paintSyncState() {
   const dot = document.getElementById('sdot');
   const txt = document.getElementById('stxt');
-  bar.className = st;
-  dot.className = 'sdot' + (st==='syn'?' pulse':'');
-  txt.textContent = msg;
+  if (!dot || !txt) return;   // la tarjeta solo existe en Ajustes
+  var st = lastSyncState.st;
+  var col = st === 'ok' ? 'var(--acc)' : (st === 'err' ? 'var(--acc3)' : 'var(--acc2)');
+  dot.style.background = col;
+  dot.className = 'sdot' + (st === 'syn' ? ' pulse' : '');
+  txt.textContent = lastSyncState.msg;
+  txt.style.color = col;
 }
 
 // ════════════════════════════════════════════
@@ -1046,6 +1395,97 @@ function fixArrays(obj) {
   const result = {};
   keys.forEach(k => { result[k] = fixArrays(obj[k]); });
   return result;
+}
+
+
+
+// ── PODA DEL HISTORIAL ──
+// Los accesos son frecuentes y poco interesantes: si se guardaran para siempre,
+// acabarían siendo megas de descarga al abrir la pantalla y ahogarían a los
+// gastos y pagos, que sí importan y se conservan ÍNTEGROS.
+const LOG_ACCESS_DAYS = 60;   // los accesos caducan a los 60 días
+
+// Borra en el servidor las entradas caducadas (PATCH con null = eliminar).
+// Solo se ejecuta al abrir la pantalla de Historial, y como mucho una vez al día
+// por dispositivo, para no hacer trabajo repetido.
+async function pruneLog(entries) {
+  var limite = Date.now() - LOG_ACCESS_DAYS * 86400000;
+  var caducadas = entries.filter(function(e) {
+    return e && e.type === 'acceso' && (e.ts || 0) < limite;
+  });
+  if (!caducadas.length) return entries;
+
+  // No más de una poda al día por dispositivo
+  var hoy = tod();
+  try {
+    if (localStorage.getItem('sg_prune') === hoy) return entries;
+  } catch (e) {}
+
+  var payload = {};
+  caducadas.forEach(function(e){ payload[e.id] = null; });   // null = borrar
+
+  try {
+    await fetch(FB_LOG_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    try { localStorage.setItem('sg_prune', hoy); } catch (e) {}
+  } catch (e) {
+    return entries;   // sin conexión: no pasa nada, se reintenta otro día
+  }
+
+  // Devolver la lista ya sin las caducadas
+  var borradas = {};
+  caducadas.forEach(function(e){ borradas[e.id] = true; });
+  return entries.filter(function(e){ return !borradas[e.id]; });
+}
+
+// Lee el historial (solo cuando se abre la pantalla)
+async function fbLogRead() {
+  try {
+    // Límite de 10 s: si el servidor no responde, no dejamos la pantalla colgada
+    var ctrl = new AbortController();
+    var corte = setTimeout(function(){ ctrl.abort(); }, 10000);
+
+    const res = await fetch(FB_LOG_URL + '?_=' + Date.now(), {
+      headers: { 'Cache-Control': 'no-cache' }, mode: 'cors', signal: ctrl.signal
+    });
+    clearTimeout(corte);
+    if (!res.ok) return [];
+    const raw = await res.json();
+    if (!raw || typeof raw !== 'object') return [];
+    return Object.keys(raw).map(function(k){ return raw[k]; })
+                 .filter(function(e){ return e && e.ts; });
+  } catch (e) {
+    return [];
+  }
+}
+
+// Envía SOLO las entradas nuevas (PATCH añade sin tocar el resto).
+// No hay que leer ni reescribir todo el historial.
+async function fbLogFlush() {
+  if (!LOG_QUEUE.length) return;
+  var lote = LOG_QUEUE.slice();
+  LOG_QUEUE = [];
+  var payload = {};
+  lote.forEach(function(e){ payload[e.id] = e; });
+  try {
+    await fetch(FB_LOG_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    LOG_QUEUE = lote.concat(LOG_QUEUE);   // reintentar en el siguiente envío
+  }
+}
+
+// Envío agrupado: si haces varias cosas seguidas, se manda una sola vez.
+var logFlushTimer = null;
+function scheduleLogFlush() {
+  if (logFlushTimer) clearTimeout(logFlushTimer);
+  logFlushTimer = setTimeout(function(){ fbLogFlush(); }, 2500);
 }
 
 async function fbRead() {
@@ -1116,8 +1556,54 @@ function mergeDB(remote, local) {
   var deleted = {};
   (Array.isArray(local.deleted)?local.deleted:[]).forEach(function(d){ deleted[d]=true; });
   (Array.isArray(remote.deleted)?remote.deleted:[]).forEach(function(d){ deleted[d]=true; });
+  // Un amigo re-creado a propósito revive: su tombstone deja de aplicar
+  Object.keys(revivedFriends).forEach(function(name){ delete deleted['fr:' + name]; });
 
   var result = { v: Math.max(remote.v||0, local.v||0), ts: Date.now(), deleted: Object.keys(deleted) };
+
+  // ── Códigos y roles de usuario (DB.people) ──
+  // Fusionar por nombre: gana el local si existe (es quien acaba de editar).
+  var pm = {};
+  var rp = (remote.people && typeof remote.people === 'object') ? remote.people : {};
+  var lp = (local.people  && typeof local.people  === 'object') ? local.people  : {};
+  Object.keys(rp).forEach(function(n){ if (!deleted['fr:' + n]) pm[n] = rp[n]; });
+  Object.keys(lp).forEach(function(n){
+    if (deleted['fr:' + n]) return;
+    var l = lp[n] || {}, r = rp[n] || {};
+    pm[n] = {
+      // El código del SERVIDOR manda si ya existía (para que no lo pise un móvil
+      // que acaba de generar el suyo). Solo se cambia editando el perfil, y en
+      // ese caso el local ya lleva el código nuevo y el servidor el viejo:
+      // por eso comparamos con el que teníamos cargado.
+      code: (r.code && !l.codeEdited) ? r.code : (l.code || r.code || ''),
+      role: (l.role === 'admin' || l.role === 'user') ? l.role : (r.role || 'user')
+    };
+  });
+  result.people = pm;
+
+  // El historial YA NO viaja en DB (vive en /log.json). Si viniera de una
+  // versión antigua, lo descartamos para no arrastrar peso inútil.
+  delete result.log;
+
+
+  // ── PIN de administrador (heredado, ya no se usa) ──
+  // Gana el que tenga la marca de tiempo MÁS RECIENTE. Así un dispositivo con
+  // datos viejos no puede pisar el PIN real, pero un cambio legítimo sí se propaga.
+  var lts = local.adminPinTs || 0;
+  var rts = remote.adminPinTs || 0;
+  if (remote.adminPin && rts > lts) {
+    result.adminPin   = remote.adminPin;
+    result.adminPinTs = rts;
+  } else if (local.adminPin) {
+    result.adminPin   = local.adminPin;
+    result.adminPinTs = lts;
+  } else if (remote.adminPin) {
+    result.adminPin   = remote.adminPin;
+    result.adminPinTs = rts;
+  }
+  var hg = (Array.isArray(local.hiddenGroups) ? local.hiddenGroups
+          : (Array.isArray(remote.hiddenGroups) ? remote.hiddenGroups : []));
+  result.hiddenGroups = hg;
 
   // Fusionar friends (unión), respetando tombstones de amigos borrados
   var friendsSet = {};
@@ -1157,9 +1643,19 @@ function mergeGroup(remote, local, deleted) {
   (Array.isArray(remote.expenses)?remote.expenses:[]).forEach(function(e){ if(e&&e.id && !deleted['exp:'+e.id]) expById[e.id]=e; });
   (Array.isArray(local.expenses)?local.expenses:[]).forEach(function(e){ if(e&&e.id && !deleted['exp:'+e.id]) expById[e.id]=e; });
   g.expenses = Object.keys(expById).map(function(k){ return expById[k]; });
-  // settled: unión por key
+  // settled: unión por key, descartando los que referencian a alguien
+  // borrado o renombrado (si no, al renombrar quedarían DUPLICADOS: uno con
+  // el nombre viejo del servidor y otro con el nuevo).
   var setByKey = {};
-  function addSettled(arr){ (Array.isArray(arr)?arr:[]).forEach(function(s){ var k = typeof s==='string'?s:(s&&s.key); if(k) setByKey[k]=s; }); }
+  function addSettled(arr){
+    (Array.isArray(arr)?arr:[]).forEach(function(s){
+      var k = typeof s === 'string' ? s : (s && s.key);
+      if (!k) return;
+      var parts = String(k).split('|');
+      if (deleted['fr:' + parts[0]] || deleted['fr:' + parts[1]]) return;  // clave obsoleta
+      setByKey[k] = s;
+    });
+  }
   addSettled(remote.settled); addSettled(local.settled);
   g.settled = Object.keys(setByKey).map(function(k){ return setByKey[k]; });
   return g;
@@ -1176,6 +1672,9 @@ async function sync(silent = false) {
   }
   if (!silent) ss('syn', 'Sincronizando…');
   try {
+    // Firma de lo que tenemos AHORA, para saber si algo cambia de verdad
+    var sigAntes = dbSignature();
+
     const remote = await fbRead();
     const prevV = DB.v || 0;
     if (remote && typeof remote === 'object') {
@@ -1186,6 +1685,7 @@ async function sync(silent = false) {
         DB = migrateSettlements(remote);
         if (!Array.isArray(DB.groups))  DB.groups  = [];
         if (!Array.isArray(DB.friends)) DB.friends = [];
+        if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
         DB.groups.forEach(function(g) {
           if (!Array.isArray(g.expenses))    g.expenses    = [];
           if (!Array.isArray(g.members))     g.members     = [];
@@ -1197,13 +1697,29 @@ async function sync(silent = false) {
         if (!silent && remoteV > prevV) toast('🔄 Actualizado por otro miembro');
       }
     }
+
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
     ss('ok', '✓ Conectado · ' + now);
-    renderAll();
+
+    // ── CLAVE: repintar SOLO si algo ha cambiado de verdad ──
+    // Antes se repintaba en cada sincronización (cada pocos segundos), lo que
+    // reconstruía las tarjetas y recargaba las imágenes → parpadeo sutil.
+    if (dbSignature() !== sigAntes) {
+      renderAll();
+    }
   } catch(e) {
     console.error('sync error:', e);
     ss('err', '⚠️ Sin conexión · Datos locales');
   }
+}
+
+// Huella de los datos que SE MUESTRAN. Si no cambia, no hace falta repintar.
+// (Se excluye 'ts', que cambia en cada escritura sin afectar a lo que se ve.)
+function dbSignature() {
+  // O(1): la versión sube en CADA escritura, así que basta para saber si algo
+  // cambió. Antes esto hacía JSON.stringify de todos los grupos y gastos en
+  // cada ciclo de sincronización (cada 10 s) — puro gasto de CPU.
+  return String(DB.v || 0);
 }
 
 async function manualSync() {
@@ -1214,6 +1730,7 @@ async function manualSync() {
       DB = migrateSettlements(remote);
       if (!Array.isArray(DB.groups))  DB.groups  = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
+      if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
       DB.groups.forEach(g => {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
@@ -1234,7 +1751,17 @@ async function manualSync() {
 
 // Firebase soporta polling más frecuente — cada 10s
 setInterval(() => { if (document.visibilityState === 'visible') sync(true); }, 10000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // La app instalada NO siempre se reinicia al reabrirla: a veces solo se
+    // reanuda desde memoria y init() no vuelve a ejecutarse. Por eso el acceso
+    // se registra también aquí (con el anti-rebote de 60 s de logAppOpen).
+    logAppOpen();
+    sync(true);
+  } else {
+    fbLogFlush();   // al salir de la app, enviar lo que quede en la cola
+  }
+});
 
 // ════════════════════════════════════════════
 // SAVE — guarda local + sube a Firebase
@@ -1253,28 +1780,772 @@ function save() {
 // TEMA CLARO / OSCURO
 // ════════════════════════════════════════════
 
-function renderSettingsMe() {
-  // Actualiza la tarjeta compacta de "Tu perfil" en Ajustes
+
+// ════════════════════════════════════════════
+// USUARIOS: CÓDIGO DE ACCESO + ROL
+// ────────────────────────────────────────────
+// Cada persona tiene un código de 6 caracteres (mayúsculas + números) y un rol
+// (estándar o administrador). El código sustituye al antiguo PIN: te identifica.
+// NOTA: la app es HTML público y la BD abierta → esto NO es seguridad real,
+// es un candado para evitar suplantaciones accidentales entre amigos.
+// ════════════════════════════════════════════
+const ADMIN_NAME = 'Jota';          // administrador por defecto al migrar
+
+// Versión del sistema de acceso. Si el móvil no tiene esta marca, significa que
+// venía de una versión ANTERIOR (identificado sin código) → se le desidentifica
+// y se le obliga a introducir su código.
+const AUTH_VERSION = 'v14';
+
+// Código inicial del administrador. Solo se usa si aún NO tiene código
+// (no pisa uno ya existente). Se puede cambiar desde su perfil.
+const ADMIN_SEED_CODE = '173117';
+const CODE_LEN   = 6;
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sin O/0/I/1 (se confunden)
+
+// Mapa de metadatos por nombre: DB.people = { "Jota": {code:"AB3K9Z", role:"admin"} }
+function peopleMap() {
+  if (!DB.people || typeof DB.people !== 'object' || Array.isArray(DB.people)) DB.people = {};
+  return DB.people;
+}
+function getPerson(name) {
+  var m = peopleMap();
+  return m[name] || null;
+}
+function personCode(name) {
+  var p = getPerson(name);
+  return p && p.code ? p.code : '';
+}
+function personRole(name) {
+  var p = getPerson(name);
+  return p && p.role === 'admin' ? 'admin' : 'user';
+}
+
+// Genera un código único de 6 caracteres
+function genCode() {
+  var m = peopleMap();
+  var usados = {};
+  Object.keys(m).forEach(function(n){ if (m[n] && m[n].code) usados[m[n].code] = true; });
+
+  for (var intento = 0; intento < 200; intento++) {
+    var c = '';
+    for (var i = 0; i < CODE_LEN; i++) {
+      c += CODE_CHARS.charAt(Math.floor(Math.random() * CODE_CHARS.length));
+    }
+    if (!usados[c]) return c;
+  }
+  return 'X' + Date.now().toString(36).toUpperCase().slice(-5);   // salvavidas
+}
+
+// ¿A quién pertenece este código?
+function findByCode(code) {
+  var c = String(code || '').trim().toUpperCase();
+  if (c.length !== CODE_LEN) return null;
+  var m = peopleMap();
+  var found = null;
+  Object.keys(m).forEach(function(n) {
+    if (m[n] && m[n].code === c) found = n;
+  });
+  // Solo vale si sigue siendo un amigo activo
+  if (found && getFriends().indexOf(found) < 0) return null;
+  return found;
+}
+
+// Asegura que TODOS los amigos tengan código y rol.
+// Los usuarios antiguos (sin código) reciben uno automáticamente.
+function ensurePeople() {
+  var m = peopleMap();
+  var cambios = false;
+  getFriends().forEach(function(n) {
+    if (!m[n] || typeof m[n] !== 'object') { m[n] = {}; cambios = true; }
+    if (!m[n].code) {
+      // Al administrador por defecto se le asigna su código conocido;
+      // al resto, uno aleatorio.
+      var esJota = n.trim().toLowerCase() === ADMIN_NAME.toLowerCase();
+      m[n].code = esJota ? ADMIN_SEED_CODE : genCode();
+      cambios = true;
+    }
+    if (m[n].role !== 'admin' && m[n].role !== 'user') {
+      // Jota es administrador por defecto; el resto, estándar
+      m[n].role = (n.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) ? 'admin' : 'user';
+      cambios = true;
+    }
+  });
+  // Si nadie es administrador, ascender a Jota (o al primero de la lista)
+  var hayAdmin = Object.keys(m).some(function(n){ return m[n] && m[n].role === 'admin'; });
+  if (!hayAdmin) {
+    var fr = getFriends();
+    var cand = fr.filter(function(n){ return n.trim().toLowerCase() === ADMIN_NAME.toLowerCase(); })[0] || fr[0];
+    if (cand) { m[cand].role = 'admin'; cambios = true; }
+  }
+  return cambios;
+}
+
+// ¿El usuario identificado es administrador?
+function isAdmin() {
   var me = myName();
-  var avatar = document.getElementById('settings-me-avatar');
-  var nameEl = document.getElementById('settings-me-name');
-  var subEl = document.getElementById('settings-me-sub');
-  if (!avatar || !nameEl) return;
-  if (me) {
-    var col = avc(me);
-    avatar.style.background = col + '22';
-    avatar.style.color = col;
-    avatar.textContent = ini(me);
-    avatar.style.display = 'flex';
-    nameEl.textContent = me;
-    if (subEl) subEl.textContent = 'Toca para cambiar';
+  return !!me && personRole(me) === 'admin';
+}
+
+// Aviso estándar al intentar una acción reservada
+function denyNotAdmin() {
+  toast('🔒 Solo un administrador puede hacer esto');
+}
+
+
+
+// ════════════════════════════════════════════
+// OCULTAR GRUPOS (solo administrador)
+// ════════════════════════════════════════════
+function hiddenGroups() {
+  return Array.isArray(DB.hiddenGroups) ? DB.hiddenGroups : [];
+}
+function isGroupHidden(id) {
+  return hiddenGroups().indexOf(id) >= 0;
+}
+
+function openHideGroups() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  renderHideGroupsList();
+  openModal('m-hide-groups');
+}
+
+function renderHideGroupsList() {
+  var cont = document.getElementById('hide-groups-list');
+  if (!cont) return;
+  var groups = Array.isArray(DB.groups) ? DB.groups : [];
+  if (!groups.length) {
+    cont.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:14px 0">No hay grupos todavía.</div>';
+    return;
+  }
+  var h = '';
+  groups.forEach(function(g) {
+    var hidden = isGroupHidden(g.id);
+    h += '<div class="hide-grp-row" data-gid="' + esc(g.id) + '" style="display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:12px;cursor:pointer;margin-bottom:5px;border:1px solid ' + (hidden ? 'rgba(251,191,36,.35)' : 'var(--border)') + ';background:' + (hidden ? 'rgba(251,191,36,.08)' : 'var(--s2)') + '">';
+    h += '<span style="font-size:22px;flex-shrink:0">' + esc(g.emoji || '📁') + '</span>';
+    h += '<div style="flex:1;min-width:0">';
+    h += '<div style="font-weight:600;color:' + (hidden ? 'var(--muted2)' : 'var(--txt)') + ';' + (hidden ? 'text-decoration:line-through' : '') + '">' + esc(g.name) + '</div>';
+    h += '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + (hidden ? 'Oculto en Inicio' : 'Visible') + '</div>';
+    h += '</div>';
+    h += '<span style="font-size:18px;flex-shrink:0">' + (hidden ? '🙈' : '👁️') + '</span>';
+    h += '</div>';
+  });
+  cont.innerHTML = h;
+
+  cont.querySelectorAll('.hide-grp-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      toggleHideGroup(row.getAttribute('data-gid'));
+    });
+  });
+}
+
+function toggleHideGroup(gid) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
+  var i = DB.hiddenGroups.indexOf(gid);
+  if (i >= 0) DB.hiddenGroups.splice(i, 1);
+  else        DB.hiddenGroups.push(gid);
+  save();
+  renderHideGroupsList();
+  updateHiddenCount();
+  renderHome();
+}
+
+function updateHiddenCount() {
+  var el = document.getElementById('hidden-count');
+  if (!el) return;
+  var n = hiddenGroups().length;
+  el.textContent = n ? (n + ' grupo' + (n===1?'':'s') + ' oculto' + (n===1?'':'s')) : 'Elige qué grupos no se ven en Inicio';
+}
+
+
+// Muestra u oculta las opciones reservadas al administrador
+function applyAdminUI() {
+  var admin = isAdmin();
+
+  // Sección "Grupos" de Ajustes (crear grupo, ocultar grupos, cambiar PIN)
+  var sec = document.getElementById('admin-groups-sec');
+  if (sec) sec.style.display = admin ? 'block' : 'none';
+  updateHiddenCount();
+
+  // Campo "Nuevo amigo" de la pantalla Amigos
+  var ff = document.getElementById('add-friend-field');
+  if (ff) ff.style.display = admin ? 'block' : 'none';
+
+  // Aviso para los no administradores en la pantalla Amigos
+  var note = document.getElementById('friends-admin-note');
+  if (note) note.style.display = admin ? 'none' : 'block';
+
+  // Historial: el administrador puede ver la actividad de todos
+  var hs = document.getElementById('history-sub');
+  if (hs) hs.textContent = admin
+    ? 'Tu actividad y la de todos los usuarios'
+    : 'Todo lo que has hecho en la app';
+}
+
+
+
+// ════════════════════════════════════════════
+// HISTORIAL DE ACTIVIDAD
+// ────────────────────────────────────────────
+// Registra QUIÉN hace cada cosa (crear/editar/borrar gastos, marcar pagos,
+// crear grupos, gestionar amigos...). Antes no se guardaba nada de esto, así
+// que el historial empieza a partir de ahora.
+// ════════════════════════════════════════════
+// El historial ya no vive en DB: no hay cupo que recortar en cada acción.
+// Solo se descarga al abrir la pantalla, así que su tamaño no afecta a la
+// agilidad de la app en el uso diario.
+
+// Tipos de acción (para el filtro del historial)
+const LOG_TYPES = [
+  { id: 'all',    label: 'Todo',    icon: '📋' },
+  { id: 'gasto',  label: 'Gastos',  icon: '💸' },
+  { id: 'pago',   label: 'Pagos',   icon: '✅' },
+  { id: 'grupo',  label: 'Grupos',  icon: '📁' },
+  { id: 'amigo',  label: 'Amigos',  icon: '👤' },
+  { id: 'acceso', label: 'Accesos', icon: '🔑' }
+];
+
+// Cola de acciones pendientes de enviar (se mandan agrupadas)
+var LOG_QUEUE = [];
+// Historial descargado (solo cuando se abre la pantalla)
+var LOG_CACHE = [];
+
+// Registra una acción. YA NO toca DB → no engorda la sincronización.
+function logAction(tipo, icon, texto, gid) {
+  var me = myName();
+  if (!me) return;
+  LOG_QUEUE.push({
+    id:   'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    ts:   Date.now(),
+    who:  me,
+    type: tipo || 'otro',
+    icon: icon,
+    txt:  texto,
+    gid:  gid || ''
+  });
+  scheduleLogFlush();   // se envía en 2,5 s, agrupado con lo que venga
+}
+
+
+// Historial completo: lo descargado + lo que aún no se ha enviado
+function allLogEntries() {
+  return LOG_CACHE.concat(LOG_QUEUE);
+}
+
+// "hace 5 min", "ayer 18:30", "12 jul 14:05"
+function logWhen(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  var ahora = Date.now();
+  var difMin = Math.floor((ahora - ts) / 60000);
+
+  if (difMin < 1)  return 'ahora mismo';
+  if (difMin < 60) return 'hace ' + difMin + ' min';
+
+  var hh = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var dia = new Date(ts); dia.setHours(0,0,0,0);
+  var difDias = Math.round((hoy - dia) / 86400000);
+
+  if (difDias === 0) return 'hoy ' + hh;
+  if (difDias === 1) return 'ayer ' + hh;
+
+  var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return d.getDate() + ' ' + meses[d.getMonth()] + ' ' + hh;
+}
+
+var logShowAll = false;   // el admin puede alternar entre "solo yo" y "todos"
+var logType    = 'all';   // filtro por tipo de acción
+var pistaAdmin = null;    // salvavidas al migrar: código del admin de este móvil
+
+async function openHistory() {
+  logShowAll = false;
+  logType    = 'all';
+
+  var cont = document.getElementById('history-list');
+  if (cont) cont.innerHTML = '<div class="empty" style="padding:26px 10px"><div class="empty-icon">⏳</div><p>Cargando historial…</p></div>';
+  openModal('m-history');
+
+  // TODO envuelto: si algo falla (red, servidor), la pantalla NO se queda
+  // colgada en "Cargando…" para siempre; se muestra el error y lo que haya.
+  try {
+    await fbLogFlush();                        // enviar lo pendiente
+    LOG_CACHE = await fbLogRead();             // descargar (con límite de tiempo)
+    LOG_CACHE = await pruneLog(LOG_CACHE);     // podar accesos caducados
+  } catch (err) {
+    console.error('historial:', err);
+    if (cont) {
+      cont.innerHTML = '<div class="empty" style="padding:26px 10px">' +
+        '<div class="empty-icon">⚠️</div><p>No se pudo cargar el historial.</p>' +
+        '<p style="font-size:12px;color:var(--muted);margin-top:8px">Revisa tu conexión e inténtalo de nuevo.</p></div>';
+    }
+    return;
+  }
+
+  buildLogTypeSelect();
+  renderHistory();
+}
+
+// Rellena el desplegable con el número de acciones de cada tipo
+function buildLogTypeSelect() {
+  var sel = document.getElementById('hist-type');
+  if (!sel) return;
+
+  // Contar solo dentro del ámbito visible (solo yo / todos)
+  var base = allLogEntries().filter(function(e) {
+    return (isAdmin() && logShowAll) ? true : isMe(e.who);
+  });
+
+  var h = '';
+  LOG_TYPES.forEach(function(t) {
+    var n = (t.id === 'all')
+        ? base.length
+        : base.filter(function(e){ return e.type === t.id; }).length;
+    h += '<option value="' + t.id + '"' + (logType === t.id ? ' selected' : '') + '>' +
+         t.icon + '  ' + t.label + ' (' + n + ')</option>';
+  });
+  sel.innerHTML = h;
+}
+
+function setLogType(t) {
+  logType = t || 'all';
+  renderHistory();
+}
+
+function toggleLogScope(all) {
+  if (all && !isAdmin()) { denyNotAdmin(); return; }
+  logShowAll = !!all;
+  buildLogTypeSelect();   // los contadores cambian según el ámbito
+  renderHistory();
+}
+
+function renderHistory() {
+  var cont = document.getElementById('history-list');
+  var tabs = document.getElementById('history-tabs');
+  if (!cont) return;
+
+  // Las pestañas "Solo yo / Todos" solo tienen sentido para el administrador
+  if (tabs) tabs.style.display = isAdmin() ? 'flex' : 'none';
+  var bMe  = document.getElementById('hist-tab-me');
+  var bAll = document.getElementById('hist-tab-all');
+  if (bMe)  bMe.className  = 'rep-filter' + (!logShowAll ? ' on' : '');
+  if (bAll) bAll.className = 'rep-filter' + (logShowAll  ? ' on' : '');
+
+  var me = myName();
+  var todos = allLogEntries();
+
+  // Ámbito: solo yo / todos (admin)
+  var items = (isAdmin() && logShowAll)
+      ? todos
+      : todos.filter(function(e){ return e && isMe(e.who); });
+
+  // Filtro por tipo de acción
+  if (logType && logType !== 'all') {
+    items = items.filter(function(e){ return e && e.type === logType; });
+  }
+
+  items.sort(function(a,b){ return (b.ts||0) - (a.ts||0); });   // lo más reciente arriba
+
+  // Contador
+  var cnt = document.getElementById('history-count');
+  if (cnt) {
+    cnt.textContent = items.length
+      ? items.length + ' acción' + (items.length === 1 ? '' : 'es')
+      : '';
+  }
+
+  if (!items.length) {
+    var filtrando = (logType && logType !== 'all');
+    cont.innerHTML = '<div class="empty" style="padding:26px 10px">' +
+      '<div class="empty-icon">🕐</div>' +
+      (filtrando
+        ? '<p>Sin acciones de este tipo.</p>'
+        : '<p>Todavía no hay actividad registrada.</p>' +
+          '<p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">El historial se empieza a guardar desde ahora:<br>gastos, pagos, grupos, amigos y accesos.</p>') +
+      '</div>';
+    return;
+  }
+
+  var h = '';
+  items.forEach(function(e) {
+    var g = (Array.isArray(DB.groups) ? DB.groups : []).filter(function(x){ return x.id === e.gid; })[0];
+    var mio = isMe(e.who);
+    h += '<div style="display:flex;gap:11px;padding:11px 2px;border-bottom:1px solid var(--border)">';
+    // Icono de la acción + punto con el color del autor (para distinguirlos de un vistazo)
+    h += '<div style="position:relative;flex-shrink:0">';
+    h += '<div style="width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px">' + esc(e.icon || '•') + '</div>';
+    h += '<span style="position:absolute;bottom:-2px;right:-3px;width:15px;height:15px;border-radius:50%;background:' + (mio ? 'var(--acc)' : avc(e.who)) + ';border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#0a0b0f;font-family:var(--ff-head)">' + esc((e.who || '?').charAt(0).toUpperCase()) + '</span>';
+    h += '</div>';
+    h += '<div style="flex:1;min-width:0">';
+    h += '<div style="font-size:13.5px;color:var(--txt);line-height:1.45">' + esc(e.txt || '') + '</div>';
+    h += '<div style="font-size:11.5px;color:var(--muted);margin-top:3px">';
+    // SIEMPRE se indica quién lo hizo. Antes solo se mostraba el nombre de los
+    // demás, y no quedaba claro de quién eran las líneas sin nombre.
+    if (mio) {
+      h += '<span style="color:var(--acc);font-weight:700">Tú</span> · ';
+    } else {
+      h += '<span style="color:' + avc(e.who) + ';font-weight:700">' + esc(e.who || '?') + '</span> · ';
+    }
+    h += logWhen(e.ts);
+    if (g) h += ' · ' + esc(g.emoji || '') + ' ' + esc(g.name);
+    h += '</div></div></div>';
+  });
+  cont.innerHTML = h;
+}
+
+// ════════════════════════════════════════════
+// CASILLAS DEL CÓDIGO (6 huecos)
+// ════════════════════════════════════════════
+function buildCodeBoxes(contId) {
+  var cont = document.getElementById(contId);
+  if (!cont) return;
+  var h = '';
+  for (var i = 0; i < CODE_LEN; i++) {
+    h += '<input class="code-box" type="text" inputmode="text" maxlength="1" autocomplete="off" ' +
+         'autocapitalize="characters" spellcheck="false" data-i="' + i + '">';
+  }
+  cont.innerHTML = h;
+
+  var boxes = cont.querySelectorAll('.code-box');
+  boxes.forEach(function(box, i) {
+    box.addEventListener('input', function() {
+      box.value = box.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      boxes.forEach(function(b){ b.classList.remove('err'); });
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
+      if (ev.key === 'Enter') submitCode(contId.indexOf('welcome') >= 0 ? 'welcome' : 'switch');
+    });
+    // Pegar el código entero
+    box.addEventListener('paste', function(ev) {
+      ev.preventDefault();
+      var txt = (ev.clipboardData || window.clipboardData).getData('text') || '';
+      txt = txt.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LEN);
+      for (var k = 0; k < txt.length && k < boxes.length; k++) boxes[k].value = txt.charAt(k);
+      if (txt.length) boxes[Math.min(txt.length, boxes.length - 1)].focus();
+    });
+  });
+}
+
+function readCode(contId) {
+  var cont = document.getElementById(contId);
+  if (!cont) return '';
+  var out = '';
+  cont.querySelectorAll('.code-box').forEach(function(b){ out += (b.value || ''); });
+  return out.toUpperCase();
+}
+
+function clearCode(contId) {
+  var cont = document.getElementById(contId);
+  if (!cont) return;
+  cont.querySelectorAll('.code-box').forEach(function(b){ b.value = ''; b.classList.remove('err'); });
+}
+
+function markCodeError(contId, errId, msg) {
+  var cont = document.getElementById(contId);
+  if (cont) cont.querySelectorAll('.code-box').forEach(function(b){ b.classList.add('err'); });
+  var e = document.getElementById(errId);
+  if (e) { e.innerHTML = msg; e.style.display = 'block'; }
+}
+
+
+// Si el enlace trae el código (?c=ABC123), lo rellenamos solo.
+// Así, tanto si se abre en el navegador como si Android lanza la app instalada,
+// la persona no tiene que teclear nada.
+function codeFromUrl() {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    var c = (p.get('c') || p.get('code') || '').trim().toUpperCase();
+    if (/^[A-Z0-9]{6}$/.test(c)) return c;
+  } catch (e) {}
+  return '';
+}
+
+// Borra el código de la barra de direcciones (para que no quede a la vista
+// ni se guarde en el historial del navegador)
+function cleanUrl() {
+  try {
+    if (window.location.search) {
+      history.replaceState(null, '', window.location.pathname);
+    }
+  } catch (e) {}
+}
+
+// Escribe un código en las casillas
+function fillCodeBoxes(contId, code) {
+  var cont = document.getElementById(contId);
+  if (!cont || !code) return;
+  var boxes = cont.querySelectorAll('.code-box');
+  for (var i = 0; i < boxes.length && i < code.length; i++) {
+    boxes[i].value = code.charAt(i);
+  }
+}
+
+// Abre el modal del código: modo 'welcome' (primera vez) o 'switch' (cambiar)
+function openCodeModal(modo) {
+  if (modo === 'welcome') {
+    buildCodeBoxes('welcome-code-boxes');
+    clearCode('welcome-code-boxes');
+    var we = document.getElementById('welcome-code-err');
+    if (we) we.style.display = 'none';
+
+    // Código incluido en el enlace: lo rellenamos y entramos solos
+    var urlCode = codeFromUrl();
+    if (urlCode) {
+      fillCodeBoxes('welcome-code-boxes', urlCode);
+      cleanUrl();
+      setTimeout(function(){ submitCode('welcome'); }, 400);
+    }
+    // Salvavidas del administrador que venía de la versión anterior
+    var hint = document.getElementById('welcome-admin-hint');
+    if (hint) {
+      if (pistaAdmin && pistaAdmin.code) {
+        hint.innerHTML = '👑 Este móvil era de <strong>' + esc(pistaAdmin.nombre) + '</strong> (administrador).<br>' +
+                         'Tu código es <strong style="font-family:var(--ff-head);letter-spacing:2px;font-size:16px;color:var(--acc)">' + esc(pistaAdmin.code) + '</strong>';
+        hint.style.display = 'block';
+      } else {
+        hint.style.display = 'none';
+      }
+    }
+    openModal('m-welcome');
+    setTimeout(function(){
+      var f = document.querySelector('#welcome-code-boxes .code-box');
+      if (f) f.focus();
+    }, 250);
   } else {
-    avatar.style.background = 'var(--s3)';
-    avatar.style.color = 'var(--muted)';
-    avatar.textContent = '?';
-    avatar.style.display = 'flex';
-    nameEl.textContent = 'Sin identificar';
-    if (subEl) subEl.textContent = 'Toca para elegir quién eres';
+    buildCodeBoxes('switch-code-boxes');
+    clearCode('switch-code-boxes');
+    var se = document.getElementById('switch-code-err');
+    if (se) se.style.display = 'none';
+    openModal('m-code-switch');
+    setTimeout(function(){
+      var f = document.querySelector('#switch-code-boxes .code-box');
+      if (f) f.focus();
+    }, 250);
+  }
+}
+
+// Valida el código introducido y asigna el usuario
+async function submitCode(modo) {
+  var boxId = modo === 'welcome' ? 'welcome-code-boxes' : 'switch-code-boxes';
+  var errId = modo === 'welcome' ? 'welcome-code-err'   : 'switch-code-err';
+  var code  = readCode(boxId);
+
+  if (code.length !== CODE_LEN) {
+    markCodeError(boxId, errId, 'Escribe los ' + CODE_LEN + ' caracteres del código.');
+    return;
+  }
+
+  // Releer del servidor: el admin puede haber creado o cambiado códigos hace un momento
+  try {
+    var remote = await fbRead();
+    if (remote && typeof remote === 'object') {
+      var fresh = migrateSettlements(remote);
+      if (fresh && fresh.people) DB.people = fresh.people;
+      if (fresh && Array.isArray(fresh.friends)) DB.friends = fresh.friends;
+    }
+  } catch (e) { /* sin conexión: usamos lo que tengamos */ }
+
+  var name = findByCode(code);
+  if (!name) {
+    markCodeError(boxId, errId, '❌ Código incorrecto.<br>Habla con el administrador.');
+    return;
+  }
+
+  setName(name);
+  // Marca de que este móvil ya ha pasado por el sistema de códigos
+  try { localStorage.setItem('sg_auth_v', AUTH_VERSION); } catch(e) {}
+
+  // Registrar el acceso (logAction usa myName(), por eso va DESPUÉS de setName)
+  logAction('acceso', '🔑', modo === 'welcome' ? 'Accedió a la aplicación' : 'Cambió de usuario y accedió', '');
+
+  // Repintar ANTES de cerrar el modal: si no, al desaparecer se vería un
+  // instante el contenido del usuario anterior (parpadeo).
+  renderSettingsMe();
+  renderAll();
+
+  closeModal(modo === 'welcome' ? 'm-welcome' : 'm-code-switch');
+  clearCode(boxId);
+  toast('👋 ¡Hola, ' + name + '!');
+}
+
+
+// Comparte el enlace de la app + el código de acceso de esa persona.
+// Usa el nombre y el código que hay AHORA en los campos, así puedes
+// regenerar el código y enviarlo sin guardar primero.
+async function shareAccess() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+
+  var nombre = (document.getElementById('ep-name').value || '').trim() || epTarget || '';
+  var codigo = (document.getElementById('ep-code').value || '').trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{6}$/.test(codigo)) {
+    toast('⚠️ El código debe tener 6 caracteres');
+    return;
+  }
+
+  // El código va DENTRO del enlace: al abrirlo, la app entra sola.
+  // Funciona igual si Android lanza la app ya instalada.
+  var enlace = APP_URL + '?c=' + codigo;
+
+  var texto =
+    '💸 ¡Hola' + (nombre ? ', ' + nombre : '') + '! Te uno a SplitGuasa, ' +
+    'la app donde llevamos los gastos del grupo.\n\n' +
+    '👉 Entra aquí (ya lleva tu código):\n' + enlace + '\n\n' +
+    '🔑 Tu código, por si te lo pide:\n' + codigo + '\n\n' +
+    'Si ya tienes la app instalada, ábrela y escribe el código.\n\n' +
+    'Un Lannister siempre paga sus deudas 😉';
+
+  // 1) Menú nativo del móvil (WhatsApp, Telegram…)
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Tu acceso a SplitGuasa', text: texto });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;   // el usuario canceló
+    }
+  }
+
+  // 2) Escritorio: copiar al portapapeles
+  try {
+    await navigator.clipboard.writeText(texto);
+    toast('🔗 Mensaje copiado — pégalo donde quieras');
+    return;
+  } catch (e) {}
+
+  // 3) Último recurso
+  prompt('Copia este mensaje para ' + (nombre || 'la persona') + ':', texto);
+}
+
+// ════════════════════════════════════════════
+// EDITAR PERFIL (nombre · código · rol)
+// ════════════════════════════════════════════
+var epTarget = null;   // persona en edición
+var epRole   = 'user';
+
+function openEditProfile(name) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  if (!name) return;
+
+  ensurePeople();
+  epTarget = name;
+  epRole   = personRole(name);
+
+  var av = document.getElementById('ep-avatar');
+  if (av) {
+    av.textContent = name.charAt(0).toUpperCase();
+    av.style.background = avc(name);
+  }
+  var inN = document.getElementById('ep-name');
+  var inC = document.getElementById('ep-code');
+  if (inN) inN.value = name;
+  if (inC) inC.value = personCode(name);
+
+  paintEpRole();
+  openModal('m-edit-profile');
+}
+
+function setEpRole(r) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  epRole = (r === 'admin') ? 'admin' : 'user';
+  paintEpRole();
+}
+
+function paintEpRole() {
+  var bu = document.getElementById('ep-role-user');
+  var ba = document.getElementById('ep-role-admin');
+  if (bu) bu.className = 'role-btn' + (epRole === 'user'  ? ' on' : '');
+  if (ba) ba.className = 'role-btn' + (epRole === 'admin' ? ' on' : '');
+}
+
+function regenCode() {
+  var inC = document.getElementById('ep-code');
+  if (inC) inC.value = genCode();
+}
+
+function saveProfile() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  if (!epTarget) return;
+
+  var nuevo  = (document.getElementById('ep-name').value || '').trim();
+  var codigo = (document.getElementById('ep-code').value || '').trim().toUpperCase();
+
+  if (!nuevo) { toast('⚠️ El nombre no puede estar vacío'); return; }
+  if (!/^[A-Z0-9]{6}$/.test(codigo)) {
+    toast('⚠️ El código debe tener 6 caracteres (letras y números)');
+    return;
+  }
+
+  // El código no puede repetirse
+  var m = peopleMap();
+  var repetido = Object.keys(m).some(function(n) {
+    return n !== epTarget && m[n] && m[n].code === codigo;
+  });
+  if (repetido) { toast('⚠️ Ese código ya lo tiene otra persona'); return; }
+
+  // Nombre duplicado
+  if (nuevo !== epTarget && getFriends().some(function(f){ return f.toLowerCase() === nuevo.toLowerCase(); })) {
+    toast('⚠️ Ya existe alguien con ese nombre');
+    return;
+  }
+
+  // No dejar la app sin ningún administrador
+  if (epRole !== 'admin' && personRole(epTarget) === 'admin') {
+    var otrosAdmins = getFriends().filter(function(n) {
+      return n !== epTarget && personRole(n) === 'admin';
+    });
+    if (!otrosAdmins.length) {
+      toast('⚠️ Debe quedar al menos un administrador');
+      return;
+    }
+  }
+
+  // codeEdited: marca que el admin ha fijado este código a propósito,
+  // para que el merge no lo reemplace por el que hubiera en el servidor.
+  var meta = { code: codigo, role: epRole, codeEdited: true };
+
+  // Si cambia el nombre, propagarlo a TODA la app (gastos, grupos, pagos…)
+  if (nuevo !== epTarget) {
+    renamePersonTo(epTarget, nuevo);
+    delete peopleMap()[epTarget];
+  }
+  peopleMap()[nuevo] = meta;
+
+  var cambios = [];
+  if (nuevo !== epTarget) cambios.push('nombre → ' + nuevo);
+  if (codigo !== personCode(epTarget)) cambios.push('código');
+  if (epRole !== personRole(epTarget)) cambios.push('rol → ' + (epRole === 'admin' ? 'Administrador' : 'Estándar'));
+  logAction('amigo', '⚙️', 'Editó el perfil de ' + epTarget + (cambios.length ? ' (' + cambios.join(', ') + ')' : ''), '');
+
+  epTarget = null;
+  save();
+  closeModal('m-edit-profile');
+  renderYoModal();
+  renderSettingsMe();
+  renderAll();
+  toast('✅ Perfil actualizado');
+}
+
+function renderSettingsMe() {
+  var me = myName();
+  var av = document.getElementById('settings-me-avatar');
+  var nm = document.getElementById('settings-me-name');
+  var sb = document.getElementById('settings-me-sub');
+  var ed = document.getElementById('settings-me-edit');
+
+  if (me) {
+    if (av) { av.textContent = me.charAt(0).toUpperCase(); av.style.background = avc(me); }
+    if (nm) nm.textContent = me;
+    // El código NO se muestra aquí: es una pantalla que se ve de reojo.
+    // Está en Editar perfil, que es donde tiene sentido consultarlo.
+    if (sb) sb.textContent = personRole(me) === 'admin' ? '👑 Administrador' : 'Usuario estándar';
+    if (ed) ed.style.display = isAdmin() ? 'flex' : 'none';
+  } else {
+    if (av) { av.textContent = '?'; av.style.background = 'var(--s2)'; }
+    if (nm) nm.textContent = 'Sin identificar';
+    if (sb) sb.textContent = 'Introduce tu código para entrar';
+    if (ed) ed.style.display = 'none';
   }
 }
 
@@ -1306,24 +2577,55 @@ function renderMeSelectorList() {
   cont.innerHTML = h;
   cont.querySelectorAll('.me-sel-row').forEach(function(row) {
     row.addEventListener('click', function() {
-      var name = row.getAttribute('data-name');
-      var cur = myName();
-      if (cur && name.trim().toLowerCase() === cur.trim().toLowerCase()) {
-        setName('');
-        toast('Ya no estás identificado');
-      } else {
-        setName(name);
-        toast('👋 Hola, ' + name);
-      }
+      // Cambiar de usuario requiere CÓDIGO: se pide en el modal de código
       closeModal('m-me-selector');
-      renderSettingsMe();
-      renderAll();
+      openCodeModal('switch');
     });
   });
 }
 
 
+
+// ════════════════════════════════════════════
+// COMPARTIR LA APP
+// ════════════════════════════════════════════
+const APP_URL = 'https://jjblanquer-netizen.github.io/Splitguasa/';
+
+async function shareApp() {
+  var texto = '💸 Únete a SplitGuasa para repartir los gastos del grupo sin líos.\n\nUn Lannister siempre paga sus deudas 😉';
+
+  // 1) Menú nativo de compartir (WhatsApp, Telegram, etc.) — móviles
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'SplitGuasa',
+        text: texto,
+        url: APP_URL
+      });
+      return;
+    } catch (e) {
+      // El usuario canceló: no hacer nada
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+
+  // 2) Sin menú nativo (escritorio): copiar el enlace al portapapeles
+  try {
+    await navigator.clipboard.writeText(texto + '\n' + APP_URL);
+    toast('🔗 Enlace copiado al portapapeles');
+    return;
+  } catch (e) {}
+
+  // 3) Último recurso: mostrar el enlace para copiarlo a mano
+  prompt('Copia este enlace para compartir SplitGuasa:', APP_URL);
+}
+
 function setTheme(theme) {
+  // Mantener sincronizada la marca temprana del <html>
+  try {
+    if (theme === 'light') document.documentElement.classList.add('pre-light');
+    else                   document.documentElement.classList.remove('pre-light');
+  } catch (e) {}
   if (theme === 'light') {
     document.body.classList.add('light');
   } else {
@@ -1337,22 +2639,10 @@ function setTheme(theme) {
 }
 
 function updateThemeButtons(theme) {
-  var darkBtn = document.getElementById('theme-dark-btn');
-  var lightBtn = document.getElementById('theme-light-btn');
-  var darkChk = document.getElementById('theme-dark-check');
-  var lightChk = document.getElementById('theme-light-check');
-  if (!darkBtn || !lightBtn) return;
-  if (theme === 'light') {
-    lightBtn.style.borderColor = 'var(--acc)';
-    darkBtn.style.borderColor = 'var(--border)';
-    if (lightChk) { lightChk.textContent = '✓ Activado'; lightChk.style.color = 'var(--acc)'; }
-    if (darkChk) { darkChk.textContent = 'Activar'; darkChk.style.color = 'var(--muted)'; }
-  } else {
-    darkBtn.style.borderColor = 'var(--acc)';
-    lightBtn.style.borderColor = 'var(--border)';
-    if (darkChk) { darkChk.textContent = '✓ Activado'; darkChk.style.color = 'var(--acc)'; }
-    if (lightChk) { lightChk.textContent = 'Activar'; lightChk.style.color = 'var(--muted)'; }
-  }
+  var dk = document.getElementById('theme-dark-btn');
+  var lt = document.getElementById('theme-light-btn');
+  if (dk) dk.className = 'theme-btn' + (theme === 'dark'  ? ' on' : '');
+  if (lt) lt.className = 'theme-btn' + (theme === 'light' ? ' on' : '');
 }
 
 function loadTheme() {
@@ -1364,11 +2654,24 @@ function loadTheme() {
 function goTab(tab) {
   document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
   document.getElementById('scr-'+tab).classList.add('on');
+  setActiveNav(tab);
   if (tab==='activity') renderActivity();
   if (tab==='report')   renderReport();
   if (tab==='home')     renderHome();
-  if (tab==='friends')  renderYoModal();
-  if (tab==='settings') { var t='dark'; try{t=localStorage.getItem('sg_theme')||'dark';}catch(e){} updateThemeButtons(t); renderSettingsMe(); }
+  if (tab==='friends')  { renderYoModal(); applyAdminUI(); }
+  if (tab==='settings') { var t='dark'; try{t=localStorage.getItem('sg_theme')||'dark';}catch(e){} updateThemeButtons(t); renderSettingsMe(); paintSyncState(); applyAdminUI(); }
+}
+
+// Marca como activo solo el botón de la pantalla actual (en todas las barras)
+function setActiveNav(tab) {
+  document.querySelectorAll('.bnav .nav-item').forEach(function(el) {
+    el.classList.remove('on');
+    el.style.color = '';
+    var oc = el.getAttribute('onclick') || '';
+    if (oc.indexOf("goTab('" + tab + "')") >= 0) {
+      el.classList.add('on');
+    }
+  });
 }
 function closeGroup() { goTab('home'); curGid=null; }
 
@@ -1412,8 +2715,8 @@ function applyGroupHeaderBg(g) {
   var bgEl = document.getElementById('g-hdr-bg');
   if (!hero || !bgEl) return;
   if (g && g.bg) {
-    bgEl.style.backgroundImage = "url('" + g.bg + "')";
     hero.classList.add('has-bg');
+    applyBgWithRetry(bgEl, g.bg);   // reintenta si la extensión o la red fallan
   } else {
     bgEl.style.backgroundImage = '';
     hero.classList.remove('has-bg');
@@ -1446,11 +2749,13 @@ function catBadge(cid) {
 function renderGastos(g) {
   if (!g.expenses.length) return '<div class="empty"><div class="empty-icon">💸</div><p>Sin gastos todavía.<br>Pulsa <strong>+</strong> para añadir uno.</p></div>';
   const sorted=[...g.expenses].sort((a,b)=>b.date.localeCompare(a.date));
-  const total=g.expenses.reduce((a,e)=>a+e.amount,0);
-  let h=`<div class="stats-grid">
-    <div class="stat-box"><div class="stat-lbl">Total grupo</div><div class="stat-val">${fmt(total)}</div></div>
-    <div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val">${g.expenses.length}</div></div>
-  </div><div class="sec-lbl">Historial</div>`;
+  const total=g.expenses.reduce((a,e)=>a+(e.isSettlement?0:e.amount),0);
+  const nMem = (Array.isArray(g.members)?g.members:[]).length || 1;
+  let h = '<div class="stats-grid cols3">' +
+    '<div class="stat-box"><div class="stat-lbl">Total grupo</div><div class="stat-val">' + fmt(total) + '</div></div>' +
+    '<div class="stat-box"><div class="stat-lbl">Media/persona</div><div class="stat-val">' + fmt(total/nMem) + '</div></div>' +
+    '<div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val">' + g.expenses.length + '</div></div>' +
+  '</div><div class="sec-lbl">Historial</div>';
   sorted.forEach(e=>{
     const pp=e.amount/(e.splitAmong.length||1);
     h+=`<div class="exp-item" onclick="openEditExpense('${e.id}')" style="cursor:pointer;">
@@ -1506,16 +2811,66 @@ function computeBals(g) {
     return { name: m, paid: p[m] || 0, owes: o[m] || 0, net: (p[m] || 0) - (o[m] || 0) };
   });
 }
+
+// Gráfico circular (donut) de lo PAGADO por cada persona
+function buildPaidDonut(bals) {
+  var items = (bals || []).filter(function(b){ return b.paid > 0.005; })
+                          .sort(function(a,b){ return b.paid - a.paid; });
+  if (!items.length) return '';
+
+  var total = items.reduce(function(s,b){ return s + b.paid; }, 0);
+  if (total <= 0) return '';
+
+  var size = 168, r = 58, cx = size/2, cy = size/2, sw = 26;
+  var C = 2 * Math.PI * r;
+  var offset = 0;
+  var arcs = '';
+
+  items.forEach(function(b) {
+    var frac = b.paid / total;
+    var len  = frac * C;
+    var col  = avc(b.name);
+    arcs += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none"' +
+            ' stroke="' + col + '" stroke-width="' + sw + '"' +
+            ' stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) + '"' +
+            ' stroke-dashoffset="' + (-offset).toFixed(2) + '"' +
+            ' transform="rotate(-90 ' + cx + ' ' + cy + ')"></circle>';
+    offset += len;
+  });
+
+  var svg = '<svg viewBox="0 0 ' + size + ' ' + size + '" style="width:168px;height:168px;flex-shrink:0">' +
+    arcs +
+    '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="10" fill="var(--muted)">Total</text>' +
+    '<text x="' + cx + '" y="' + (cy + 13) + '" text-anchor="middle" font-size="15" font-weight="800" fill="var(--txt)" font-family="Outfit, sans-serif">' + fmt(total) + '</text>' +
+    '</svg>';
+
+  // Leyenda
+  var legend = '<div style="flex:1;min-width:0">';
+  items.forEach(function(b) {
+    var col = avc(b.name);
+    var pct = Math.round(b.paid / total * 100);
+    legend += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">' +
+      '<span style="width:10px;height:10px;border-radius:3px;background:' + col + ';flex-shrink:0"></span>' +
+      '<span style="flex:1;min-width:0;font-size:13px;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.name) + '</span>' +
+      '<span style="font-size:12px;color:var(--muted);flex-shrink:0">' + pct + '%</span>' +
+      '<span style="font-family:var(--ff-head);font-weight:700;font-size:13px;color:var(--txt);flex-shrink:0;min-width:58px;text-align:right">' + fmt(b.paid) + '</span>' +
+    '</div>';
+  });
+  legend += '</div>';
+
+  return '<div class="sec-lbl">Cuánto ha pagado cada persona</div>' +
+    '<div class="card" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center">' +
+      svg + legend +
+    '</div>';
+}
+
 function renderBals(g) {
   var bals = computeBals(g);
   var total = (Array.isArray(g.expenses)?g.expenses:[]).reduce(function(a,e){ return a + (e.isSettlement?0:e.amount); }, 0);
   var me = myName();
   var nMembers = (Array.isArray(g.members)?g.members:[]).length || 1;
 
-  var h = '<div class="stats-grid">';
-  h += '<div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val">' + fmt(total) + '</div></div>';
-  h += '<div class="stat-box"><div class="stat-lbl">Media/persona</div><div class="stat-val">' + fmt(total/nMembers) + '</div></div>';
-  h += '</div>';
+  var h = '';
 
   // Tu saldo destacado
   var myb = bals.find(function(b){ return me && b.name.trim().toLowerCase()===me.trim().toLowerCase(); });
@@ -1528,6 +2883,9 @@ function renderBals(g) {
     h += '<div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:' + color + '">' + msg + '</div>';
     h += '</div>';
   }
+
+  // Gráfico circular: quién ha pagado cuánto
+  h += buildPaidDonut(bals);
 
   // Cabecera explicativa
   h += '<div class="sec-lbl">Saldo de cada persona</div>';
@@ -1665,6 +3023,9 @@ function togglePaid(gid, key) {
   // settled puede contener strings (formato viejo) u objetos {key,...}
   var i = settledIndex(g.settled, key);
   if (i >= 0) {
+    var ant = g.settled[i];
+    var pa = String(key).split('|');
+    logAction('pago', '↩️', 'Desmarcó el pago de ' + pa[0] + ' a ' + pa[1] + (ant && ant.amount ? ' (' + fmt(ant.amount) + ')' : ''), gid);
     g.settled.splice(i, 1);
     toast('↩️ Marcado como pendiente');
   } else {
@@ -1674,6 +3035,7 @@ function togglePaid(gid, key) {
     var txs = computeDebts(g);
     for (var k=0; k<txs.length; k++) { if (txs[k].key===key) { amount=txs[k].amount; break; } }
     g.settled.push({ key:key, from:parts[0], to:parts[1], amount:amount, date:tod() });
+    logAction('pago', '✅', 'Marcó como pagada la deuda de ' + parts[0] + ' a ' + parts[1] + ' (' + fmt(amount) + ')', gid);
     toast('✅ Marcado como pagado');
   }
   save();
@@ -1784,6 +3146,7 @@ function saveExpense() {
   if (!Array.isArray(targetGrp.expenses)) targetGrp.expenses = [];
 
   if (editExpenseId) {
+    logAction('gasto', '✏️', 'Editó el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ')', g.id);
     // MODO EDICIÓN — actualizar gasto existente
     const idx = targetGrp.expenses.findIndex(e=>e.id===editExpenseId);
     if (idx >= 0) {
@@ -1797,6 +3160,7 @@ function saveExpense() {
     }
     editExpenseId = null;
   } else {
+    logAction('gasto', '💸', 'Añadió el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ') pagado por ' + paidBy, g.id);
     // MODO NUEVO
     targetGrp.expenses.push({id:uid(),desc:desc||'Gasto',amount,paidBy,category:selCat,date,splitAmong,addedBy:myName(),addedAt:new Date().toISOString()});
     toast('💾 Gasto guardado');
@@ -1808,6 +3172,10 @@ function saveExpense() {
 function askDel(id) { pDelId=id; openModal('m-del'); }
 function confirmDel() {
   const g=grp(); if(!g||!pDelId) return;
+  const borrado = g.expenses.filter(e=>e.id===pDelId)[0];
+  if (borrado) {
+    logAction('gasto', '🗑️', 'Borró el gasto "' + (borrado.desc || 'Sin descripción') + '" (' + fmt(borrado.amount||0) + ')', g.id);
+  }
   g.expenses=g.expenses.filter(e=>e.id!==pDelId);
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   DB.deleted.push('exp:'+pDelId);
@@ -1830,6 +3198,8 @@ function askDelGrp() {
 }
 function confirmDelGrp() {
   if (!pDelGid) return;
+  var borrado = DB.groups.filter(function(g){ return g.id===pDelGid; })[0];
+  if (borrado) logAction('grupo', '🗑️', 'Borró el grupo "' + borrado.name + '"', '');
   DB.groups = DB.groups.filter(function(g){ return g.id!==pDelGid; });
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   DB.deleted.push('grp:'+pDelGid);
@@ -1842,6 +3212,7 @@ function confirmDelGrp() {
 
 function renderAll() {
   updateYoBanner();
+  applyAdminUI();
   renderHome();
   const cur = document.querySelector('.scr.on');
   if (cur?.id==='scr-activity') renderActivity();
@@ -1856,11 +3227,21 @@ function renderHome() {
   renderBanner();
   const c = document.getElementById('grp-list');
   if (!DB.groups.length) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>Sin grupos todavía.<br>Pulsa <strong>+</strong> para crear el primero.<br><br><span style="font-size:12px;color:var(--muted)">Todos verán los grupos al sincronizar.</span></p></div>';
+    c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>Sin grupos todavía.</p>' +
+      (isAdmin()
+        ? '<button onclick="openModal(\'m-newgrp\')" style="margin-top:14px;background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;cursor:pointer">+ Crear primer grupo</button>'
+        : '<p style="font-size:12px;color:var(--muted);margin-top:12px">🔒 Solo el administrador puede crear grupos.</p>') +
+      '</div>';
     return;
   }
   c.innerHTML = '';
-  DB.groups.forEach(function(g) {
+  // Los grupos ocultados por el administrador no se muestran en Inicio
+  var visibles = visibleGroups();
+  if (!visibles.length) {
+    c.innerHTML = '<div class="empty"><div class="empty-icon">🙈</div><p>No hay grupos visibles.</p></div>';
+    return;
+  }
+  visibles.forEach(function(g) {
     var tot = (Array.isArray(g.expenses)?g.expenses:[]).reduce(function(a,e){ return a + (e && !e.isSettlement ? e.amount : 0); }, 0);
     var me  = myName();
     var myb = computeBals(g).find(function(b){ return me && b.name.trim().toLowerCase()===me.trim().toLowerCase(); });
@@ -1869,8 +3250,8 @@ function renderHome() {
     var balHtml = '';
     if (myb && Math.abs(myb.net) > 0.005) {
       balHtml = myb.net > 0
-        ? '<div style="text-align:right"><div style="color:var(--acc);font-family:var(--ff-head);font-weight:700;font-size:14px">+' + fmt(myb.net) + '</div><div style="font-size:10px;color:var(--muted2)">te deben</div></div>'
-        : '<div style="text-align:right"><div style="color:var(--acc3);font-family:var(--ff-head);font-weight:700;font-size:14px">-' + fmt(Math.abs(myb.net)) + '</div><div style="font-size:10px;color:var(--muted2)">debes</div></div>';
+        ? '<div style="text-align:right"><div class="group-total">+' + fmt(myb.net) + '</div><div class="group-total-sub">te deben</div></div>'
+        : '<div style="text-align:right"><div class="group-total" style="color:var(--acc3)">-' + fmt(Math.abs(myb.net)) + '</div><div class="group-total-sub">debes</div></div>';
     }
 
     // Avatares de miembros (máx 3 + contador)
@@ -1890,7 +3271,8 @@ function renderHome() {
     var hasBg = g.bg ? true : false;
     var bgLayer = '';
     if (hasBg) {
-      bgLayer = '<div class="group-card-bg" style="background-image:url(\'' + esc(g.bg) + '\')"></div><div class="group-card-overlay"></div>';
+      // El fondo se aplica después con applyBgWithRetry (reintenta si falla)
+      bgLayer = '<div class="group-card-bg"></div><div class="group-card-overlay"></div>';
     }
 
     var d = document.createElement('div');
@@ -1919,15 +3301,37 @@ function renderHome() {
       '</div>';
     d.addEventListener('click', function(){ openGroup(g.id); });
     c.appendChild(d);
+    // Cargar el fondo con reintento (extensión incorrecta o red lenta)
+    if (hasBg) {
+      var bgEl = d.querySelector('.group-card-bg');
+      applyBgWithRetry(bgEl, g.bg);
+    }
   });
+}
+
+
+// Grupos visibles = todos menos los ocultados por el administrador.
+// Se usa en Inicio, Actividad e Informe para que TODAS las vistas coincidan.
+function visibleGroups() {
+  var gs = Array.isArray(DB.groups) ? DB.groups : [];
+  return gs.filter(function(g){ return g && !isGroupHidden(g.id); });
+}
+
+// ¿Este nombre soy yo? (comparación tolerante: mayúsculas y espacios)
+function isMe(name) {
+  var me = myName();
+  return !!me && !!name && name.trim().toLowerCase() === me.trim().toLowerCase();
 }
 
 function renderBanner() {
   let deb=0, ted=0;
   const me = myName();
-  DB.groups.forEach(g => {
+  // Solo los grupos VISIBLES: si no, el banner contaría deudas de grupos
+  // ocultos que el usuario no ve en la lista (incoherente).
+  const vis = visibleGroups();
+  vis.forEach(g => {
     computeBals(g).forEach(b => {
-      if (b.name === me) {
+      if (isMe(b.name)) {                      // comparación tolerante
         if (b.net < -0.005) deb += Math.abs(b.net);
         else if (b.net > 0.005) ted += b.net;
       }
@@ -1935,7 +3339,7 @@ function renderBanner() {
   });
   document.getElementById('b-deb').textContent = fmt(deb);
   document.getElementById('b-ted').textContent = fmt(ted);
-  document.getElementById('b-grp').textContent = DB.groups.length;
+  document.getElementById('b-grp').textContent = vis.length;
   // Saludo personalizado
   const greetEl   = document.getElementById('greeting');
   const greetName = document.getElementById('greeting-name');
@@ -1956,7 +3360,7 @@ function renderActivity() {
   var c = document.getElementById('act-list');
   var all = [];
   // Gastos normales
-  DB.groups.forEach(function(g){
+  visibleGroups().forEach(function(g){
     (Array.isArray(g.expenses)?g.expenses:[]).forEach(function(e){
       if (e && !e.isSettlement) all.push({type:'expense', date:e.date, desc:e.desc, category:e.category, paidBy:e.paidBy, amount:e.amount, gn:g.name, ge:g.emoji});
     });
@@ -1995,18 +3399,16 @@ function renderActivity() {
 // ════════════════════════════════════════════
 function renderReport() {
   const c = document.getElementById('rep-cont');
-  if (!DB.groups.length) {
+  const vis = visibleGroups();
+  if (!vis.length) {
     c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>Crea grupos y añade gastos para ver el informe.</p></div>';
     return;
   }
   const me = myName();
-  let h = '', gt = 0;
-  const cm = {};
+  let h = '';
 
-  DB.groups.forEach(g => {
-    const tot = g.expenses.reduce((a, e) => a + e.amount, 0);
-    gt += tot;
-    g.expenses.forEach(e => { cm[e.category] = (cm[e.category] || 0) + e.amount; });
+  vis.forEach(g => {
+    const tot = g.expenses.reduce((a, e) => a + (e && !e.isSettlement ? e.amount : 0), 0);
 
     const bals = computeBals(g);
     const txs  = computeDebts(g);
@@ -2017,7 +3419,21 @@ function renderReport() {
     h += '<div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val" style="font-size:17px">' + fmt(tot) + '</div></div>';
     h += '<div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val" style="font-size:17px">' + g.expenses.length + '</div></div>';
     h += '</div>';
-    h += '<div class="sec-lbl" style="margin-top:9px">Balances (' + bals.length + ' personas)</div>';
+
+    // Gráfico de barras del grupo con ESCALA PROPIA:
+    // del primer al último gasto del grupo, independiente del filtro global.
+    var gData = getGroupChartData(g.expenses);
+    if (gData && gData.values.some(function(v){ return v > 0; })) {
+      var gTot = gData.values.reduce(function(a,b){ return a+b; }, 0);
+      h += '<div class="sec-lbl" style="margin-top:11px">Gastos por ' + (gData.isMonthly ? 'mes' : 'día') + '</div>';
+      h += '<div>' + buildChartSVG(gData, true) + '</div>';
+      h += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">' +
+             '<span>' + niceDate(gData.from) + ' → ' + niceDate(gData.to) + '</span>' +
+             '<span>Total: <strong style="color:var(--acc)">' + fmt(gTot) + '</strong></span>' +
+           '</div>';
+    }
+
+    h += '<div class="sec-lbl" style="margin-top:11px">Balances (' + bals.length + ' personas)</div>';
 
     bals.forEach(b => {
       const col   = avc(b.name);
@@ -2070,13 +3486,54 @@ function renderReport() {
     h += '</div>';
   });
 
-  const cats = Object.entries(cm).sort((a, b) => b[1] - a[1]);
-  if (cats.length) {
-    h += '<div class="rep-card"><h3>📊 Gastos por categoría</h3>';
+  c.innerHTML = h;
+  // Insertar al principio: categorías (del periodo) y luego la gráfica encima
+  renderCategoryCard();
+  renderDailyChart();
+}
+
+// Tarjeta de gastos por categoría, filtrada por el periodo activo
+function renderCategoryCard() {
+  var rep = document.getElementById('rep-cont');
+  if (!rep) return;
+
+  // Rango de fechas según el periodo
+  var now = new Date();
+  var from;
+  if (repPeriod === '12m') {
+    from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  } else {
+    var nDays = repPeriod === '7d' ? 7 : (repPeriod === '15d' ? 15 : 30);
+    from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (nDays - 1));
+  }
+
+  var cm = {}, total = 0;
+  visibleGroups().forEach(function(g) {          // excluye grupos ocultos
+    (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e) {
+      if (!e || e.isSettlement || typeof e.amount !== 'number' || !e.date) return;
+      var d = new Date(String(e.date).slice(0,10) + 'T00:00:00');
+      if (isNaN(d) || d < from) return;
+      cm[e.category] = (cm[e.category] || 0) + e.amount;
+      total += e.amount;
+    });
+  });
+
+  var cats = Object.keys(cm).map(function(k){ return [k, cm[k]]; })
+                            .sort(function(a,b){ return b[1] - a[1]; });
+
+  var periodLbl = repPeriod === '12m' ? 'últimos 12 meses' :
+                  (repPeriod === '7d' ? 'últimos 7 días' : (repPeriod === '15d' ? 'últimos 15 días' : 'últimos 30 días'));
+
+  var h = '<div class="rep-card"><h3>📊 Gastos por categoría</h3>';
+  h += '<div style="font-size:11px;color:var(--muted);margin:-4px 0 12px">En los ' + periodLbl + '</div>';
+
+  if (!cats.length) {
+    h += '<div style="text-align:center;color:var(--muted);font-size:13px;padding:14px 0">Sin gastos en este periodo</div>';
+  } else {
     cats.forEach(function(entry) {
-      const cid = entry[0], amt = entry[1];
-      const cat = catBy(cid);
-      const pct = gt > 0 ? Math.round(amt / gt * 100) : 0;
+      var cid = entry[0], amt = entry[1];
+      var cat = catBy(cid);
+      var pct = total > 0 ? Math.round(amt / total * 100) : 0;
       h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">';
       h += '<span style="font-size:18px;width:24px;text-align:center">' + cat.e + '</span>';
       h += '<div style="flex:1">';
@@ -2088,82 +3545,269 @@ function renderReport() {
       h += '</div></div>';
     });
     h += '<hr><div style="display:flex;justify-content:space-between;font-family:var(--ff-head);font-weight:700;font-size:15px;color:var(--txt)">';
-    h += '<span>Total global</span><span style="color:var(--acc)">' + fmt(gt) + '</span></div></div>';
+    h += '<span>Total del periodo</span><span style="color:var(--acc)">' + fmt(total) + '</span></div>';
   }
+  h += '</div>';
 
-  c.innerHTML = h;
-  renderDailyChart();
+  rep.insertAdjacentHTML('afterbegin', h);
 }
 
-function renderDailyChart() {
-  const all = [];
-  DB.groups.forEach(g => g.expenses.forEach(e => all.push(e)));
-  if (all.length < 2) return;
+var repPeriod = '30d';  // periodo activo del informe: 7d, 15d, 30d, 12m
 
-  // Agrupar por fecha
-  const byDay = {};
-  all.forEach(e => { byDay[e.date] = (byDay[e.date]||0) + e.amount; });
-  const days = Object.keys(byDay).sort();
-  if (days.length < 2) return;
+function setRepPeriod(p) {
+  repPeriod = p;
+  renderReport();
+}
 
-  const vals = days.map(d => byDay[d]);
-  const maxVal = Math.max(...vals);
-  const W = 420, H = 160, PAD = 36, BAR_GAP = 4;
-  const barW = Math.max(4, Math.floor((W - PAD*2 - BAR_GAP*(days.length-1)) / days.length));
-  const chartW = Math.min(days.length * (barW + BAR_GAP) + PAD*2, W);
+// Devuelve los gastos agrupados según el periodo elegido.
+// Para 7d/15d/30d agrupa por día; para 12m agrupa por mes.
+// Si se pasa una lista de gastos, la usa; si no, coge los de TODOS los grupos.
+function getChartDataFrom(expenses) {
+  var all = (expenses || []).filter(function(e) {
+    return e && !e.isSettlement && typeof e.amount === 'number';
+  });
+  if (!all.length) return null;
 
-  // Eje Y labels
-  const ySteps = 4;
-  let yLines = '';
-  for (let i=0; i<=ySteps; i++) {
-    const y = PAD + (H - PAD*2) * (1 - i/ySteps);
-    const val = (maxVal * i/ySteps);
-    yLines += `<line x1="${PAD}" y1="${y.toFixed(1)}" x2="${chartW-8}" y2="${y.toFixed(1)}" stroke="#2a2d3a" stroke-width="1"/>`;
-    if (i>0) yLines += `<text x="${PAD-4}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#64748b">${val>=1000?(val/1000).toFixed(1)+'k':val.toFixed(0)}</text>`;
+  var now = new Date();
+  var buckets = {};
+  var order = [];
+
+  if (repPeriod === '12m') {
+    for (var i = 11; i >= 0; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      var key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      buckets[key] = 0;
+      order.push(key);
+    }
+    all.forEach(function(e) {
+      if (!e.date) return;
+      var k = String(e.date).slice(0, 7);
+      if (k in buckets) buckets[k] += e.amount;
+    });
+    var mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return {
+      values: order.map(function(k){ return buckets[k]; }),
+      labels: order.map(function(k){ return mn[parseInt(k.split('-')[1],10) - 1]; }),
+      isMonthly: true
+    };
   }
 
-  // Barras
-  let bars = '';
-  days.forEach((d, i) => {
-    const x = PAD + i*(barW+BAR_GAP);
-    const barH = Math.max(3, (vals[i]/maxVal)*(H-PAD*2));
-    const y = PAD + (H-PAD*2) - barH;
-    const isMax = vals[i]===maxVal;
-    const color = isMax ? '#5eead4' : '#2e4a7a';
-    const glow = isMax ? `filter="url(#glow)"` : '';
-    bars += `<rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${barH.toFixed(1)}" rx="3" fill="${color}" ${glow} opacity="0.9"/>`;
-    // Etiqueta de fecha (solo si hay pocos días o es el primero/último/máximo)
-    if (days.length<=10 || i===0 || i===days.length-1 || isMax) {
-      const label = d.slice(5); // MM-DD
-      bars += `<text x="${(x+barW/2).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="8" fill="#64748b">${label}</text>`;
+  var nDays = repPeriod === '7d' ? 7 : (repPeriod === '15d' ? 15 : 30);
+  for (var j = nDays - 1; j >= 0; j--) {
+    var dd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - j);
+    var k2 = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
+    buckets[k2] = 0;
+    order.push(k2);
+  }
+  all.forEach(function(e) {
+    if (!e.date) return;
+    var k = String(e.date).slice(0, 10);
+    if (k in buckets) buckets[k] += e.amount;
+  });
+  return {
+    values: order.map(function(k){ return buckets[k]; }),
+    labels: order.map(function(k){ return k.slice(8) + '/' + k.slice(5,7); }),
+    isMonthly: false
+  };
+}
+
+
+// Datos del gráfico de UN grupo, con escala PROPIA:
+// va del día del primer gasto al día del último. No depende del filtro global.
+// Si el rango es largo, agrupa por mes para que las barras sigan siendo legibles.
+function getGroupChartData(expenses) {
+  var all = (Array.isArray(expenses) ? expenses : []).filter(function(e) {
+    return e && !e.isSettlement && typeof e.amount === 'number' && e.date;
+  });
+  if (!all.length) return null;
+
+  // Primer y último día con gasto
+  var dates = all.map(function(e){ return String(e.date).slice(0, 10); }).sort();
+  var first = dates[0];
+  var last  = dates[dates.length - 1];
+
+  function toDate(s) {
+    var p = s.split('-');
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+  var d1 = toDate(first), d2 = toDate(last);
+  var days = Math.round((d2 - d1) / 86400000) + 1;   // ambos incluidos
+
+  var buckets = {}, order = [];
+
+  // Rango largo (más de 62 días) → agrupar por MES
+  if (days > 62) {
+    var cur = new Date(d1.getFullYear(), d1.getMonth(), 1);
+    var end = new Date(d2.getFullYear(), d2.getMonth(), 1);
+    while (cur <= end) {
+      var mk = cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0');
+      buckets[mk] = 0;
+      order.push(mk);
+      cur.setMonth(cur.getMonth() + 1);
     }
-    // Valor encima si es máximo
-    if (isMax) {
-      bars += `<text x="${(x+barW/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="9" fill="#5eead4" font-weight="bold">${fmt(vals[i])}</text>`;
+    all.forEach(function(e) {
+      var k = String(e.date).slice(0, 7);
+      if (k in buckets) buckets[k] += e.amount;
+    });
+    var mn = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return {
+      values: order.map(function(k){ return buckets[k]; }),
+      labels: order.map(function(k) {
+        var parts = k.split('-');
+        return mn[parseInt(parts[1], 10) - 1];
+      }),
+      isMonthly: true,
+      from: first,
+      to: last
+    };
+  }
+
+  // Rango corto → agrupar por DÍA (incluyendo los días sin gasto)
+  for (var i = 0; i < days; i++) {
+    var dd = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate() + i);
+    var dk = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0') + '-' + String(dd.getDate()).padStart(2,'0');
+    buckets[dk] = 0;
+    order.push(dk);
+  }
+  all.forEach(function(e) {
+    var k = String(e.date).slice(0, 10);
+    if (k in buckets) buckets[k] += e.amount;
+  });
+  return {
+    values: order.map(function(k){ return buckets[k]; }),
+    labels: order.map(function(k){ return k.slice(8) + '/' + k.slice(5,7); }),
+    isMonthly: false,
+    from: first,
+    to: last
+  };
+}
+
+// "12/07/2026" a partir de "2026-07-12"
+function niceDate(iso) {
+  if (!iso) return '';
+  var p = String(iso).slice(0,10).split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
+// Todos los gastos de todos los grupos
+function allExpenses() {
+  var out = [];
+  visibleGroups().forEach(function(g) {          // excluye grupos ocultos
+    (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e){ out.push(e); });
+  });
+  return out;
+}
+
+function getChartData() {
+  return getChartDataFrom(allExpenses());
+}
+
+// Construye el SVG del gráfico de barras a partir de los datos.
+// compact = versión pequeña (para los gráficos por grupo)
+function buildChartSVG(data, compact) {
+  if (!data) return '';
+  var vals = data.values;
+  var maxVal = Math.max.apply(null, vals);
+  if (maxVal <= 0) maxVal = 1;
+
+  var n = vals.length;
+  var W = 420;
+  var H = compact ? 120 : 170;
+  var PAD_L = 38, PAD_R = 10, PAD_T = compact ? 12 : 18, PAD_B = compact ? 22 : 26;
+  var innerW = W - PAD_L - PAD_R;
+  var innerH = H - PAD_T - PAD_B;
+  var gap = n > 20 ? 2 : 4;
+  var barW = Math.max(3, (innerW - gap * (n - 1)) / n);
+
+  var ySteps = compact ? 3 : 4;
+  var yLines = '';
+  for (var i = 0; i <= ySteps; i++) {
+    var y = PAD_T + innerH * (1 - i / ySteps);
+    var val = maxVal * i / ySteps;
+    yLines += '<line x1="' + PAD_L + '" y1="' + y.toFixed(1) + '" x2="' + (W - PAD_R) + '" y2="' + y.toFixed(1) + '" stroke="var(--border)" stroke-width="1" opacity="0.5"/>';
+    if (i > 0) {
+      var lbl = val >= 1000 ? (val/1000).toFixed(1) + 'k' : val.toFixed(0);
+      yLines += '<text x="' + (PAD_L - 5) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end" font-size="9" fill="var(--muted)">' + lbl + '</text>';
+    }
+  }
+
+  var bars = '';
+  vals.forEach(function(v, i) {
+    var x = PAD_L + i * (barW + gap);
+    var barH = v > 0 ? Math.max(2, (v / maxVal) * innerH) : 0;
+    var y = PAD_T + innerH - barH;
+    var isMax = v === maxVal && v > 0;
+    var color = isMax ? 'var(--acc)' : 'var(--acc4)';
+    if (barH > 0) {
+      bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + barH.toFixed(1) + '" rx="2.5" fill="' + color + '" opacity="' + (isMax ? '1' : '0.75') + '"/>';
+    }
+    var showLabel = data.isMonthly || n <= 10 || i === 0 || i === n - 1 || (n <= 15 && i % 2 === 0) || (n > 15 && i % 5 === 0);
+    if (showLabel) {
+      bars += '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (H - 7) + '" text-anchor="middle" font-size="8" fill="var(--muted)">' + data.labels[i] + '</text>';
+    }
+    if (isMax && !compact) {
+      bars += '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (y - 5).toFixed(1) + '" text-anchor="middle" font-size="9" fill="var(--acc)" font-weight="bold">' + fmt(v) + '</text>';
     }
   });
 
-  const svgW = Math.max(chartW, 300);
-  const svg = `<svg viewBox="0 0 ${svgW} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
-    <defs>
-      <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    </defs>
-    ${yLines}${bars}
-    <line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H-PAD}" stroke="#2a2d3a" stroke-width="1.5"/>
-  </svg>`;
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">' +
+    yLines + bars +
+    '<line x1="' + PAD_L + '" y1="' + PAD_T + '" x2="' + PAD_L + '" y2="' + (PAD_T + innerH) + '" stroke="var(--border)" stroke-width="1.5"/>' +
+    '</svg>';
+}
 
-  const chartHtml = `<div class="rep-card">
-    <h3>📅 Gastos por día</h3>
-    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">${svg}</div>
-    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px">
-      <span>${dlbl(days[0])}</span>
-      <span>${days.length} días · Total ${fmt(vals.reduce((a,b)=>a+b,0))}</span>
-      <span>${dlbl(days[days.length-1])}</span>
-    </div>
-  </div>`;
+// Etiqueta del periodo activo
+function periodLabel() {
+  if (repPeriod === '12m') return 'Últimos 12 meses';
+  if (repPeriod === '7d')  return 'Últimos 7 días';
+  if (repPeriod === '15d') return 'Últimos 15 días';
+  return 'Últimos 30 días';
+}
 
-  const rep = document.getElementById('rep-cont');
-  if (rep) rep.insertAdjacentHTML('afterbegin', chartHtml);
+function renderDailyChart() {
+  var data = getChartData();
+  var rep = document.getElementById('rep-cont');
+  if (!rep) return;
+
+  var periods = [
+    { id: '7d',  label: '7D'  },
+    { id: '15d', label: '15D' },
+    { id: '30d', label: '30D' },
+    { id: '12m', label: '12M' }
+  ];
+  var btns = '<div class="rep-filters">';
+  periods.forEach(function(p) {
+    btns += '<button class="rep-filter' + (repPeriod === p.id ? ' on' : '') + '" data-period="' + p.id + '">' + p.label + '</button>';
+  });
+  btns += '</div>';
+
+  var h = '<div class="rep-card"><h3>📊 Gastos Totales</h3>' + btns;
+
+  if (!data || !data.values.some(function(v){ return v > 0; })) {
+    h += '<div style="text-align:center;color:var(--muted);font-size:13px;padding:20px 0">Sin gastos en este periodo</div></div>';
+    rep.insertAdjacentHTML('afterbegin', h);
+    bindRepFilters();
+    return;
+  }
+
+  var total = data.values.reduce(function(a,b){ return a+b; }, 0);
+  h += '<div>' + buildChartSVG(data, false) + '</div>';
+  h += '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px">' +
+         '<span>' + periodLabel() + ' · por ' + (data.isMonthly ? 'mes' : 'día') + '</span>' +
+         '<span>Total: <strong style="color:var(--acc)">' + fmt(total) + '</strong></span>' +
+       '</div>';
+  h += '</div>';
+
+  rep.insertAdjacentHTML('afterbegin', h);
+  bindRepFilters();
+}
+
+function bindRepFilters() {
+  document.querySelectorAll('.rep-filter').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setRepPeriod(btn.getAttribute('data-period'));
+    });
+  });
 }
 
 
@@ -2178,23 +3822,30 @@ function getFriends() {
 
 // Añadir amigo nuevo
 function addFriend() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
   const inp = document.getElementById('friend-inp');
   const name = inp.value.trim();
   if (!name) return;
   if (!Array.isArray(DB.friends)) DB.friends = [];
-  if (DB.friends.includes(name)) {
-    toast('⚠️ ' + name + ' ya existe en Amigos');
-    inp.value = ''; return;
+  if (DB.friends.some(function(f){ return f.toLowerCase() === name.toLowerCase(); })) {
+    toast('⚠️ Ya existe ' + name);
+    return;
   }
   DB.friends.push(name);
-  // Limpiar tombstone si este amigo se había borrado antes
+
+  // Código de acceso automático, único, y rol estándar
+  peopleMap()[name] = { code: genCode(), role: 'user' };
+  logAction('amigo', '👤', 'Añadió a ' + name + ' como amigo', '');
+
+  revivedFriends[name] = true;
   if (Array.isArray(DB.deleted)) {
     DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + name; });
   }
-  save();
   inp.value = '';
+  save();
   renderYoModal();
-  toast('✅ ' + name + ' añadido a Amigos');
+  renderAll();
+  toast('✅ ' + name + ' añadido · código ' + peopleMap()[name].code);
 }
 
 function friendKd(e) {
@@ -2203,93 +3854,143 @@ function friendKd(e) {
 
 // Borrar amigo de la lista maestra
 function renamePerson(oldName) {
-  var nuevo = prompt('Nuevo nombre para "' + oldName + '":', oldName);
-  if (nuevo === null) return;  // cancelado
-  nuevo = nuevo.trim();
-  if (!nuevo) { toast('⚠️ El nombre no puede estar vacío'); return; }
-  if (nuevo === oldName) return;  // sin cambios
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  openEditProfile(oldName);   // ahora se renombra desde el perfil
+}
 
-  // Comprobar que no existe ya otro amigo con ese nombre (case-insensitive)
-  var existe = getFriends().some(function(f){
-    return f.trim().toLowerCase() === nuevo.trim().toLowerCase() && f !== oldName;
-  });
-  if (existe) { toast('⚠️ Ya existe un amigo llamado ' + nuevo); return; }
+// Propaga un cambio de nombre a TODA la app: amigos, miembros, gastos y pagos.
+function renamePersonTo(oldName, nuevo) {
+  if (!oldName || !nuevo || oldName === nuevo) return;
 
-  // 1. Lista maestra de amigos
+  // Lista maestra
   if (Array.isArray(DB.friends)) {
     DB.friends = DB.friends.map(function(f){ return f === oldName ? nuevo : f; });
   }
-  // Limpiar tombstones de ambos nombres
-  if (Array.isArray(DB.deleted)) {
-    DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + oldName && d !== 'fr:' + nuevo; });
-  }
 
-  // 2. En cada grupo: miembros, gastos (paidBy, splitAmong), pagos (settled)
-  (Array.isArray(DB.groups)?DB.groups:[]).forEach(function(g){
-    // Miembros
+  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
     if (Array.isArray(g.members)) {
       g.members = g.members.map(function(m){ return m === oldName ? nuevo : m; });
     }
-    // Gastos
-    (Array.isArray(g.expenses)?g.expenses:[]).forEach(function(e){
+    (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e) {
+      if (!e) return;
       if (e.paidBy === oldName) e.paidBy = nuevo;
       if (Array.isArray(e.splitAmong)) {
         e.splitAmong = e.splitAmong.map(function(m){ return m === oldName ? nuevo : m; });
       }
     });
-    // Pagos marcados (settled): actualizar key, from, to
     if (Array.isArray(g.settled)) {
-      g.settled = g.settled.map(function(s){
-        if (typeof s === 'string') {
-          // formato viejo "deudor|acreedor"
-          var parts = s.split('|');
-          if (parts[0] === oldName) parts[0] = nuevo;
-          if (parts[1] === oldName) parts[1] = nuevo;
-          return parts.join('|');
-        } else if (s && s.key) {
-          if (s.from === oldName) s.from = nuevo;
-          if (s.to === oldName) s.to = nuevo;
-          s.key = (s.from||'') + '|' + (s.to||'');
-          return s;
+      g.settled = g.settled.map(function(s) {
+        if (typeof s === 'string') return s.split('|').map(function(n){ return n===oldName?nuevo:n; }).join('|');
+        if (s && s.key) {
+          return {
+            key:    s.key.split('|').map(function(n){ return n===oldName?nuevo:n; }).join('|'),
+            from:   s.from === oldName ? nuevo : s.from,
+            to:     s.to   === oldName ? nuevo : s.to,
+            amount: s.amount,
+            date:   s.date
+          };
         }
         return s;
       });
     }
   });
 
-  // 3. Si era el usuario identificado, actualizar "soy yo"
-  if (myName() === oldName) {
-    localStorage.setItem('sg_me_fb', nuevo);
-  }
+  // Si era yo, actualizar mi identidad
+  if (myName() === oldName) setName(nuevo);
 
-  save();
-  renderAll();
-  renderYoModal();
-  toast('✏️ ' + oldName + ' → ' + nuevo);
+  // Tombstone del nombre viejo (si no, el merge lo resucita) y revivir el nuevo
+  if (!Array.isArray(DB.deleted)) DB.deleted = [];
+  revivedFriends[nuevo] = true;
+  delete revivedFriends[oldName];
+  DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + nuevo; });
+  if (DB.deleted.indexOf('fr:' + oldName) < 0) DB.deleted.push('fr:' + oldName);
+}
+
+var pDelPerson = null;   // persona pendiente de borrar
+
+// Nombres que el usuario ha vuelto a crear a propósito tras borrarlos/renombrarlos.
+// El merge une los tombstones de local y remoto, así que sin esto el servidor
+// volvería a "matar" al amigo recién re-creado.
+var revivedFriends = {};
+
+// Cuenta en qué está implicada la persona (gastos pagados, repartos, grupos)
+function personUsage(name) {
+  var paid = 0, split = 0, groups = [];
+  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
+    var used = false;
+    (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e) {
+      if (!e) return;
+      if (e.paidBy === name) { paid++; used = true; }
+      var among = Array.isArray(e.splitAmong) ? e.splitAmong : [];
+      if (among.indexOf(name) >= 0) { split++; used = true; }
+    });
+    var mems = Array.isArray(g.members) ? g.members : [];
+    if (mems.indexOf(name) >= 0) used = true;
+    if (used) groups.push(g.name);
+  });
+  return { paid: paid, split: split, groups: groups };
 }
 
 function askDelPerson(name) {
-  const inGroup = DB.groups.some(g =>
-    g.expenses.some(e => e.paidBy === name || (e.splitAmong||[]).includes(name))
-  );
-  if (inGroup) {
-    toast('⚠️ ' + name + ' tiene gastos — no se puede eliminar');
-    return;
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  pDelPerson = name;
+  var u = personUsage(name);
+
+  var txt = document.getElementById('del-person-txt');
+  var warn = document.getElementById('del-person-warn');
+  if (txt) txt.innerHTML = '¿Seguro que quieres eliminar a <strong style="color:var(--txt)">' + esc(name) + '</strong> de la lista de Amigos?';
+
+  if (warn) {
+    if (u.paid > 0 || u.split > 0 || u.groups.length > 0) {
+      var partes = [];
+      if (u.groups.length) partes.push('está en ' + u.groups.length + ' grupo' + (u.groups.length === 1 ? '' : 's') + ' (' + u.groups.map(esc).join(', ') + ')');
+      if (u.paid > 0)  partes.push('pagó ' + u.paid + ' gasto' + (u.paid === 1 ? '' : 's'));
+      if (u.split > 0) partes.push('participa en el reparto de ' + u.split + ' gasto' + (u.split === 1 ? '' : 's'));
+      warn.innerHTML = '<strong>Atención:</strong> ' + esc(name) + ' ' + partes.join(', ') + '.<br><br>' +
+        'Se le quitará de los grupos, pero <strong>sus gastos se conservan</strong> para no descuadrar las cuentas. ' +
+        'Los balances seguirán mostrando su nombre en los gastos antiguos.';
+      warn.style.display = 'block';
+    } else {
+      warn.style.display = 'none';
+    }
   }
-  // Quitar de todos los grupos
-  DB.groups.forEach(g => {
-    g.members = g.members.filter(m => m !== name);
+
+  openModal('m-del-person');
+}
+
+function confirmDelPerson() {
+  if (!isAdmin()) { denyNotAdmin(); closeModal('m-del-person'); return; }
+  var name = pDelPerson;
+  if (!name) return;
+
+  // Quitar de los miembros de todos los grupos (los gastos NO se tocan)
+  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
+    if (Array.isArray(g.members)) {
+      g.members = g.members.filter(function(m){ return m !== name; });
+    }
   });
-  // Quitar de la lista maestra
-  DB.friends = DB.friends.filter(f => f !== name);
-  // Registrar tombstone para que el merge no lo resucite
+
+  // Quitar de la lista maestra de amigos y su código/rol
+  if (Array.isArray(DB.friends)) {
+    DB.friends = DB.friends.filter(function(f){ return f !== name; });
+  }
+  delete peopleMap()[name];
+  logAction('amigo', '🚫', 'Eliminó a ' + name + ' de Amigos', '');
+
+  // Tombstone: que el merge no lo resucite
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
-  DB.deleted.push('fr:' + name);
+  delete revivedFriends[name];               // deja de estar "revivido"
+  if (DB.deleted.indexOf('fr:' + name) < 0) DB.deleted.push('fr:' + name);
+
+  // Si era el usuario identificado, desidentificar
   if (myName() === name) {
     localStorage.removeItem('sg_me_fb');
     localStorage.removeItem('sg_me');
   }
+
+  pDelPerson = null;
   save();
+  closeModal('m-del-person');
   renderYoModal();
   renderAll();
   toast('🗑️ ' + name + ' eliminado');
@@ -2332,8 +4033,21 @@ function renderYoModal() {
     h += '<div class="person-name">' + esc(name);
     if (isMe) h += ' <span style="font-size:11px;color:var(--acc);background:rgba(94,234,212,.12);padding:1px 7px;border-radius:10px;margin-left:4px">soy yo</span>';
     h += '</div>';
-    h += '<div class="person-groups">' + esc(grpStr) + '</div>';
+    // El administrador ve el código y el rol de cada persona
+    if (isAdmin()) {
+      var cod = personCode(name);
+      var esAdm = personRole(name) === 'admin';
+      h += '<div class="person-groups">' +
+             (esAdm ? '<span style="color:var(--acc2);font-weight:700">👑 Admin</span> · ' : '') +
+             '<span style="font-family:var(--ff-head);font-weight:700;letter-spacing:1px;color:var(--acc4)">' + esc(cod || '—') + '</span>' +
+             (grpStr ? ' · ' + esc(grpStr) : '') +
+           '</div>';
+    } else {
+      h += '<div class="person-groups">' + esc(grpStr) + '</div>';
+    }
     h += '</div>';
+    // Editar perfil y borrar: SOLO el administrador
+    if (isAdmin()) {
     // Botón renombrar (lápiz)
     h += '<button class="person-edit" style="flex-shrink:0;background:none;border:none;color:var(--acc4);cursor:pointer;padding:6px;border-radius:8px">';
     h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
@@ -2344,12 +4058,13 @@ function renderYoModal() {
     h += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">';
     h += '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>';
     h += '<path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>';
+    }   // fin de if (isAdmin())
     row.innerHTML = h;
     var editBtn = row.querySelector('.person-edit');
     if (editBtn) {
       editBtn.addEventListener('click', function(ev) {
         ev.stopPropagation();
-        renamePerson(name);
+        openEditProfile(name);      // perfil: nombre, código y rol
       });
     }
     var delBtn = row.querySelector('.person-del');
@@ -2365,13 +4080,10 @@ function renderYoModal() {
 }
 
 function updateYoBanner() {
-  const me = myName();
   // El botón SIEMPRE dice "Amigos" (nunca el nombre del usuario)
   document.querySelectorAll('.nav-yo-lbl').forEach(el => el.textContent = 'Amigos');
-  // Color del icono según si está identificado
-  document.querySelectorAll('.nav-yo').forEach(el => {
-    el.style.color = me ? 'var(--acc)' : '';
-  });
+  // El color activo lo gestiona goTab según la pantalla, no la identificación
+  document.querySelectorAll('.nav-yo').forEach(el => { el.style.color = ''; });
 }
 
 // ════════════════════════════════════════════
@@ -2385,7 +4097,7 @@ let ngMem = [], ngEmoji = EMOJIS[0];
 // ════════════════════════════════════════════
 const BG_BASE = 'backgrounds/';
 // Formatos soportados (se prueba en orden hasta encontrar el que existe)
-const BG_EXTS = ['webp', 'png', 'jpg'];
+const BG_EXTS = ['webp', 'png', 'jpg'];   // webp primero (formato actual)
 const BG_THEMES = [
   { id: '',         name: 'Sin fondo' },
   { id: 'playa',    name: 'Playa'    },
@@ -2430,6 +4142,47 @@ function bgIdFromUrl(url) {
   var m = String(url).match(/([^/]+)\.(webp|png|jpg|jpeg)$/i);
   return m ? m[1] : '';
 }
+
+// Aplica el fondo a un elemento con REINTENTO:
+// si la URL guardada falla (extensión incorrecta o red), prueba las otras
+// extensiones del mismo tema antes de rendirse.
+function applyBgWithRetry(el, savedUrl) {
+  if (!el || !savedUrl) return;
+  var themeId = bgIdFromUrl(savedUrl);
+
+  // Si ya sabemos que esta imagen carga bien, ponerla YA (sin esperar a
+  // comprobarla). Si no, al repintar se vería un instante el hueco vacío
+  // mientras se verifica → parpadeo.
+  if (themeId && BG_RESOLVED[themeId]) {
+    el.style.backgroundImage = "url('" + BG_RESOLVED[themeId] + "')";
+    return;
+  }
+
+  // Lista de candidatos: primero la URL guardada, luego el resto de extensiones
+  var candidates = [savedUrl];
+  if (themeId) {
+    BG_EXTS.forEach(function(ext) {
+      var u = BG_BASE + themeId + '.' + ext;
+      if (candidates.indexOf(u) < 0) candidates.push(u);
+    });
+  }
+
+  var i = 0;
+  function tryNext() {
+    if (i >= candidates.length) return;   // ninguna funcionó: se queda sin fondo
+    var url = candidates[i];
+    var img = new Image();
+    img.onload = function() {
+      el.style.backgroundImage = "url('" + url + "')";
+      if (themeId) BG_RESOLVED[themeId] = url;   // recordar la buena
+    };
+    img.onerror = function() { i++; tryNext(); };
+    img.src = url;
+  }
+  tryNext();
+}
+
+
 
 function renderBgGrid(selectedId) {
   buildBgGrid('ng-bg-grid', selectedId, function(id){ ngSelectedBg = id; });
@@ -2533,6 +4286,7 @@ function addChip() {} // stub — miembros se añaden desde lista Amigos
 function mkd(e) {} // stub
 
 function createGroup() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
   const name = document.getElementById('ng-name').value.trim();
   if (!name) { toast('⚠️ Escribe el nombre del grupo'); return; }
   if (ngMem.length < 2) { toast('⚠️ Selecciona al menos 2 amigos'); return; }
@@ -2541,7 +4295,8 @@ function createGroup() {
     const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
     if (url) g.bg = url;
     DB.groups.unshift(g);
-    save();
+    logAction('grupo', '📁', 'Creó el grupo "' + name + '"', g.id);
+  save();
     closeModal('m-newgrp');
     toast('✅ Grupo "' + name + '" creado');
     renderHome();
@@ -2636,6 +4391,7 @@ function saveMembers() {
   // Resolver la URL real del fondo (extensión correcta) antes de guardar
   resolveBgUrl(emSelectedBg, function(url) {
     if (url) g.bg = url; else delete g.bg;
+    logAction('grupo', '👥', 'Editó los miembros del grupo "' + g.name + '"', g.id);
     save();
     closeModal('m-edit-members');
     var memsEl = document.getElementById('g-mems');
@@ -2663,83 +4419,105 @@ function getAllPersons() {
 // ════════════════════════════════════════════
 // ONBOARDING: identificarse la primera vez
 // ════════════════════════════════════════════
+// Registra que el usuario ha abierto la app, como mucho una vez al día
+// (si no, cada apertura llenaría el historial de ruido).
+function logAppOpen() {
+  var me = myName();
+  if (!me) return;
+
+  // Anti-rebote: si la app se reinicia sola (cambiar de app y volver, girar la
+  // pantalla...) no queremos dos entradas seguidas. 60 segundos de margen.
+  var ahora = Date.now();
+  var ultimo = 0;
+  try { ultimo = parseInt(localStorage.getItem('sg_open_ts') || '0', 10); } catch(e) {}
+  if (ahora - ultimo < 60000) return;
+
+  logAction('acceso', '📱', 'Abrió la aplicación', '');
+  try { localStorage.setItem('sg_open_ts', String(ahora)); } catch(e) {}
+  // NO se llama a save(): antes cada reanudación de la app disparaba una
+  // escritura completa del DB en Firebase. Ahora la cola se envía sola.
+}
+
 function maybeShowWelcome() {
-  // Si ya está identificado, no mostrar nada
-  if (myName()) return;
-  renderWelcomeList();
-  var m = document.getElementById('m-welcome');
-  if (m) { m.classList.add('on'); document.body.style.overflow = 'hidden'; }
+  if (necesitaCodigo()) openCodeModal('welcome');
+  else logAppOpen();
 }
 
-function renderWelcomeList() {
-  var cont = document.getElementById('welcome-list');
-  if (!cont) return;
-  var friends = getFriends();
-  if (!friends.length) {
-    cont.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">Aún no hay nadie. Escribe tu nombre abajo para empezar.</div>';
-    return;
-  }
-  var h = '';
-  friends.forEach(function(name) {
-    var col = avc(name);
-    h += '<div class="welcome-row" data-name="' + esc(name) + '" style="display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:11px;cursor:pointer;margin-bottom:4px;border:1px solid var(--border);transition:all .15s">';
-    h += '<div class="avatar" style="background:' + col + '22;color:' + col + ';width:38px;height:38px;flex-shrink:0">' + ini(name) + '</div>';
-    h += '<div style="flex:1;font-weight:600;color:var(--txt)">' + esc(name) + '</div>';
-    h += '<span style="font-size:17px;color:var(--muted)">›</span>';
-    h += '</div>';
-  });
-  cont.innerHTML = h;
-  cont.querySelectorAll('.welcome-row').forEach(function(row) {
-    row.addEventListener('click', function() {
-      welcomeSelectMe(row.getAttribute('data-name'));
-    });
-  });
-}
 
-function welcomeSelectMe(name) {
-  setName(name);
-  closeModal('m-welcome');
-  renderAll();
-  toast('👋 ¡Hola, ' + name + '!');
-}
 
-function welcomeCreateMe() {
-  var inp = document.getElementById('welcome-new');
-  var name = inp.value.trim();
-  if (!name) { toast('⚠️ Escribe tu nombre'); return; }
-  // ¿Ya existe? (case-insensitive)
-  var existing = getFriends().find(function(f){ return f.trim().toLowerCase() === name.trim().toLowerCase(); });
-  if (existing) {
-    welcomeSelectMe(existing);
-    return;
-  }
-  // Crear el amigo y seleccionarlo
-  if (!Array.isArray(DB.friends)) DB.friends = [];
-  DB.friends.push(name);
-  if (Array.isArray(DB.deleted)) {
-    DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + name; });
-  }
-  setName(name);
-  save();
-  inp.value = '';
-  closeModal('m-welcome');
-  renderAll();
-  toast('✅ ¡Hola, ' + name + '!');
-}
+
+
+
 
 async function init() {
   loadTheme();
-  document.getElementById('load-msg').textContent = 'Conectando con Firebase…';
   DB = { groups: [], v: 0 };
+  setActiveNav('home');
+
+  // ── Orden importante para que NO parpadee ──
+  // Antes: se mostraba la app vacía → llegaban los datos → aparecía el modal.
+  // Eran tres repintados seguidos y se veía el "flash".
+  // Ahora: se mantiene la pantalla de carga hasta tener TODO listo, se pinta
+  // la app ya completa y, si hace falta, el modal del código sale con ella.
+  document.getElementById('load-msg').textContent = 'Conectando…';
+  await connectFirebase();          // carga los datos (pinta sobre la app oculta)
+
+  // ¿Hace falta pedir el código? Se decide ANTES de mostrar nada.
+  var pideCodigo = necesitaCodigo();
+
+  renderAll();                      // la app queda ya pintada y completa
+  if (pideCodigo) openCodeModal('welcome');   // el modal, listo desde el primer fotograma
+
+  // Ahora sí: cambiar de la pantalla de carga a la app, de una sola vez
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  renderAll();
-  await connectFirebase();
-  // Tras cargar datos, si no estás identificado, pedir quién eres
-  maybeShowWelcome();
+
+  if (!pideCodigo) logAppOpen();
+}
+
+// ¿Este dispositivo debe introducir un código?
+// (Se separa de maybeShowWelcome para poder decidirlo ANTES de pintar.)
+function necesitaCodigo() {
+  var me = myName();
+
+  // Migración: quien venga de una versión anterior no tiene la marca
+  var marca = '';
+  try { marca = localStorage.getItem('sg_auth_v') || ''; } catch(e) {}
+  if (marca !== AUTH_VERSION) {
+    if (me && personRole(me) === 'admin') {
+      pistaAdmin = { nombre: me, code: personCode(me) };
+    }
+    setName('');
+    return true;
+  }
+
+  // El usuario guardado ya no existe (fue borrado)
+  if (me && getFriends().indexOf(me) < 0) { setName(''); return true; }
+
+  return !me;
 }
 
 // Migrar liquidaciones antiguas (isSettlement) al nuevo sistema settled[]
+
+// Normaliza las URLs de fondo guardadas al formato actual (.webp).
+// Los grupos creados antes del cambio tienen .png guardado y ese archivo
+// puede ya no existir; reescribimos la extensión al formato principal.
+function normalizeBgUrls(db) {
+  if (!db || !Array.isArray(db.groups)) return false;
+  var changed = false;
+  db.groups.forEach(function(g) {
+    if (!g || !g.bg) return;
+    var id = bgIdFromUrl(g.bg);
+    if (!id) return;
+    var wanted = BG_BASE + id + '.' + BG_EXTS[0];   // backgrounds/<tema>.webp
+    if (g.bg !== wanted) {
+      g.bg = wanted;
+      changed = true;
+    }
+  });
+  return changed;
+}
+
 function migrateSettlements(db) {
   if (!db) return db;
   // Normalizar groups
@@ -2772,6 +4550,8 @@ function migrateSettlements(db) {
     });
     g.expenses = remaining;
   });
+  // Normalizar las URLs de fondo al formato actual (.webp)
+  normalizeBgUrls(db);
   return db;
 }
 
@@ -2796,6 +4576,14 @@ async function connectFirebase() {
         if (!Array.isArray(g.settled))     g.settled     = [];
       });
       try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
+    }
+
+    // Con los datos YA frescos del servidor: dar código y rol a quien no lo tenga
+    // (usuarios antiguos). Se guarda inmediatamente para que el código sea el
+    // mismo en todos los dispositivos; si cada móvil generase el suyo, nadie
+    // podría entrar.
+    if (ensurePeople()) {
+      await fbWrite();
     }
 
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
@@ -3028,17 +4816,15 @@ if ('serviceWorker' in navigator) {
   <div class="modal-bg" id="m-welcome" style="z-index:10000">
     <div class="sheet" style="text-align:center">
       <div class="sheet-handle"></div>
-      <div style="font-size:44px;margin:8px 0 4px">👋</div>
-      <h2 style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:var(--txt);margin-bottom:6px">¡Bienvenido a SplitGuasa!</h2>
-      <p style="font-size:14px;color:var(--muted2);margin-bottom:18px">¿Quién eres? Selecciona tu nombre para empezar.</p>
-      <div id="welcome-list" style="text-align:left;max-height:44vh;overflow-y:auto;margin-bottom:14px"></div>
-      <div style="border-top:1px solid var(--border);padding-top:14px">
-        <p style="font-size:13px;color:var(--muted2);margin-bottom:8px">¿No estás en la lista?</p>
-        <div style="display:flex;gap:8px">
-          <input id="welcome-new" type="text" placeholder="Escribe tu nombre" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--txt);font-size:15px;font-family:var(--ff-body)">
-          <button onclick="welcomeCreateMe()" style="background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:0 18px;border-radius:11px;cursor:pointer">Crear</button>
-        </div>
-      </div>
+      <img id="welcome-logo" src="icon-192.png" alt="SplitGuasa" style="width:96px;height:96px;border-radius:24px;margin:10px auto 14px;display:block;box-shadow:0 8px 28px rgba(0,0,0,.35)">
+      <h2 style="font-family:var(--ff-head);font-weight:800;font-size:24px;color:var(--txt);margin-bottom:6px">SplitGuasa</h2>
+      <p style="font-size:14px;color:var(--muted2);margin-bottom:22px;line-height:1.5">Introduce tu <strong style="color:var(--txt2)">código de acceso</strong><br>para entrar con tu usuario.</p>
+      <div id="welcome-admin-hint" style="display:none;background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--txt2);line-height:1.6"></div>
+      <div class="code-boxes" id="welcome-code-boxes"></div>
+      <div id="welcome-code-err" style="display:none;color:var(--acc3);font-size:13px;margin-top:12px;line-height:1.5"></div>
+      <button class="btn-primary" style="margin-top:20px" onclick="submitCode('welcome')">Entrar</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:14px">¿No tienes código? Pídeselo al administrador.</p>
+      <div class="pb"></div>
     </div>
   </div>
   <!-- ══ MODAL SELECTOR USUARIO ══ -->
