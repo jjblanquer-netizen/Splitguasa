@@ -813,7 +813,19 @@ body.light .profile-card {
   color: var(--txt);
 }
 .theme-btn.on svg { color: var(--acc); }
+
+/* El tema se aplica antes del primer dibujado (evita el destello) */
+html.pre-light body { background: #f6f7fb; }
 </style>
+<script>
+// Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
+(function() {
+  try {
+    var t = localStorage.getItem('sg_theme') || 'dark';
+    if (t === 'light') document.documentElement.classList.add('pre-light');
+  } catch (e) {}
+})();
+</script>
 </head>
 <body>
 
@@ -1030,7 +1042,10 @@ body.light .profile-card {
 
     <div id="history-count" style="font-size:11.5px;color:var(--muted);margin-bottom:8px"></div>
 
-    <div id="history-list" style="max-height:58vh;overflow-y:auto;margin-bottom:14px"></div>
+    <div id="history-list" style="max-height:54vh;overflow-y:auto;margin-bottom:10px"></div>
+    <p style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:12px;line-height:1.5">
+      Gastos, pagos y grupos se guardan siempre.<br>Los accesos se conservan 60 días.
+    </p>
     <button class="btn-secondary" style="width:100%" onclick="closeModal('m-history')">Cerrar</button>
     <div class="pb"></div>
   </div>
@@ -1283,7 +1298,12 @@ body.light .profile-card {
 // ════════════════════════════════════════════
 // FIREBASE — base de datos en tiempo real
 // ════════════════════════════════════════════
-const FB_URL = 'https://splitguasa-default-rtdb.europe-west1.firebasedatabase.app/data.json';
+const FB_URL = 'https://splitguasa-default-rtdb.europe-west1.firebasedatabase.app/data.json'
+// El historial vive en una RUTA APARTE. Antes iba dentro de data.json y se
+// descargaba entero cada 10 segundos (~100 KB → 36 MB/hora). Ahora solo se
+// lee al abrir la pantalla de Historial, y se escribe añadiendo (PATCH),
+// sin releer ni reenviar todo.
+const FB_LOG_URL = 'https://splitguasa-default-rtdb.europe-west1.firebasedatabase.app/log.json';
 
 // ════════════════════════════════════════════
 // CATEGORÍAS (20)
@@ -1381,6 +1401,92 @@ function fixArrays(obj) {
   return result;
 }
 
+
+
+// ── PODA DEL HISTORIAL ──
+// Los accesos son frecuentes y poco interesantes: si se guardaran para siempre,
+// acabarían siendo megas de descarga al abrir la pantalla y ahogarían a los
+// gastos y pagos, que sí importan y se conservan ÍNTEGROS.
+const LOG_ACCESS_DAYS = 60;   // los accesos caducan a los 60 días
+
+// Borra en el servidor las entradas caducadas (PATCH con null = eliminar).
+// Solo se ejecuta al abrir la pantalla de Historial, y como mucho una vez al día
+// por dispositivo, para no hacer trabajo repetido.
+async function pruneLog(entries) {
+  var limite = Date.now() - LOG_ACCESS_DAYS * 86400000;
+  var caducadas = entries.filter(function(e) {
+    return e && e.type === 'acceso' && (e.ts || 0) < limite;
+  });
+  if (!caducadas.length) return entries;
+
+  // No más de una poda al día por dispositivo
+  var hoy = tod();
+  try {
+    if (localStorage.getItem('sg_prune') === hoy) return entries;
+  } catch (e) {}
+
+  var payload = {};
+  caducadas.forEach(function(e){ payload[e.id] = null; });   // null = borrar
+
+  try {
+    await fetch(FB_LOG_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    try { localStorage.setItem('sg_prune', hoy); } catch (e) {}
+  } catch (e) {
+    return entries;   // sin conexión: no pasa nada, se reintenta otro día
+  }
+
+  // Devolver la lista ya sin las caducadas
+  var borradas = {};
+  caducadas.forEach(function(e){ borradas[e.id] = true; });
+  return entries.filter(function(e){ return !borradas[e.id]; });
+}
+
+// Lee el historial (solo cuando se abre la pantalla)
+async function fbLogRead() {
+  try {
+    const res = await fetch(FB_LOG_URL + '?_=' + Date.now(), {
+      headers: { 'Cache-Control': 'no-cache' }, mode: 'cors'
+    });
+    if (!res.ok) return [];
+    const raw = await res.json();
+    if (!raw || typeof raw !== 'object') return [];
+    return Object.keys(raw).map(function(k){ return raw[k]; })
+                 .filter(function(e){ return e && e.ts; });
+  } catch (e) {
+    return [];
+  }
+}
+
+// Envía SOLO las entradas nuevas (PATCH añade sin tocar el resto).
+// No hay que leer ni reescribir todo el historial.
+async function fbLogFlush() {
+  if (!LOG_QUEUE.length) return;
+  var lote = LOG_QUEUE.slice();
+  LOG_QUEUE = [];
+  var payload = {};
+  lote.forEach(function(e){ payload[e.id] = e; });
+  try {
+    await fetch(FB_LOG_URL, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    LOG_QUEUE = lote.concat(LOG_QUEUE);   // reintentar en el siguiente envío
+  }
+}
+
+// Envío agrupado: si haces varias cosas seguidas, se manda una sola vez.
+var logFlushTimer = null;
+function scheduleLogFlush() {
+  if (logFlushTimer) clearTimeout(logFlushTimer);
+  logFlushTimer = setTimeout(function(){ fbLogFlush(); }, 2500);
+}
+
 async function fbRead() {
   const res = await fetch(FB_URL + '?_=' + Date.now(), {
     headers: { 'Cache-Control': 'no-cache' },
@@ -1474,14 +1580,10 @@ function mergeDB(remote, local) {
   });
   result.people = pm;
 
-  // ── Historial: unión por id, ordenado, quedándonos con las más recientes ──
-  var logById = {};
-  (Array.isArray(remote.log) ? remote.log : []).forEach(function(e){ if (e && e.id) logById[e.id] = e; });
-  (Array.isArray(local.log)  ? local.log  : []).forEach(function(e){ if (e && e.id) logById[e.id] = e; });
-  var merged = Object.keys(logById).map(function(k){ return logById[k]; });
-  merged.sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
-  if (merged.length > LOG_MAX) merged = merged.slice(merged.length - LOG_MAX);
-  result.log = merged;
+  // El historial YA NO viaja en DB (vive en /log.json). Si viniera de una
+  // versión antigua, lo descartamos para no arrastrar peso inútil.
+  delete result.log;
+
 
   // ── PIN de administrador (heredado, ya no se usa) ──
   // Gana el que tenga la marca de tiempo MÁS RECIENTE. Así un dispositivo con
@@ -1569,6 +1671,9 @@ async function sync(silent = false) {
   }
   if (!silent) ss('syn', 'Sincronizando…');
   try {
+    // Firma de lo que tenemos AHORA, para saber si algo cambia de verdad
+    var sigAntes = dbSignature();
+
     const remote = await fbRead();
     const prevV = DB.v || 0;
     if (remote && typeof remote === 'object') {
@@ -1580,8 +1685,6 @@ async function sync(silent = false) {
         if (!Array.isArray(DB.groups))  DB.groups  = [];
         if (!Array.isArray(DB.friends)) DB.friends = [];
         if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
-        if (!Array.isArray(DB.log)) DB.log = [];
-      if (!Array.isArray(DB.log)) DB.log = [];
         DB.groups.forEach(function(g) {
           if (!Array.isArray(g.expenses))    g.expenses    = [];
           if (!Array.isArray(g.members))     g.members     = [];
@@ -1593,13 +1696,29 @@ async function sync(silent = false) {
         if (!silent && remoteV > prevV) toast('🔄 Actualizado por otro miembro');
       }
     }
+
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
     ss('ok', '✓ Conectado · ' + now);
-    renderAll();
+
+    // ── CLAVE: repintar SOLO si algo ha cambiado de verdad ──
+    // Antes se repintaba en cada sincronización (cada pocos segundos), lo que
+    // reconstruía las tarjetas y recargaba las imágenes → parpadeo sutil.
+    if (dbSignature() !== sigAntes) {
+      renderAll();
+    }
   } catch(e) {
     console.error('sync error:', e);
     ss('err', '⚠️ Sin conexión · Datos locales');
   }
+}
+
+// Huella de los datos que SE MUESTRAN. Si no cambia, no hace falta repintar.
+// (Se excluye 'ts', que cambia en cada escritura sin afectar a lo que se ve.)
+function dbSignature() {
+  // O(1): la versión sube en CADA escritura, así que basta para saber si algo
+  // cambió. Antes esto hacía JSON.stringify de todos los grupos y gastos en
+  // cada ciclo de sincronización (cada 10 s) — puro gasto de CPU.
+  return String(DB.v || 0);
 }
 
 async function manualSync() {
@@ -1611,7 +1730,6 @@ async function manualSync() {
       if (!Array.isArray(DB.groups))  DB.groups  = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
       if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
-      if (!Array.isArray(DB.log)) DB.log = [];
       DB.groups.forEach(g => {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
@@ -1632,7 +1750,17 @@ async function manualSync() {
 
 // Firebase soporta polling más frecuente — cada 10s
 setInterval(() => { if (document.visibilityState === 'visible') sync(true); }, 10000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(true); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    // La app instalada NO siempre se reinicia al reabrirla: a veces solo se
+    // reanuda desde memoria y init() no vuelve a ejecutarse. Por eso el acceso
+    // se registra también aquí (con el anti-rebote de 60 s de logAppOpen).
+    logAppOpen();
+    sync(true);
+  } else {
+    fbLogFlush();   // al salir de la app, enviar lo que quede en la cola
+  }
+});
 
 // ════════════════════════════════════════════
 // SAVE — guarda local + sube a Firebase
@@ -1862,29 +1990,20 @@ function applyAdminUI() {
 // crear grupos, gestionar amigos...). Antes no se guardaba nada de esto, así
 // que el historial empieza a partir de ahora.
 // ════════════════════════════════════════════
-const LOG_MAX = 400;   // se conservan las últimas 400 acciones
+// El historial ya no vive en DB: no hay cupo que recortar en cada acción.
+// Solo se descarga al abrir la pantalla, así que su tamaño no afecta a la
+// agilidad de la app en el uso diario.
 
-function logList() {
-  if (!Array.isArray(DB.log)) DB.log = [];
-  return DB.log;
-}
+// Cola de acciones pendientes de enviar (se mandan agrupadas)
+var LOG_QUEUE = [];
+// Historial descargado (solo cuando se abre la pantalla)
+var LOG_CACHE = [];
 
-// Tipos de acción (para el filtro del historial)
-const LOG_TYPES = [
-  { id: 'all',    label: 'Todo',     icon: '📋' },
-  { id: 'gasto',  label: 'Gastos',   icon: '💸' },
-  { id: 'pago',   label: 'Pagos',    icon: '✅' },
-  { id: 'grupo',  label: 'Grupos',   icon: '📁' },
-  { id: 'amigo',  label: 'Amigos',   icon: '👤' },
-  { id: 'acceso', label: 'Accesos',  icon: '🔑' }
-];
-
-// Registra una acción. Se llama ANTES de save().
+// Registra una acción. YA NO toca DB → no engorda la sincronización.
 function logAction(tipo, icon, texto, gid) {
   var me = myName();
-  if (!me) return;                      // sin identificar, no se registra
-  var l = logList();
-  l.push({
+  if (!me) return;
+  LOG_QUEUE.push({
     id:   'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     ts:   Date.now(),
     who:  me,
@@ -1893,11 +2012,13 @@ function logAction(tipo, icon, texto, gid) {
     txt:  texto,
     gid:  gid || ''
   });
-  // Recortar: quedarse con las más recientes
-  if (l.length > LOG_MAX) {
-    l.sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
-    DB.log = l.slice(l.length - LOG_MAX);
-  }
+  scheduleLogFlush();   // se envía en 2,5 s, agrupado con lo que venga
+}
+
+
+// Historial completo: lo descargado + lo que aún no se ha enviado
+function allLogEntries() {
+  return LOG_CACHE.concat(LOG_QUEUE);
 }
 
 // "hace 5 min", "ayer 18:30", "12 jul 14:05"
@@ -1926,12 +2047,24 @@ var logShowAll = false;   // el admin puede alternar entre "solo yo" y "todos"
 var logType    = 'all';   // filtro por tipo de acción
 var pistaAdmin = null;    // salvavidas al migrar: código del admin de este móvil
 
-function openHistory() {
+async function openHistory() {
   logShowAll = false;
   logType    = 'all';
+
+  // Mostrar el modal ya, con un aviso de carga
+  var cont = document.getElementById('history-list');
+  if (cont) cont.innerHTML = '<div class="empty" style="padding:26px 10px"><div class="empty-icon">⏳</div><p>Cargando historial…</p></div>';
+  openModal('m-history');
+
+  // El historial se descarga SOLO aquí (no en cada sincronización)
+  await fbLogFlush();          // enviar lo que tengamos pendiente
+  LOG_CACHE = await fbLogRead();
+
+  // Podar los accesos caducados (los gastos y pagos NO se tocan nunca)
+  LOG_CACHE = await pruneLog(LOG_CACHE);
+
   buildLogTypeSelect();
   renderHistory();
-  openModal('m-history');
 }
 
 // Rellena el desplegable con el número de acciones de cada tipo
@@ -1940,7 +2073,7 @@ function buildLogTypeSelect() {
   if (!sel) return;
 
   // Contar solo dentro del ámbito visible (solo yo / todos)
-  var base = logList().filter(function(e) {
+  var base = allLogEntries().filter(function(e) {
     return (isAdmin() && logShowAll) ? true : isMe(e.who);
   });
 
@@ -1980,7 +2113,7 @@ function renderHistory() {
   if (bAll) bAll.className = 'rep-filter' + (logShowAll  ? ' on' : '');
 
   var me = myName();
-  var todos = logList().slice();
+  var todos = allLogEntries();
 
   // Ámbito: solo yo / todos (admin)
   var items = (isAdmin() && logShowAll)
@@ -2199,11 +2332,14 @@ async function submitCode(modo) {
 
   // Registrar el acceso (logAction usa myName(), por eso va DESPUÉS de setName)
   logAction('acceso', '🔑', modo === 'welcome' ? 'Accedió a la aplicación' : 'Cambió de usuario y accedió', '');
-  save();
-  closeModal(modo === 'welcome' ? 'm-welcome' : 'm-code-switch');
-  clearCode(boxId);
+
+  // Repintar ANTES de cerrar el modal: si no, al desaparecer se vería un
+  // instante el contenido del usuario anterior (parpadeo).
   renderSettingsMe();
   renderAll();
+
+  closeModal(modo === 'welcome' ? 'm-welcome' : 'm-code-switch');
+  clearCode(boxId);
   toast('👋 ¡Hola, ' + name + '!');
 }
 
@@ -2460,6 +2596,11 @@ async function shareApp() {
 }
 
 function setTheme(theme) {
+  // Mantener sincronizada la marca temprana del <html>
+  try {
+    if (theme === 'light') document.documentElement.classList.add('pre-light');
+    else                   document.documentElement.classList.remove('pre-light');
+  } catch (e) {}
   if (theme === 'light') {
     document.body.classList.add('light');
   } else {
@@ -3984,6 +4125,14 @@ function applyBgWithRetry(el, savedUrl) {
   if (!el || !savedUrl) return;
   var themeId = bgIdFromUrl(savedUrl);
 
+  // Si ya sabemos que esta imagen carga bien, ponerla YA (sin esperar a
+  // comprobarla). Si no, al repintar se vería un instante el hueco vacío
+  // mientras se verifica → parpadeo.
+  if (themeId && BG_RESOLVED[themeId]) {
+    el.style.backgroundImage = "url('" + BG_RESOLVED[themeId] + "')";
+    return;
+  }
+
   // Lista de candidatos: primero la URL guardada, luego el resto de extensiones
   var candidates = [savedUrl];
   if (themeId) {
@@ -4250,43 +4399,23 @@ function getAllPersons() {
 function logAppOpen() {
   var me = myName();
   if (!me) return;
-  var hoy = tod();
-  var ya = false;
-  try { ya = localStorage.getItem('sg_open_log') === hoy + '|' + me; } catch(e) {}
-  if (ya) return;
+
+  // Anti-rebote: si la app se reinicia sola (cambiar de app y volver, girar la
+  // pantalla...) no queremos dos entradas seguidas. 60 segundos de margen.
+  var ahora = Date.now();
+  var ultimo = 0;
+  try { ultimo = parseInt(localStorage.getItem('sg_open_ts') || '0', 10); } catch(e) {}
+  if (ahora - ultimo < 60000) return;
+
   logAction('acceso', '📱', 'Abrió la aplicación', '');
-  try { localStorage.setItem('sg_open_log', hoy + '|' + me); } catch(e) {}
-  save();
+  try { localStorage.setItem('sg_open_ts', String(ahora)); } catch(e) {}
+  // NO se llama a save(): antes cada reanudación de la app disparaba una
+  // escritura completa del DB en Firebase. Ahora la cola se envía sola.
 }
 
 function maybeShowWelcome() {
-  var me = myName();
-
-  // ── Migración desde versiones anteriores ──
-  // Antes bastaba con elegir tu nombre de una lista. Ahora hace falta código.
-  // Si este móvil no tiene la marca de la versión nueva, se le desidentifica
-  // para que introduzca su código, aunque ya estuviera "dentro".
-  var marca = '';
-  try { marca = localStorage.getItem('sg_auth_v') || ''; } catch(e) {}
-  if (marca !== AUTH_VERSION) {
-    // Salvavidas: si este móvil ya era del ADMINISTRADOR bajo las reglas
-    // antiguas, le enseñamos su código. Si no, se quedaría fuera de su propia
-    // app sin forma de ver los códigos que acaban de generarse.
-    if (me && personRole(me) === 'admin') {
-      pistaAdmin = { nombre: me, code: personCode(me) };
-    }
-    setName('');
-    me = '';
-  }
-
-  // Si el usuario guardado ya no existe (fue borrado), desidentificar también
-  if (me && getFriends().indexOf(me) < 0) { setName(''); me = ''; }
-
-  if (!me) {
-    openCodeModal('welcome');           // pedir el código
-  } else {
-    logAppOpen();                       // ya identificado: registrar la apertura
-  }
+  if (necesitaCodigo()) openCodeModal('welcome');
+  else logAppOpen();
 }
 
 
@@ -4297,15 +4426,50 @@ function maybeShowWelcome() {
 
 async function init() {
   loadTheme();
-  document.getElementById('load-msg').textContent = 'Conectando con Firebase…';
   DB = { groups: [], v: 0 };
+  setActiveNav('home');
+
+  // ── Orden importante para que NO parpadee ──
+  // Antes: se mostraba la app vacía → llegaban los datos → aparecía el modal.
+  // Eran tres repintados seguidos y se veía el "flash".
+  // Ahora: se mantiene la pantalla de carga hasta tener TODO listo, se pinta
+  // la app ya completa y, si hace falta, el modal del código sale con ella.
+  document.getElementById('load-msg').textContent = 'Conectando…';
+  await connectFirebase();          // carga los datos (pinta sobre la app oculta)
+
+  // ¿Hace falta pedir el código? Se decide ANTES de mostrar nada.
+  var pideCodigo = necesitaCodigo();
+
+  renderAll();                      // la app queda ya pintada y completa
+  if (pideCodigo) openCodeModal('welcome');   // el modal, listo desde el primer fotograma
+
+  // Ahora sí: cambiar de la pantalla de carga a la app, de una sola vez
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  setActiveNav('home');   // la barra es única: marcar Inicio al arrancar
-  renderAll();
-  await connectFirebase();
-  // Tras cargar datos, si no estás identificado, pedir quién eres
-  maybeShowWelcome();
+
+  if (!pideCodigo) logAppOpen();
+}
+
+// ¿Este dispositivo debe introducir un código?
+// (Se separa de maybeShowWelcome para poder decidirlo ANTES de pintar.)
+function necesitaCodigo() {
+  var me = myName();
+
+  // Migración: quien venga de una versión anterior no tiene la marca
+  var marca = '';
+  try { marca = localStorage.getItem('sg_auth_v') || ''; } catch(e) {}
+  if (marca !== AUTH_VERSION) {
+    if (me && personRole(me) === 'admin') {
+      pistaAdmin = { nombre: me, code: personCode(me) };
+    }
+    setName('');
+    return true;
+  }
+
+  // El usuario guardado ya no existe (fue borrado)
+  if (me && getFriends().indexOf(me) < 0) { setName(''); return true; }
+
+  return !me;
 }
 
 // Migrar liquidaciones antiguas (isSettlement) al nuevo sistema settled[]
