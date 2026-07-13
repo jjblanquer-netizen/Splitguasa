@@ -791,6 +791,28 @@ body.light .profile-card {
   cursor: pointer;
 }
 .profile-btn:active { transform: scale(.97); }
+
+/* Botones de tema: horizontales y bajos (antes ocupaban demasiado) */
+.theme-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 8px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 11px;
+  color: var(--muted2);
+  font-family: var(--ff-head);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.theme-btn.on {
+  border-color: var(--acc);
+  background: rgba(94,234,212,.1);
+  color: var(--txt);
+}
+.theme-btn.on svg { color: var(--acc); }
 </style>
 </head>
 <body>
@@ -1107,33 +1129,7 @@ body.light .profile-card {
     <span class="topbar-title">Ajustes</span>
   </div>
   <div class="sb">
-    <div class="sec-lbl" style="margin-top:6px">Sincronización</div>
-    <div class="card" style="display:flex;align-items:center;gap:12px">
-      <div class="sdot" id="sdot" style="flex-shrink:0"></div>
-      <div style="flex:1;min-width:0">
-        <div id="stxt" style="font-weight:600;font-size:14px;color:var(--txt)">Conectado</div>
-        <div style="font-size:12px;color:var(--muted2);margin-top:1px">Los datos se guardan en la nube</div>
-      </div>
-      <button id="sbtn-sync" onclick="manualSync()" style="flex-shrink:0">↻ Sync</button>
-    </div>
-
-    <div class="sec-lbl" style="margin-top:18px">Apariencia</div>
-    <div class="card" style="padding:6px">
-      <div style="display:flex;gap:8px">
-        <button id="theme-dark-btn" onclick="setTheme('dark')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;background:var(--s2);border:2px solid var(--acc);border-radius:14px;cursor:pointer;transition:all .15s">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--acc)"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          <span style="font-family:var(--ff-head);font-weight:700;font-size:14px;color:var(--txt)">Oscuro</span>
-          <span id="theme-dark-check" style="font-size:11px;color:var(--acc);font-weight:600">✓ Activado</span>
-        </button>
-        <button id="theme-light-btn" onclick="setTheme('light')" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;background:var(--s2);border:2px solid var(--border);border-radius:14px;cursor:pointer;transition:all .15s">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--muted2)"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          <span style="font-family:var(--ff-head);font-weight:700;font-size:14px;color:var(--txt)">Claro</span>
-          <span id="theme-light-check" style="font-size:11px;color:var(--muted);font-weight:600">Activar</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="sec-lbl" style="margin-top:18px">Tu perfil</div>
+    <div class="sec-lbl" style="margin-top:6px">Tu perfil</div>
     <div class="profile-card" id="settings-me-card">
       <div style="display:flex;align-items:center;gap:13px">
         <div id="settings-me-avatar" class="avatar" style="width:54px;height:54px;flex-shrink:0;font-size:21px"></div>
@@ -1154,6 +1150,30 @@ body.light .profile-card {
         <button class="profile-btn" onclick="manualSync()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           Sincronizar
+        </button>
+      </div>
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Sincronización</div>
+    <div class="card" style="display:flex;align-items:center;gap:12px">
+      <div class="sdot" id="sdot" style="flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div id="stxt" style="font-weight:600;font-size:14px;color:var(--txt)">Conectado</div>
+        <div style="font-size:12px;color:var(--muted2);margin-top:1px">Los datos se guardan en la nube</div>
+      </div>
+      <button id="sbtn-sync" onclick="manualSync()" style="flex-shrink:0">↻ Sync</button>
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Apariencia</div>
+    <div class="card" style="padding:5px">
+      <div style="display:flex;gap:6px">
+        <button id="theme-dark-btn" onclick="setTheme('dark')" class="theme-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <span>Oscuro</span>
+        </button>
+        <button id="theme-light-btn" onclick="setTheme('light')" class="theme-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <span>Claro</span>
         </button>
       </div>
     </div>
@@ -2308,22 +2328,10 @@ function setTheme(theme) {
 }
 
 function updateThemeButtons(theme) {
-  var darkBtn = document.getElementById('theme-dark-btn');
-  var lightBtn = document.getElementById('theme-light-btn');
-  var darkChk = document.getElementById('theme-dark-check');
-  var lightChk = document.getElementById('theme-light-check');
-  if (!darkBtn || !lightBtn) return;
-  if (theme === 'light') {
-    lightBtn.style.borderColor = 'var(--acc)';
-    darkBtn.style.borderColor = 'var(--border)';
-    if (lightChk) { lightChk.textContent = '✓ Activado'; lightChk.style.color = 'var(--acc)'; }
-    if (darkChk) { darkChk.textContent = 'Activar'; darkChk.style.color = 'var(--muted)'; }
-  } else {
-    darkBtn.style.borderColor = 'var(--acc)';
-    lightBtn.style.borderColor = 'var(--border)';
-    if (darkChk) { darkChk.textContent = '✓ Activado'; darkChk.style.color = 'var(--acc)'; }
-    if (lightChk) { lightChk.textContent = 'Activar'; lightChk.style.color = 'var(--muted)'; }
-  }
+  var dk = document.getElementById('theme-dark-btn');
+  var lt = document.getElementById('theme-light-btn');
+  if (dk) dk.className = 'theme-btn' + (theme === 'dark'  ? ' on' : '');
+  if (lt) lt.className = 'theme-btn' + (theme === 'light' ? ' on' : '');
 }
 
 function loadTheme() {
