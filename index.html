@@ -1022,6 +1022,25 @@ body.light .hv-saldo { box-shadow: 0 -8px 30px rgba(0,0,0,.12); }
 .hv-gn { font-weight: 700; font-size: 14.5px; color: var(--txt); }
 .hv-gs { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
 .hv-gb { font-family: var(--ff-head); font-weight: 800; font-size: 13.5px; flex-shrink: 0; }
+
+/* ══ Las dos Homes viven dentro de .scr, que tiene overflow:hidden ══
+   Sin esto no scrollean:
+   · La CLÁSICA lleva dentro un .sb que ya scrollea, pero necesita que su
+     padre sea un contenedor flex (si no, el flex:1 del .sb no aplica).
+   · La AVANZADA no tiene .sb: scrollea ella misma.
+   min-height:0 es imprescindible: sin él, un hijo flex no encoge por debajo
+   de su contenido y el scroll nunca llega a activarse. */
+#home-clasica {
+  flex: 1; min-height: 0;
+  flex-direction: column;
+  overflow: hidden;              /* el .sb de dentro es quien scrollea */
+}
+#home-avanzada {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -1422,6 +1441,18 @@ body.light .hv-saldo { box-shadow: 0 -8px 30px rgba(0,0,0,.12); }
         <strong style="color:var(--txt2)">Clásica</strong>: la lista de todos tus grupos.<br>
         <strong style="color:var(--txt2)">Avanzada</strong>: un grupo a fondo, con podio y rankings.
       </p>
+
+      <!-- Solo tiene sentido si has elegido Avanzada -->
+      <div id="home-gid-row" style="display:none;border-top:1px solid var(--border);margin-top:6px;padding:12px 8px 6px">
+        <label style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:8px">
+          Grupo al abrir la app
+        </label>
+        <select id="home-gid-sel" onchange="setHomeGidFromSettings(this.value)"
+                style="width:100%;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px;color:var(--txt);font-size:14px;font-family:var(--ff-body);cursor:pointer"></select>
+        <p style="font-size:11px;color:var(--muted);margin-top:7px;line-height:1.5">
+          Podrás cambiar de grupo en cualquier momento desde la propia pantalla de Inicio.
+        </p>
+      </div>
     </div>
 
     <div class="sec-lbl" style="margin-top:18px">Apariencia</div>
@@ -2967,6 +2998,14 @@ function closeOut(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 // así las llamadas antiguas siguen funcionando igual.
 function openGroup(id, tab) {
   var t = (tab === 'balances' || tab === 'deudas') ? tab : 'gastos';
+
+  // Nadie entra en un grupo del que no forma parte (el admin sí, para gestionar)
+  var destino = (Array.isArray(DB.groups) ? DB.groups : []).filter(function(x){ return x.id === id; })[0];
+  if (destino && !isAdmin() && !esMiembro(destino, myName())) {
+    toast('🔒 No formas parte de este grupo');
+    return;
+  }
+
   curGid=id; curTab=t;
   const g=grp(); if(!g) return;
   document.getElementById('g-emoji').textContent  = g.emoji;
@@ -3639,6 +3678,7 @@ function renderAll() {
   if (cur?.id==='scr-activity') renderActivity();
   if (cur?.id==='scr-report')   renderReport();
   if (cur?.id==='scr-grp' && curGid) renderGTab();
+  buildHomeGidSelect();   // los grupos pueden cambiar al sincronizar
 }
 
 // ════════════════════════════════════════════
@@ -3652,6 +3692,43 @@ function renderAll() {
 // no en la base de datos. Cada uno elige cómo quiere ver su Inicio.
 // ══════════════════════════════════════════════════
 
+
+// Rellena el desplegable "Grupo al abrir la app" (solo en modo Avanzada)
+function buildHomeGidSelect() {
+  var row = document.getElementById('home-gid-row');
+  var sel = document.getElementById('home-gid-sel');
+  if (!row || !sel) return;
+
+  var avanzada = (homeStyle() === 'avanzada');
+  row.style.display = avanzada ? 'block' : 'none';
+  if (!avanzada) return;
+
+  var vis = visibleGroups();
+  if (!vis.length) {
+    sel.innerHTML = '<option>No estás en ningún grupo</option>';
+    sel.disabled = true;
+    return;
+  }
+  sel.disabled = false;
+
+  var actual = homeGid();
+  var h = '';
+  vis.forEach(function(g) {
+    h += '<option value="' + esc(g.id) + '"' + (g.id === actual ? ' selected' : '') + '>' +
+         (g.emoji || '📁') + '  ' + esc(g.name) + '</option>';
+  });
+  sel.innerHTML = h;
+}
+
+// Elegir el grupo por defecto desde Ajustes
+function setHomeGidFromSettings(gid) {
+  if (!gid) return;
+  try { localStorage.setItem('sg_home_gid', gid); } catch (e) {}
+  renderHome();
+  var g = visibleGroups().filter(function(x){ return x.id === gid; })[0];
+  if (g) toast('🏠 Inicio: ' + (g.emoji || '') + ' ' + g.name);
+}
+
 function homeStyle() {
   try { return localStorage.getItem('sg_home') === 'avanzada' ? 'avanzada' : 'clasica'; }
   catch (e) { return 'clasica'; }
@@ -3661,6 +3738,7 @@ function setHomeStyle(estilo) {
   var v = (estilo === 'avanzada') ? 'avanzada' : 'clasica';
   try { localStorage.setItem('sg_home', v); } catch (e) {}
   updateHomeButtons(v);
+  buildHomeGidSelect();     // el selector solo aparece en modo Avanzada
   renderHome();
   toast(v === 'avanzada' ? '✨ Inicio avanzado' : '📋 Inicio clásico');
 }
@@ -3729,7 +3807,7 @@ function renderHomeAvanzada() {
       '<p>Sin grupos todavía.</p>' +
       (isAdmin()
         ? '<button onclick="openModal(\'m-newgrp\')" style="margin-top:14px;background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;cursor:pointer">+ Crear primer grupo</button>'
-        : '<p style="font-size:12px;color:var(--muted);margin-top:12px">🔒 Solo el administrador puede crear grupos.</p>') +
+        : '<p style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6">No estás en ningún grupo todavía.<br>Pídele al administrador que te añada.</p>') +
       '</div>';
     return;
   }
@@ -4091,7 +4169,7 @@ function renderHome() {
   var avanzada = (homeStyle() === 'avanzada');
   var ca = document.getElementById('home-clasica');
   var av = document.getElementById('home-avanzada');
-  if (ca) ca.style.display = avanzada ? 'none'  : 'block';
+  if (ca) ca.style.display = avanzada ? 'none'  : 'flex';   // flex, para que el .sb de dentro scrolle
   if (av) av.style.display = avanzada ? 'block' : 'none';
 
   if (avanzada) { renderHomeAvanzada(); return; }
@@ -4101,11 +4179,12 @@ function renderHome() {
 function renderHomeClasica() {
   renderBanner();
   const c = document.getElementById('grp-list');
-  if (!DB.groups.length) {
+  // Los grupos que YO veo, no todos los que existen
+  if (!visibleGroups().length) {
     c.innerHTML = '<div class="empty"><div class="empty-icon">👥</div><p>Sin grupos todavía.</p>' +
       (isAdmin()
         ? '<button onclick="openModal(\'m-newgrp\')" style="margin-top:14px;background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:12px 22px;border-radius:12px;cursor:pointer">+ Crear primer grupo</button>'
-        : '<p style="font-size:12px;color:var(--muted);margin-top:12px">🔒 Solo el administrador puede crear grupos.</p>') +
+        : '<p style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6">No estás en ningún grupo todavía.<br>Pídele al administrador que te añada.</p>') +
       '</div>';
     return;
   }
@@ -4187,9 +4266,31 @@ function renderHomeClasica() {
 
 // Grupos visibles = todos menos los ocultados por el administrador.
 // Se usa en Inicio, Actividad e Informe para que TODAS las vistas coincidan.
+// Filtro ÚNICO que se aplica en toda la app (Home, Actividad, Informe, banner).
+// Dos reglas:
+//   1. Los grupos ocultados por el admin no salen para nadie.
+//   2. Cada persona solo ve los grupos EN LOS QUE ESTÁ.
+// El administrador es la excepción a la regla 2: los ve todos, porque si no,
+// crearía un grupo para otros y desaparecería de su vista sin poder gestionarlo.
 function visibleGroups() {
   var gs = Array.isArray(DB.groups) ? DB.groups : [];
-  return gs.filter(function(g){ return g && !isGroupHidden(g.id); });
+  var me = myName();
+  var admin = isAdmin();
+
+  return gs.filter(function(g) {
+    if (!g || isGroupHidden(g.id)) return false;
+    if (admin) return true;                      // el admin lo ve todo
+    if (!me) return false;                       // sin identificar, nada
+    return esMiembro(g, me);
+  });
+}
+
+// ¿Esta persona es miembro del grupo? (comparación tolerante a mayúsculas/espacios)
+function esMiembro(g, name) {
+  if (!g || !name) return false;
+  var n = String(name).trim().toLowerCase();
+  return (Array.isArray(g.members) ? g.members : [])
+    .some(function(m){ return String(m).trim().toLowerCase() === n; });
 }
 
 // ¿Este nombre soy yo? (comparación tolerante: mayúsculas y espacios)
@@ -5332,6 +5433,7 @@ function maybeShowWelcome() {
 async function init() {
   loadTheme();
   updateHomeButtons(homeStyle());
+  buildHomeGidSelect();
   DB = { groups: [], v: 0 };
   setActiveNav('home');
 
