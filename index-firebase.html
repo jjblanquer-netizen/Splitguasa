@@ -723,6 +723,74 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
 .stats-grid.cols3 .stat-box { padding: 11px 6px; text-align: center; }
 .stats-grid.cols3 .stat-val { font-size: 15px; }
 .stats-grid.cols3 .stat-lbl { font-size: 9.5px; letter-spacing: .3px; }
+
+/* ── Casillas del código de acceso (6 huecos) ── */
+.code-boxes { display: flex; gap: 8px; justify-content: center; }
+.code-box {
+  width: 44px; height: 56px;
+  background: var(--s2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+  font-family: var(--ff-head);
+  font-weight: 800;
+  font-size: 23px;
+  color: var(--txt);
+  text-transform: uppercase;
+  caret-color: var(--acc);
+  transition: border-color .15s, background .15s;
+}
+.code-box:focus { outline: none; border-color: var(--acc); background: rgba(94,234,212,.07); }
+.code-box.err   { border-color: var(--acc3); background: rgba(251,113,133,.07); }
+@media (max-width: 360px) { .code-box { width: 38px; height: 50px; font-size: 20px; } }
+
+/* ── Selector de rol (Estándar / Administrador) ── */
+.role-btn {
+  flex: 1;
+  padding: 13px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--s2);
+  color: var(--muted2);
+  font-family: var(--ff-head);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.role-btn.on {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #04221d;
+}
+
+/* ── Tarjeta de perfil destacada en Ajustes ── */
+.profile-card {
+  background: linear-gradient(135deg, #0f2420 0%, #16233d 100%);
+  border: 1px solid rgba(94,234,212,.2);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 4px;
+}
+body.light .profile-card {
+  background: linear-gradient(135deg, #e6f7f4 0%, #eef1f8 100%);
+  border-color: rgba(13,148,136,.2);
+}
+.profile-actions { display: flex; gap: 9px; margin-top: 14px; }
+.profile-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 11px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  color: var(--txt2);
+  font-family: var(--ff-head);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.profile-btn:active { transform: scale(.97); }
 </style>
 </head>
 <body>
@@ -862,6 +930,83 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
   </div>
 </div>
 
+<!-- ══ MODAL: EDITAR PERFIL DE USUARIO (admin) ══ -->
+<div class="modal-bg" id="m-edit-profile" onclick="closeOut(event,'m-edit-profile')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="text-align:center">Editar perfil</div>
+
+    <div id="ep-avatar" class="avatar" style="width:66px;height:66px;margin:6px auto 20px;font-size:26px"></div>
+
+    <div class="field">
+      <label>Nombre</label>
+      <input id="ep-name" type="text" autocomplete="off" autocapitalize="words" placeholder="Nombre">
+    </div>
+
+    <div class="field">
+      <label>Código de acceso (6 caracteres)</label>
+      <div style="display:flex;gap:8px">
+        <input id="ep-code" type="text" maxlength="6" autocomplete="off" autocapitalize="characters"
+               placeholder="ABC123"
+               style="flex:1;font-family:var(--ff-head);font-weight:800;font-size:19px;letter-spacing:4px;text-transform:uppercase;text-align:center">
+        <button onclick="regenCode()" title="Generar nuevo código"
+                style="background:var(--s2);border:1px solid var(--border);color:var(--acc);border-radius:11px;padding:0 15px;cursor:pointer;font-size:17px">🎲</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5">Este es el código que la persona usará para entrar. Compártelo solo con ella.</p>
+    </div>
+
+    <div class="field" id="ep-role-field">
+      <label>Rol</label>
+      <div style="display:flex;gap:9px">
+        <button id="ep-role-user" onclick="setEpRole('user')" class="role-btn">Estándar</button>
+        <button id="ep-role-admin" onclick="setEpRole('admin')" class="role-btn">Administrador</button>
+      </div>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5">Los administradores pueden crear y borrar amigos y grupos, y cambiar roles.</p>
+    </div>
+
+    <button id="ep-share" onclick="shareAccess()"
+            style="width:100%;margin-top:4px;margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:9px;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.35);color:var(--acc4);font-family:var(--ff-head);font-weight:700;font-size:14px;padding:13px;border-radius:12px;cursor:pointer">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Enviar acceso a esta persona
+    </button>
+
+    <button class="btn-primary" onclick="saveProfile()">Guardar</button>
+    <button class="btn-secondary" style="width:100%;margin-top:9px" onclick="closeModal('m-edit-profile')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CAMBIAR DE USUARIO (por código) ══ -->
+<div class="modal-bg" id="m-code-switch" onclick="closeOut(event,'m-code-switch')">
+  <div class="sheet" style="text-align:center">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="text-align:center">🔑 Cambiar de usuario</div>
+    <p style="font-size:13.5px;color:var(--muted2);margin-bottom:20px;line-height:1.5">Introduce el código del usuario<br>con el que quieres entrar.</p>
+    <div class="code-boxes" id="switch-code-boxes"></div>
+    <div id="switch-code-err" style="display:none;color:var(--acc3);font-size:13px;margin-top:12px;line-height:1.5"></div>
+    <button class="btn-primary" style="margin-top:20px" onclick="submitCode('switch')">Entrar</button>
+    <button class="btn-secondary" style="width:100%;margin-top:9px" onclick="closeModal('m-code-switch')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: HISTORIAL DE ACTIVIDAD ══ -->
+<div class="modal-bg" id="m-history" onclick="closeOut(event,'m-history')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🕐 Historial de actividad</div>
+
+    <div class="rep-filters" id="history-tabs" style="display:none;margin-bottom:12px">
+      <button class="rep-filter on" id="hist-tab-me"  onclick="toggleLogScope(false)">Solo yo</button>
+      <button class="rep-filter"    id="hist-tab-all" onclick="toggleLogScope(true)">Todos</button>
+    </div>
+
+    <div id="history-list" style="max-height:58vh;overflow-y:auto;margin-bottom:14px"></div>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-history')">Cerrar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
 <!-- ══ MODAL: OCULTAR GRUPOS (admin) ══ -->
 <div class="modal-bg" id="m-hide-groups" onclick="closeOut(event,'m-hide-groups')">
   <div class="sheet">
@@ -989,13 +1134,28 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
     </div>
 
     <div class="sec-lbl" style="margin-top:18px">Tu perfil</div>
-    <div class="card" id="settings-me-card" onclick="openMeSelector()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
-      <div id="settings-me-avatar" class="avatar" style="width:44px;height:44px;flex-shrink:0"></div>
-      <div style="flex:1;min-width:0">
-        <div id="settings-me-name" style="font-weight:700;font-size:15px;color:var(--txt)">Sin identificar</div>
-        <div id="settings-me-sub" style="font-size:12px;color:var(--muted2);margin-top:1px">Toca para elegir quién eres</div>
+    <div class="profile-card" id="settings-me-card">
+      <div style="display:flex;align-items:center;gap:13px">
+        <div id="settings-me-avatar" class="avatar" style="width:54px;height:54px;flex-shrink:0;font-size:21px"></div>
+        <div style="flex:1;min-width:0">
+          <div id="settings-me-name" style="font-family:var(--ff-head);font-weight:800;font-size:20px;color:var(--txt);line-height:1.2">Sin identificar</div>
+          <div id="settings-me-sub" style="font-size:12.5px;color:var(--muted2);margin-top:3px">Introduce tu código para entrar</div>
+        </div>
+        <button id="settings-me-edit" onclick="openEditProfile(myName())" title="Editar perfil"
+                style="display:none;width:38px;height:38px;flex-shrink:0;border-radius:11px;border:1px solid var(--border);background:var(--s2);color:var(--txt2);cursor:pointer;align-items:center;justify-content:center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
       </div>
-      <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+      <div class="profile-actions">
+        <button class="profile-btn" onclick="openCodeModal('switch')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Cambiar de usuario
+        </button>
+        <button class="profile-btn" onclick="manualSync()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sincronizar
+        </button>
+      </div>
     </div>
 
     <div id="admin-groups-sec" style="display:none">
@@ -1019,16 +1179,19 @@ body.light .rep-filter.on { background: rgba(13,148,136,.12); }
         <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
       </div>
 
-      <div class="card" onclick="changeAdminPin()" style="cursor:pointer;display:flex;align-items:center;gap:12px;margin-top:9px">
-        <div style="width:42px;height:42px;border-radius:12px;background:rgba(129,140,248,.14);border:1px solid rgba(129,140,248,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc4)">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-        </div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:700;font-size:15px;color:var(--txt)">Cambiar PIN</div>
-          <div style="font-size:12px;color:var(--muted2);margin-top:1px">Clave de acceso de administrador</div>
-        </div>
-        <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
+      
+    </div>
+
+    <div class="sec-lbl" style="margin-top:18px">Historial</div>
+    <div class="card" onclick="openHistory()" style="cursor:pointer;display:flex;align-items:center;gap:12px">
+      <div style="width:42px;height:42px;border-radius:12px;background:rgba(94,234,212,.12);border:1px solid rgba(94,234,212,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--acc)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:15px;color:var(--txt)">Mi actividad</div>
+        <div id="history-sub" style="font-size:12px;color:var(--muted2);margin-top:1px">Todo lo que has hecho en la app</div>
+      </div>
+      <span style="color:var(--muted);font-size:20px;flex-shrink:0">›</span>
     </div>
 
     <div class="sec-lbl" style="margin-top:18px">Compartir</div>
@@ -1264,7 +1427,36 @@ function mergeDB(remote, local) {
 
   var result = { v: Math.max(remote.v||0, local.v||0), ts: Date.now(), deleted: Object.keys(deleted) };
 
-  // ── PIN de administrador ──
+  // ── Códigos y roles de usuario (DB.people) ──
+  // Fusionar por nombre: gana el local si existe (es quien acaba de editar).
+  var pm = {};
+  var rp = (remote.people && typeof remote.people === 'object') ? remote.people : {};
+  var lp = (local.people  && typeof local.people  === 'object') ? local.people  : {};
+  Object.keys(rp).forEach(function(n){ if (!deleted['fr:' + n]) pm[n] = rp[n]; });
+  Object.keys(lp).forEach(function(n){
+    if (deleted['fr:' + n]) return;
+    var l = lp[n] || {}, r = rp[n] || {};
+    pm[n] = {
+      // El código del SERVIDOR manda si ya existía (para que no lo pise un móvil
+      // que acaba de generar el suyo). Solo se cambia editando el perfil, y en
+      // ese caso el local ya lleva el código nuevo y el servidor el viejo:
+      // por eso comparamos con el que teníamos cargado.
+      code: (r.code && !l.codeEdited) ? r.code : (l.code || r.code || ''),
+      role: (l.role === 'admin' || l.role === 'user') ? l.role : (r.role || 'user')
+    };
+  });
+  result.people = pm;
+
+  // ── Historial: unión por id, ordenado, quedándonos con las más recientes ──
+  var logById = {};
+  (Array.isArray(remote.log) ? remote.log : []).forEach(function(e){ if (e && e.id) logById[e.id] = e; });
+  (Array.isArray(local.log)  ? local.log  : []).forEach(function(e){ if (e && e.id) logById[e.id] = e; });
+  var merged = Object.keys(logById).map(function(k){ return logById[k]; });
+  merged.sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
+  if (merged.length > LOG_MAX) merged = merged.slice(merged.length - LOG_MAX);
+  result.log = merged;
+
+  // ── PIN de administrador (heredado, ya no se usa) ──
   // Gana el que tenga la marca de tiempo MÁS RECIENTE. Así un dispositivo con
   // datos viejos no puede pisar el PIN real, pero un cambio legítimo sí se propaga.
   var lts = local.adminPinTs || 0;
@@ -1361,6 +1553,8 @@ async function sync(silent = false) {
         if (!Array.isArray(DB.groups))  DB.groups  = [];
         if (!Array.isArray(DB.friends)) DB.friends = [];
         if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
+        if (!Array.isArray(DB.log)) DB.log = [];
+      if (!Array.isArray(DB.log)) DB.log = [];
         DB.groups.forEach(function(g) {
           if (!Array.isArray(g.expenses))    g.expenses    = [];
           if (!Array.isArray(g.members))     g.members     = [];
@@ -1390,6 +1584,7 @@ async function manualSync() {
       if (!Array.isArray(DB.groups))  DB.groups  = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
       if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
+      if (!Array.isArray(DB.log)) DB.log = [];
       DB.groups.forEach(g => {
         if (!Array.isArray(g.expenses))    g.expenses    = [];
         if (!Array.isArray(g.members))     g.members     = [];
@@ -1431,146 +1626,100 @@ function save() {
 
 
 // ════════════════════════════════════════════
-// ADMINISTRADOR (Jota) + PIN
+// USUARIOS: CÓDIGO DE ACCESO + ROL
 // ────────────────────────────────────────────
-// NOTA: la app es HTML público y la base de datos es abierta, así que esto
-// NO es seguridad real: es un candado para evitar cambios accidentales.
+// Cada persona tiene un código de 6 caracteres (mayúsculas + números) y un rol
+// (estándar o administrador). El código sustituye al antiguo PIN: te identifica.
+// NOTA: la app es HTML público y la BD abierta → esto NO es seguridad real,
+// es un candado para evitar suplantaciones accidentales entre amigos.
 // ════════════════════════════════════════════
-const ADMIN_NAME = 'Jota';
+const ADMIN_NAME = 'Jota';          // administrador por defecto al migrar
+const CODE_LEN   = 6;
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';  // sin O/0/I/1 (se confunden)
 
-// Hash sencillo del PIN: evita guardarlo en claro en la base de datos.
-function hashPin(pin) {
-  var h = 5381;
-  var s = String(pin);
-  for (var i = 0; i < s.length; i++) {
-    h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
-  }
-  return 'p' + h.toString(36);
+// Mapa de metadatos por nombre: DB.people = { "Jota": {code:"AB3K9Z", role:"admin"} }
+function peopleMap() {
+  if (!DB.people || typeof DB.people !== 'object' || Array.isArray(DB.people)) DB.people = {};
+  return DB.people;
+}
+function getPerson(name) {
+  var m = peopleMap();
+  return m[name] || null;
+}
+function personCode(name) {
+  var p = getPerson(name);
+  return p && p.code ? p.code : '';
+}
+function personRole(name) {
+  var p = getPerson(name);
+  return p && p.role === 'admin' ? 'admin' : 'user';
 }
 
-// ¿El usuario identificado es el administrador (por nombre)?
-function isAdminUser() {
-  var me = myName();
-  return !!me && me.trim().toLowerCase() === ADMIN_NAME.toLowerCase();
-}
+// Genera un código único de 6 caracteres
+function genCode() {
+  var m = peopleMap();
+  var usados = {};
+  Object.keys(m).forEach(function(n){ if (m[n] && m[n].code) usados[m[n].code] = true; });
 
-// ¿Hay PIN configurado en la base de datos (según lo que tenemos cargado)?
-function hasAdminPin() {
-  return !!(DB && DB.adminPin);
-}
-
-// Consulta el PIN REAL directamente al servidor.
-// CRÍTICO: sin esto, un móvil que aún no ha sincronizado creería que no hay PIN
-// y permitiría crear uno nuevo, pisando el verdadero.
-// Devuelve: { ok:true, pin:<hash|null> }  o  { ok:false } si no hay conexión.
-async function fetchServerPin() {
-  try {
-    var remote = await fbRead();
-    if (remote && typeof remote === 'object') {
-      // Guardar lo que diga el servidor en nuestra copia local
-      if (remote.adminPin) {
-        DB.adminPin   = remote.adminPin;
-        DB.adminPinTs = remote.adminPinTs || 0;
-      }
-      return { ok: true, pin: remote.adminPin || null };
+  for (var intento = 0; intento < 200; intento++) {
+    var c = '';
+    for (var i = 0; i < CODE_LEN; i++) {
+      c += CODE_CHARS.charAt(Math.floor(Math.random() * CODE_CHARS.length));
     }
-    return { ok: true, pin: null };
-  } catch (e) {
-    return { ok: false };
+    if (!usados[c]) return c;
   }
+  return 'X' + Date.now().toString(36).toUpperCase().slice(-5);   // salvavidas
 }
 
-// ¿Este dispositivo ha desbloqueado el modo administrador?
-function adminUnlocked() {
-  try { return localStorage.getItem('sg_admin_ok') === '1'; } catch(e) { return false; }
-}
-function setAdminUnlocked(v) {
-  try {
-    if (v) localStorage.setItem('sg_admin_ok', '1');
-    else   localStorage.removeItem('sg_admin_ok');
-  } catch(e) {}
+// ¿A quién pertenece este código?
+function findByCode(code) {
+  var c = String(code || '').trim().toUpperCase();
+  if (c.length !== CODE_LEN) return null;
+  var m = peopleMap();
+  var found = null;
+  Object.keys(m).forEach(function(n) {
+    if (m[n] && m[n].code === c) found = n;
+  });
+  // Solo vale si sigue siendo un amigo activo
+  if (found && getFriends().indexOf(found) < 0) return null;
+  return found;
 }
 
-// Permiso efectivo: es Jota Y ha introducido el PIN en este dispositivo
+// Asegura que TODOS los amigos tengan código y rol.
+// Los usuarios antiguos (sin código) reciben uno automáticamente.
+function ensurePeople() {
+  var m = peopleMap();
+  var cambios = false;
+  getFriends().forEach(function(n) {
+    if (!m[n] || typeof m[n] !== 'object') { m[n] = {}; cambios = true; }
+    if (!m[n].code) { m[n].code = genCode(); cambios = true; }
+    if (m[n].role !== 'admin' && m[n].role !== 'user') {
+      // Jota es administrador por defecto; el resto, estándar
+      m[n].role = (n.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) ? 'admin' : 'user';
+      cambios = true;
+    }
+  });
+  // Si nadie es administrador, ascender a Jota (o al primero de la lista)
+  var hayAdmin = Object.keys(m).some(function(n){ return m[n] && m[n].role === 'admin'; });
+  if (!hayAdmin) {
+    var fr = getFriends();
+    var cand = fr.filter(function(n){ return n.trim().toLowerCase() === ADMIN_NAME.toLowerCase(); })[0] || fr[0];
+    if (cand) { m[cand].role = 'admin'; cambios = true; }
+  }
+  return cambios;
+}
+
+// ¿El usuario identificado es administrador?
 function isAdmin() {
-  return isAdminUser() && adminUnlocked();
-}
-
-// Crear el PIN por primera vez
-function createAdminPin() {
-  var p1 = prompt('Eres el administrador.\nCrea un PIN (4-8 dígitos):');
-  if (p1 === null) return false;
-  p1 = String(p1).trim();
-  if (!/^\d{4,8}$/.test(p1)) { toast('⚠️ El PIN debe tener entre 4 y 8 dígitos'); return false; }
-  var p2 = prompt('Repite el PIN para confirmar:');
-  if (p2 === null) return false;
-  if (String(p2).trim() !== p1) { toast('⚠️ Los PIN no coinciden'); return false; }
-  DB.adminPin   = hashPin(p1);
-  DB.adminPinTs = Date.now();
-  setAdminUnlocked(true);
-  save();
-  toast('🔐 PIN creado. Ya eres administrador.');
-  return true;
-}
-
-// Pedir el PIN para desbloquear
-function askAdminPin() {
-  var p = prompt('Introduce el PIN de administrador:');
-  if (p === null) return false;
-  if (hashPin(String(p).trim()) !== DB.adminPin) {
-    toast('⚠️ PIN incorrecto');
-    return false;
-  }
-  setAdminUnlocked(true);
-  toast('🔓 Modo administrador activado');
-  return true;
-}
-
-
-// Flujo de acceso como administrador: SIEMPRE consulta el servidor primero.
-// Devuelve true si el usuario queda autenticado como admin.
-async function adminLoginFlow() {
-  var res = await fetchServerPin();
-
-  if (!res.ok) {
-    // Sin conexión: no podemos verificar. Si no tenemos PIN guardado, no
-    // permitimos crear uno (evita que alguien sin red se haga administrador).
-    if (!hasAdminPin()) {
-      toast('⚠️ Sin conexión: no se puede verificar el administrador');
-      return false;
-    }
-    return askAdminPin();   // usamos el PIN que ya conocíamos
-  }
-
-  if (res.pin) {
-    return askAdminPin();   // ya existe en el servidor → pedirlo
-  }
-  return createAdminPin();  // no existe en NINGÚN sitio → crearlo
-}
-
-// Cambiar el PIN (solo el administrador, desde Ajustes)
-function changeAdminPin() {
-  if (!isAdmin()) { toast('⚠️ Solo el administrador puede cambiar el PIN'); return; }
-  var actual = prompt('PIN actual:');
-  if (actual === null) return;
-  if (hashPin(String(actual).trim()) !== DB.adminPin) { toast('⚠️ PIN incorrecto'); return; }
-  var nuevo = prompt('Nuevo PIN (4-8 dígitos):');
-  if (nuevo === null) return;
-  nuevo = String(nuevo).trim();
-  if (!/^\d{4,8}$/.test(nuevo)) { toast('⚠️ El PIN debe tener entre 4 y 8 dígitos'); return; }
-  var rep = prompt('Repite el nuevo PIN:');
-  if (rep === null) return;
-  if (String(rep).trim() !== nuevo) { toast('⚠️ Los PIN no coinciden'); return; }
-  DB.adminPin   = hashPin(nuevo);
-  DB.adminPinTs = Date.now();
-  save();
-  toast('🔐 PIN actualizado');
+  var me = myName();
+  return !!me && personRole(me) === 'admin';
 }
 
 // Aviso estándar al intentar una acción reservada
 function denyNotAdmin() {
-  toast('🔒 Solo ' + ADMIN_NAME + ' (administrador) puede hacer esto');
+  toast('🔒 Solo un administrador puede hacer esto');
 }
+
 
 
 // ════════════════════════════════════════════
@@ -1654,30 +1803,423 @@ function applyAdminUI() {
   // Aviso para los no administradores en la pantalla Amigos
   var note = document.getElementById('friends-admin-note');
   if (note) note.style.display = admin ? 'none' : 'block';
+
+  // Historial: el administrador puede ver la actividad de todos
+  var hs = document.getElementById('history-sub');
+  if (hs) hs.textContent = admin
+    ? 'Tu actividad y la de todos los usuarios'
+    : 'Todo lo que has hecho en la app';
+}
+
+
+
+// ════════════════════════════════════════════
+// HISTORIAL DE ACTIVIDAD
+// ────────────────────────────────────────────
+// Registra QUIÉN hace cada cosa (crear/editar/borrar gastos, marcar pagos,
+// crear grupos, gestionar amigos...). Antes no se guardaba nada de esto, así
+// que el historial empieza a partir de ahora.
+// ════════════════════════════════════════════
+const LOG_MAX = 400;   // se conservan las últimas 400 acciones
+
+function logList() {
+  if (!Array.isArray(DB.log)) DB.log = [];
+  return DB.log;
+}
+
+// Registra una acción. Se llama ANTES de save().
+function logAction(icon, texto, gid) {
+  var me = myName();
+  if (!me) return;                      // sin identificar, no se registra
+  var l = logList();
+  l.push({
+    id:   'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    ts:   Date.now(),
+    who:  me,
+    icon: icon,
+    txt:  texto,
+    gid:  gid || ''
+  });
+  // Recortar: quedarse con las más recientes
+  if (l.length > LOG_MAX) {
+    l.sort(function(a,b){ return (a.ts||0) - (b.ts||0); });
+    DB.log = l.slice(l.length - LOG_MAX);
+  }
+}
+
+// "hace 5 min", "ayer 18:30", "12 jul 14:05"
+function logWhen(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  var ahora = Date.now();
+  var difMin = Math.floor((ahora - ts) / 60000);
+
+  if (difMin < 1)  return 'ahora mismo';
+  if (difMin < 60) return 'hace ' + difMin + ' min';
+
+  var hh = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var dia = new Date(ts); dia.setHours(0,0,0,0);
+  var difDias = Math.round((hoy - dia) / 86400000);
+
+  if (difDias === 0) return 'hoy ' + hh;
+  if (difDias === 1) return 'ayer ' + hh;
+
+  var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return d.getDate() + ' ' + meses[d.getMonth()] + ' ' + hh;
+}
+
+var logShowAll = false;   // el admin puede alternar entre "solo yo" y "todos"
+
+function openHistory() {
+  logShowAll = false;
+  renderHistory();
+  openModal('m-history');
+}
+
+function toggleLogScope(all) {
+  if (all && !isAdmin()) { denyNotAdmin(); return; }
+  logShowAll = !!all;
+  renderHistory();
+}
+
+function renderHistory() {
+  var cont = document.getElementById('history-list');
+  var tabs = document.getElementById('history-tabs');
+  if (!cont) return;
+
+  // Las pestañas "Solo yo / Todos" solo tienen sentido para el administrador
+  if (tabs) tabs.style.display = isAdmin() ? 'flex' : 'none';
+  var bMe  = document.getElementById('hist-tab-me');
+  var bAll = document.getElementById('hist-tab-all');
+  if (bMe)  bMe.className  = 'rep-filter' + (!logShowAll ? ' on' : '');
+  if (bAll) bAll.className = 'rep-filter' + (logShowAll  ? ' on' : '');
+
+  var me = myName();
+  var todos = logList().slice();
+  var items = (isAdmin() && logShowAll)
+      ? todos
+      : todos.filter(function(e){ return e && isMe(e.who); });
+
+  items.sort(function(a,b){ return (b.ts||0) - (a.ts||0); });   // lo más reciente arriba
+
+  if (!items.length) {
+    cont.innerHTML = '<div class="empty" style="padding:26px 10px">' +
+      '<div class="empty-icon">🕐</div>' +
+      '<p>Todavía no hay actividad registrada.</p>' +
+      '<p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5">El historial se empieza a guardar desde ahora:<br>gastos, pagos, grupos y cambios de amigos.</p>' +
+      '</div>';
+    return;
+  }
+
+  var h = '';
+  items.forEach(function(e) {
+    var g = (Array.isArray(DB.groups) ? DB.groups : []).filter(function(x){ return x.id === e.gid; })[0];
+    var mio = isMe(e.who);
+    h += '<div style="display:flex;gap:11px;padding:11px 2px;border-bottom:1px solid var(--border)">';
+    h += '<div style="width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">' + esc(e.icon || '•') + '</div>';
+    h += '<div style="flex:1;min-width:0">';
+    h += '<div style="font-size:13.5px;color:var(--txt);line-height:1.45">' + esc(e.txt || '') + '</div>';
+    h += '<div style="font-size:11.5px;color:var(--muted);margin-top:3px">';
+    if (!mio) {
+      h += '<span style="color:' + avc(e.who) + ';font-weight:700">' + esc(e.who) + '</span> · ';
+    }
+    h += logWhen(e.ts);
+    if (g) h += ' · ' + esc(g.emoji || '') + ' ' + esc(g.name);
+    h += '</div></div></div>';
+  });
+  cont.innerHTML = h;
+}
+
+// ════════════════════════════════════════════
+// CASILLAS DEL CÓDIGO (6 huecos)
+// ════════════════════════════════════════════
+function buildCodeBoxes(contId) {
+  var cont = document.getElementById(contId);
+  if (!cont) return;
+  var h = '';
+  for (var i = 0; i < CODE_LEN; i++) {
+    h += '<input class="code-box" type="text" inputmode="text" maxlength="1" autocomplete="off" ' +
+         'autocapitalize="characters" spellcheck="false" data-i="' + i + '">';
+  }
+  cont.innerHTML = h;
+
+  var boxes = cont.querySelectorAll('.code-box');
+  boxes.forEach(function(box, i) {
+    box.addEventListener('input', function() {
+      box.value = box.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      boxes.forEach(function(b){ b.classList.remove('err'); });
+      if (box.value && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', function(ev) {
+      if (ev.key === 'Backspace' && !box.value && i > 0) boxes[i - 1].focus();
+      if (ev.key === 'Enter') submitCode(contId.indexOf('welcome') >= 0 ? 'welcome' : 'switch');
+    });
+    // Pegar el código entero
+    box.addEventListener('paste', function(ev) {
+      ev.preventDefault();
+      var txt = (ev.clipboardData || window.clipboardData).getData('text') || '';
+      txt = txt.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LEN);
+      for (var k = 0; k < txt.length && k < boxes.length; k++) boxes[k].value = txt.charAt(k);
+      if (txt.length) boxes[Math.min(txt.length, boxes.length - 1)].focus();
+    });
+  });
+}
+
+function readCode(contId) {
+  var cont = document.getElementById(contId);
+  if (!cont) return '';
+  var out = '';
+  cont.querySelectorAll('.code-box').forEach(function(b){ out += (b.value || ''); });
+  return out.toUpperCase();
+}
+
+function clearCode(contId) {
+  var cont = document.getElementById(contId);
+  if (!cont) return;
+  cont.querySelectorAll('.code-box').forEach(function(b){ b.value = ''; b.classList.remove('err'); });
+}
+
+function markCodeError(contId, errId, msg) {
+  var cont = document.getElementById(contId);
+  if (cont) cont.querySelectorAll('.code-box').forEach(function(b){ b.classList.add('err'); });
+  var e = document.getElementById(errId);
+  if (e) { e.innerHTML = msg; e.style.display = 'block'; }
+}
+
+// Abre el modal del código: modo 'welcome' (primera vez) o 'switch' (cambiar)
+function openCodeModal(modo) {
+  if (modo === 'welcome') {
+    buildCodeBoxes('welcome-code-boxes');
+    clearCode('welcome-code-boxes');
+    var we = document.getElementById('welcome-code-err');
+    if (we) we.style.display = 'none';
+    openModal('m-welcome');
+    setTimeout(function(){
+      var f = document.querySelector('#welcome-code-boxes .code-box');
+      if (f) f.focus();
+    }, 250);
+  } else {
+    buildCodeBoxes('switch-code-boxes');
+    clearCode('switch-code-boxes');
+    var se = document.getElementById('switch-code-err');
+    if (se) se.style.display = 'none';
+    openModal('m-code-switch');
+    setTimeout(function(){
+      var f = document.querySelector('#switch-code-boxes .code-box');
+      if (f) f.focus();
+    }, 250);
+  }
+}
+
+// Valida el código introducido y asigna el usuario
+async function submitCode(modo) {
+  var boxId = modo === 'welcome' ? 'welcome-code-boxes' : 'switch-code-boxes';
+  var errId = modo === 'welcome' ? 'welcome-code-err'   : 'switch-code-err';
+  var code  = readCode(boxId);
+
+  if (code.length !== CODE_LEN) {
+    markCodeError(boxId, errId, 'Escribe los ' + CODE_LEN + ' caracteres del código.');
+    return;
+  }
+
+  // Releer del servidor: el admin puede haber creado o cambiado códigos hace un momento
+  try {
+    var remote = await fbRead();
+    if (remote && typeof remote === 'object') {
+      var fresh = migrateSettlements(remote);
+      if (fresh && fresh.people) DB.people = fresh.people;
+      if (fresh && Array.isArray(fresh.friends)) DB.friends = fresh.friends;
+    }
+  } catch (e) { /* sin conexión: usamos lo que tengamos */ }
+
+  var name = findByCode(code);
+  if (!name) {
+    markCodeError(boxId, errId, '❌ Código incorrecto.<br>Habla con el administrador.');
+    return;
+  }
+
+  setName(name);
+  closeModal(modo === 'welcome' ? 'm-welcome' : 'm-code-switch');
+  clearCode(boxId);
+  renderSettingsMe();
+  renderAll();
+  toast('👋 ¡Hola, ' + name + '!');
+}
+
+
+// Comparte el enlace de la app + el código de acceso de esa persona.
+// Usa el nombre y el código que hay AHORA en los campos, así puedes
+// regenerar el código y enviarlo sin guardar primero.
+async function shareAccess() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+
+  var nombre = (document.getElementById('ep-name').value || '').trim() || epTarget || '';
+  var codigo = (document.getElementById('ep-code').value || '').trim().toUpperCase();
+
+  if (!/^[A-Z0-9]{6}$/.test(codigo)) {
+    toast('⚠️ El código debe tener 6 caracteres');
+    return;
+  }
+
+  var texto =
+    '💸 ¡Hola' + (nombre ? ', ' + nombre : '') + '! Te uno a SplitGuasa, ' +
+    'la app donde llevamos los gastos del grupo.\n\n' +
+    '1️⃣ Abre este enlace:\n' + APP_URL + '\n\n' +
+    '2️⃣ Introduce tu código de acceso:\n' + codigo + '\n\n' +
+    'Un Lannister siempre paga sus deudas 😉';
+
+  // 1) Menú nativo del móvil (WhatsApp, Telegram…)
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Tu acceso a SplitGuasa', text: texto });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;   // el usuario canceló
+    }
+  }
+
+  // 2) Escritorio: copiar al portapapeles
+  try {
+    await navigator.clipboard.writeText(texto);
+    toast('🔗 Mensaje copiado — pégalo donde quieras');
+    return;
+  } catch (e) {}
+
+  // 3) Último recurso
+  prompt('Copia este mensaje para ' + (nombre || 'la persona') + ':', texto);
+}
+
+// ════════════════════════════════════════════
+// EDITAR PERFIL (nombre · código · rol)
+// ════════════════════════════════════════════
+var epTarget = null;   // persona en edición
+var epRole   = 'user';
+
+function openEditProfile(name) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  if (!name) return;
+
+  ensurePeople();
+  epTarget = name;
+  epRole   = personRole(name);
+
+  var av = document.getElementById('ep-avatar');
+  if (av) {
+    av.textContent = name.charAt(0).toUpperCase();
+    av.style.background = avc(name);
+  }
+  var inN = document.getElementById('ep-name');
+  var inC = document.getElementById('ep-code');
+  if (inN) inN.value = name;
+  if (inC) inC.value = personCode(name);
+
+  paintEpRole();
+  openModal('m-edit-profile');
+}
+
+function setEpRole(r) {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  epRole = (r === 'admin') ? 'admin' : 'user';
+  paintEpRole();
+}
+
+function paintEpRole() {
+  var bu = document.getElementById('ep-role-user');
+  var ba = document.getElementById('ep-role-admin');
+  if (bu) bu.className = 'role-btn' + (epRole === 'user'  ? ' on' : '');
+  if (ba) ba.className = 'role-btn' + (epRole === 'admin' ? ' on' : '');
+}
+
+function regenCode() {
+  var inC = document.getElementById('ep-code');
+  if (inC) inC.value = genCode();
+}
+
+function saveProfile() {
+  if (!isAdmin()) { denyNotAdmin(); return; }
+  if (!epTarget) return;
+
+  var nuevo  = (document.getElementById('ep-name').value || '').trim();
+  var codigo = (document.getElementById('ep-code').value || '').trim().toUpperCase();
+
+  if (!nuevo) { toast('⚠️ El nombre no puede estar vacío'); return; }
+  if (!/^[A-Z0-9]{6}$/.test(codigo)) {
+    toast('⚠️ El código debe tener 6 caracteres (letras y números)');
+    return;
+  }
+
+  // El código no puede repetirse
+  var m = peopleMap();
+  var repetido = Object.keys(m).some(function(n) {
+    return n !== epTarget && m[n] && m[n].code === codigo;
+  });
+  if (repetido) { toast('⚠️ Ese código ya lo tiene otra persona'); return; }
+
+  // Nombre duplicado
+  if (nuevo !== epTarget && getFriends().some(function(f){ return f.toLowerCase() === nuevo.toLowerCase(); })) {
+    toast('⚠️ Ya existe alguien con ese nombre');
+    return;
+  }
+
+  // No dejar la app sin ningún administrador
+  if (epRole !== 'admin' && personRole(epTarget) === 'admin') {
+    var otrosAdmins = getFriends().filter(function(n) {
+      return n !== epTarget && personRole(n) === 'admin';
+    });
+    if (!otrosAdmins.length) {
+      toast('⚠️ Debe quedar al menos un administrador');
+      return;
+    }
+  }
+
+  // codeEdited: marca que el admin ha fijado este código a propósito,
+  // para que el merge no lo reemplace por el que hubiera en el servidor.
+  var meta = { code: codigo, role: epRole, codeEdited: true };
+
+  // Si cambia el nombre, propagarlo a TODA la app (gastos, grupos, pagos…)
+  if (nuevo !== epTarget) {
+    renamePersonTo(epTarget, nuevo);
+    delete peopleMap()[epTarget];
+  }
+  peopleMap()[nuevo] = meta;
+
+  var cambios = [];
+  if (nuevo !== epTarget) cambios.push('nombre → ' + nuevo);
+  if (codigo !== personCode(epTarget)) cambios.push('código');
+  if (epRole !== personRole(epTarget)) cambios.push('rol → ' + (epRole === 'admin' ? 'Administrador' : 'Estándar'));
+  logAction('⚙️', 'Editó el perfil de ' + epTarget + (cambios.length ? ' (' + cambios.join(', ') + ')' : ''), '');
+
+  epTarget = null;
+  save();
+  closeModal('m-edit-profile');
+  renderYoModal();
+  renderSettingsMe();
+  renderAll();
+  toast('✅ Perfil actualizado');
 }
 
 function renderSettingsMe() {
-  // Actualiza la tarjeta compacta de "Tu perfil" en Ajustes
   var me = myName();
-  var avatar = document.getElementById('settings-me-avatar');
-  var nameEl = document.getElementById('settings-me-name');
-  var subEl = document.getElementById('settings-me-sub');
-  if (!avatar || !nameEl) return;
+  var av = document.getElementById('settings-me-avatar');
+  var nm = document.getElementById('settings-me-name');
+  var sb = document.getElementById('settings-me-sub');
+  var ed = document.getElementById('settings-me-edit');
+
   if (me) {
-    var col = avc(me);
-    avatar.style.background = col + '22';
-    avatar.style.color = col;
-    avatar.textContent = ini(me);
-    avatar.style.display = 'flex';
-    nameEl.textContent = me;
-    if (subEl) subEl.textContent = 'Toca para cambiar';
+    if (av) { av.textContent = me.charAt(0).toUpperCase(); av.style.background = avc(me); }
+    if (nm) nm.textContent = me;
+    if (sb) {
+      var rol = personRole(me) === 'admin' ? '👑 Administrador' : 'Usuario estándar';
+      var cod = personCode(me);
+      sb.innerHTML = rol + (cod ? ' · <span style="font-family:var(--ff-head);letter-spacing:1px">' + esc(cod) + '</span>' : '');
+    }
+    if (ed) ed.style.display = isAdmin() ? 'flex' : 'none';
   } else {
-    avatar.style.background = 'var(--s3)';
-    avatar.style.color = 'var(--muted)';
-    avatar.textContent = '?';
-    avatar.style.display = 'flex';
-    nameEl.textContent = 'Sin identificar';
-    if (subEl) subEl.textContent = 'Toca para elegir quién eres';
+    if (av) { av.textContent = '?'; av.style.background = 'var(--s2)'; }
+    if (nm) nm.textContent = 'Sin identificar';
+    if (sb) sb.textContent = 'Introduce tu código para entrar';
+    if (ed) ed.style.display = 'none';
   }
 }
 
@@ -1709,41 +2251,9 @@ function renderMeSelectorList() {
   cont.innerHTML = h;
   cont.querySelectorAll('.me-sel-row').forEach(function(row) {
     row.addEventListener('click', function() {
-      var name = row.getAttribute('data-name');
-      var cur = myName();
-
-      // Deseleccionarse
-      if (cur && name.trim().toLowerCase() === cur.trim().toLowerCase()) {
-        setName('');
-        setAdminUnlocked(false);            // al salir, se pierde el modo admin
-        toast('Ya no estás identificado');
-        closeModal('m-me-selector');
-        renderSettingsMe();
-        renderAll();
-        return;
-      }
-
-      // Si eliges al ADMINISTRADOR, hace falta el PIN (se verifica en el servidor)
-      if (name.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) {
-        setName(name);
-        adminLoginFlow().then(function(ok) {
-          if (!ok) {
-            setName(cur || '');              // revertir si no supera el PIN
-            setAdminUnlocked(false);
-          }
-          closeModal('m-me-selector');
-          renderSettingsMe();
-          renderAll();
-        });
-        return;
-      }
-
-      setName(name);
-      setAdminUnlocked(false);               // los demás no son admin
-      toast('👋 Hola, ' + name);
+      // Cambiar de usuario requiere CÓDIGO: se pide en el modal de código
       closeModal('m-me-selector');
-      renderSettingsMe();
-      renderAll();
+      openCodeModal('switch');
     });
   });
 }
@@ -2194,6 +2704,9 @@ function togglePaid(gid, key) {
   // settled puede contener strings (formato viejo) u objetos {key,...}
   var i = settledIndex(g.settled, key);
   if (i >= 0) {
+    var ant = g.settled[i];
+    var pa = String(key).split('|');
+    logAction('↩️', 'Desmarcó el pago de ' + pa[0] + ' a ' + pa[1] + (ant && ant.amount ? ' (' + fmt(ant.amount) + ')' : ''), gid);
     g.settled.splice(i, 1);
     toast('↩️ Marcado como pendiente');
   } else {
@@ -2203,6 +2716,7 @@ function togglePaid(gid, key) {
     var txs = computeDebts(g);
     for (var k=0; k<txs.length; k++) { if (txs[k].key===key) { amount=txs[k].amount; break; } }
     g.settled.push({ key:key, from:parts[0], to:parts[1], amount:amount, date:tod() });
+    logAction('✅', 'Marcó como pagada la deuda de ' + parts[0] + ' a ' + parts[1] + ' (' + fmt(amount) + ')', gid);
     toast('✅ Marcado como pagado');
   }
   save();
@@ -2313,6 +2827,7 @@ function saveExpense() {
   if (!Array.isArray(targetGrp.expenses)) targetGrp.expenses = [];
 
   if (editExpenseId) {
+    logAction('✏️', 'Editó el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ')', g.id);
     // MODO EDICIÓN — actualizar gasto existente
     const idx = targetGrp.expenses.findIndex(e=>e.id===editExpenseId);
     if (idx >= 0) {
@@ -2326,6 +2841,7 @@ function saveExpense() {
     }
     editExpenseId = null;
   } else {
+    logAction('💸', 'Añadió el gasto "' + (desc || 'Sin descripción') + '" (' + fmt(amount) + ') pagado por ' + paidBy, g.id);
     // MODO NUEVO
     targetGrp.expenses.push({id:uid(),desc:desc||'Gasto',amount,paidBy,category:selCat,date,splitAmong,addedBy:myName(),addedAt:new Date().toISOString()});
     toast('💾 Gasto guardado');
@@ -2337,6 +2853,10 @@ function saveExpense() {
 function askDel(id) { pDelId=id; openModal('m-del'); }
 function confirmDel() {
   const g=grp(); if(!g||!pDelId) return;
+  const borrado = g.expenses.filter(e=>e.id===pDelId)[0];
+  if (borrado) {
+    logAction('🗑️', 'Borró el gasto "' + (borrado.desc || 'Sin descripción') + '" (' + fmt(borrado.amount||0) + ')', g.id);
+  }
   g.expenses=g.expenses.filter(e=>e.id!==pDelId);
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   DB.deleted.push('exp:'+pDelId);
@@ -2359,6 +2879,8 @@ function askDelGrp() {
 }
 function confirmDelGrp() {
   if (!pDelGid) return;
+  var borrado = DB.groups.filter(function(g){ return g.id===pDelGid; })[0];
+  if (borrado) logAction('🗑️', 'Borró el grupo "' + borrado.name + '"', '');
   DB.groups = DB.groups.filter(function(g){ return g.id!==pDelGid; });
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   DB.deleted.push('grp:'+pDelGid);
@@ -2986,20 +3508,25 @@ function addFriend() {
   const name = inp.value.trim();
   if (!name) return;
   if (!Array.isArray(DB.friends)) DB.friends = [];
-  if (DB.friends.includes(name)) {
-    toast('⚠️ ' + name + ' ya existe en Amigos');
-    inp.value = ''; return;
+  if (DB.friends.some(function(f){ return f.toLowerCase() === name.toLowerCase(); })) {
+    toast('⚠️ Ya existe ' + name);
+    return;
   }
   DB.friends.push(name);
-  // Revivirlo: limpiar su tombstone (local y, vía merge, también el del servidor)
+
+  // Código de acceso automático, único, y rol estándar
+  peopleMap()[name] = { code: genCode(), role: 'user' };
+  logAction('👤', 'Añadió a ' + name + ' como amigo', '');
+
   revivedFriends[name] = true;
   if (Array.isArray(DB.deleted)) {
     DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + name; });
   }
-  save();
   inp.value = '';
+  save();
   renderYoModal();
-  toast('✅ ' + name + ' añadido a Amigos');
+  renderAll();
+  toast('✅ ' + name + ' añadido · código ' + peopleMap()[name].code);
 }
 
 function friendKd(e) {
@@ -3009,73 +3536,55 @@ function friendKd(e) {
 // Borrar amigo de la lista maestra
 function renamePerson(oldName) {
   if (!isAdmin()) { denyNotAdmin(); return; }
-  var nuevo = prompt('Nuevo nombre para "' + oldName + '":', oldName);
-  if (nuevo === null) return;  // cancelado
-  nuevo = nuevo.trim();
-  if (!nuevo) { toast('⚠️ El nombre no puede estar vacío'); return; }
-  if (nuevo === oldName) return;  // sin cambios
+  openEditProfile(oldName);   // ahora se renombra desde el perfil
+}
 
-  // Comprobar que no existe ya otro amigo con ese nombre (case-insensitive)
-  var existe = getFriends().some(function(f){
-    return f.trim().toLowerCase() === nuevo.trim().toLowerCase() && f !== oldName;
-  });
-  if (existe) { toast('⚠️ Ya existe un amigo llamado ' + nuevo); return; }
+// Propaga un cambio de nombre a TODA la app: amigos, miembros, gastos y pagos.
+function renamePersonTo(oldName, nuevo) {
+  if (!oldName || !nuevo || oldName === nuevo) return;
 
-  // 1. Lista maestra de amigos
+  // Lista maestra
   if (Array.isArray(DB.friends)) {
     DB.friends = DB.friends.map(function(f){ return f === oldName ? nuevo : f; });
   }
-  // El nombre VIEJO debe desaparecer también en el servidor.
-  // Sin tombstone, mergeDB hace unión de amigos (local + remoto) y, como el
-  // servidor aún tiene el nombre viejo, este reaparecería → DUPLICADO.
-  if (!Array.isArray(DB.deleted)) DB.deleted = [];
-  revivedFriends[nuevo] = true;              // el nombre nuevo vive
-  delete revivedFriends[oldName];            // el viejo ya no
-  DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + nuevo; });
-  if (DB.deleted.indexOf('fr:' + oldName) < 0) DB.deleted.push('fr:' + oldName);
 
-  // 2. En cada grupo: miembros, gastos (paidBy, splitAmong), pagos (settled)
-  (Array.isArray(DB.groups)?DB.groups:[]).forEach(function(g){
-    // Miembros
+  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
     if (Array.isArray(g.members)) {
       g.members = g.members.map(function(m){ return m === oldName ? nuevo : m; });
     }
-    // Gastos
-    (Array.isArray(g.expenses)?g.expenses:[]).forEach(function(e){
+    (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e) {
+      if (!e) return;
       if (e.paidBy === oldName) e.paidBy = nuevo;
       if (Array.isArray(e.splitAmong)) {
         e.splitAmong = e.splitAmong.map(function(m){ return m === oldName ? nuevo : m; });
       }
     });
-    // Pagos marcados (settled): actualizar key, from, to
     if (Array.isArray(g.settled)) {
-      g.settled = g.settled.map(function(s){
-        if (typeof s === 'string') {
-          // formato viejo "deudor|acreedor"
-          var parts = s.split('|');
-          if (parts[0] === oldName) parts[0] = nuevo;
-          if (parts[1] === oldName) parts[1] = nuevo;
-          return parts.join('|');
-        } else if (s && s.key) {
-          if (s.from === oldName) s.from = nuevo;
-          if (s.to === oldName) s.to = nuevo;
-          s.key = (s.from||'') + '|' + (s.to||'');
-          return s;
+      g.settled = g.settled.map(function(s) {
+        if (typeof s === 'string') return s.split('|').map(function(n){ return n===oldName?nuevo:n; }).join('|');
+        if (s && s.key) {
+          return {
+            key:    s.key.split('|').map(function(n){ return n===oldName?nuevo:n; }).join('|'),
+            from:   s.from === oldName ? nuevo : s.from,
+            to:     s.to   === oldName ? nuevo : s.to,
+            amount: s.amount,
+            date:   s.date
+          };
         }
         return s;
       });
     }
   });
 
-  // 3. Si era el usuario identificado, actualizar "soy yo"
-  if (myName() === oldName) {
-    localStorage.setItem('sg_me_fb', nuevo);
-  }
+  // Si era yo, actualizar mi identidad
+  if (myName() === oldName) setName(nuevo);
 
-  save();
-  renderAll();
-  renderYoModal();
-  toast('✏️ ' + oldName + ' → ' + nuevo);
+  // Tombstone del nombre viejo (si no, el merge lo resucita) y revivir el nuevo
+  if (!Array.isArray(DB.deleted)) DB.deleted = [];
+  revivedFriends[nuevo] = true;
+  delete revivedFriends[oldName];
+  DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + nuevo; });
+  if (DB.deleted.indexOf('fr:' + oldName) < 0) DB.deleted.push('fr:' + oldName);
 }
 
 var pDelPerson = null;   // persona pendiente de borrar
@@ -3142,10 +3651,12 @@ function confirmDelPerson() {
     }
   });
 
-  // Quitar de la lista maestra de amigos
+  // Quitar de la lista maestra de amigos y su código/rol
   if (Array.isArray(DB.friends)) {
     DB.friends = DB.friends.filter(function(f){ return f !== name; });
   }
+  delete peopleMap()[name];
+  logAction('🚫', 'Eliminó a ' + name + ' de Amigos', '');
 
   // Tombstone: que el merge no lo resucite
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
@@ -3203,9 +3714,20 @@ function renderYoModal() {
     h += '<div class="person-name">' + esc(name);
     if (isMe) h += ' <span style="font-size:11px;color:var(--acc);background:rgba(94,234,212,.12);padding:1px 7px;border-radius:10px;margin-left:4px">soy yo</span>';
     h += '</div>';
-    h += '<div class="person-groups">' + esc(grpStr) + '</div>';
+    // El administrador ve el código y el rol de cada persona
+    if (isAdmin()) {
+      var cod = personCode(name);
+      var esAdm = personRole(name) === 'admin';
+      h += '<div class="person-groups">' +
+             (esAdm ? '<span style="color:var(--acc2);font-weight:700">👑 Admin</span> · ' : '') +
+             '<span style="font-family:var(--ff-head);font-weight:700;letter-spacing:1px;color:var(--acc4)">' + esc(cod || '—') + '</span>' +
+             (grpStr ? ' · ' + esc(grpStr) : '') +
+           '</div>';
+    } else {
+      h += '<div class="person-groups">' + esc(grpStr) + '</div>';
+    }
     h += '</div>';
-    // Renombrar y borrar: SOLO el administrador
+    // Editar perfil y borrar: SOLO el administrador
     if (isAdmin()) {
     // Botón renombrar (lápiz)
     h += '<button class="person-edit" style="flex-shrink:0;background:none;border:none;color:var(--acc4);cursor:pointer;padding:6px;border-radius:8px">';
@@ -3223,7 +3745,7 @@ function renderYoModal() {
     if (editBtn) {
       editBtn.addEventListener('click', function(ev) {
         ev.stopPropagation();
-        renamePerson(name);
+        openEditProfile(name);      // perfil: nombre, código y rol
       });
     }
     var delBtn = row.querySelector('.person-del');
@@ -3446,7 +3968,8 @@ function createGroup() {
     const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
     if (url) g.bg = url;
     DB.groups.unshift(g);
-    save();
+    logAction('📁', 'Creó el grupo "' + name + '"', g.id);
+  save();
     closeModal('m-newgrp');
     toast('✅ Grupo "' + name + '" creado');
     renderHome();
@@ -3541,6 +4064,7 @@ function saveMembers() {
   // Resolver la URL real del fondo (extensión correcta) antes de guardar
   resolveBgUrl(emSelectedBg, function(url) {
     if (url) g.bg = url; else delete g.bg;
+    logAction('👥', 'Editó los miembros del grupo "' + g.name + '"', g.id);
     save();
     closeModal('m-edit-members');
     var memsEl = document.getElementById('g-mems');
@@ -3569,89 +4093,17 @@ function getAllPersons() {
 // ONBOARDING: identificarse la primera vez
 // ════════════════════════════════════════════
 function maybeShowWelcome() {
-  // Si ya está identificado, no mostrar nada
-  if (myName()) return;
-  renderWelcomeList();
-  var m = document.getElementById('m-welcome');
-  if (m) { m.classList.add('on'); document.body.style.overflow = 'hidden'; }
+  // Si el usuario guardado ya no existe (borrado), desidentificar
+  var me = myName();
+  if (me && getFriends().indexOf(me) < 0) { setName(''); me = ''; }
+  if (!me) openCodeModal('welcome');    // primera vez: pedir el código
 }
 
-function renderWelcomeList() {
-  var cont = document.getElementById('welcome-list');
-  if (!cont) return;
-  var friends = getFriends();
 
-  // Solo el administrador crea amigos: si ya hay lista, no se permite crear
-  // nombres nuevos desde el onboarding (hay que elegir uno existente).
-  var createBox = document.getElementById('welcome-create');
-  var askAdmin  = document.getElementById('welcome-ask-admin');
-  if (createBox) createBox.style.display = friends.length ? 'none' : 'block';
-  if (askAdmin)  askAdmin.style.display  = friends.length ? 'block' : 'none';
 
-  if (!friends.length) {
-    cont.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:10px 0">Aún no hay nadie. Escribe tu nombre abajo para empezar.</div>';
-    return;
-  }
-  var h = '';
-  friends.forEach(function(name) {
-    var col = avc(name);
-    h += '<div class="welcome-row" data-name="' + esc(name) + '" style="display:flex;align-items:center;gap:11px;padding:11px 10px;border-radius:11px;cursor:pointer;margin-bottom:4px;border:1px solid var(--border);transition:all .15s">';
-    h += '<div class="avatar" style="background:' + col + '22;color:' + col + ';width:38px;height:38px;flex-shrink:0">' + ini(name) + '</div>';
-    h += '<div style="flex:1;font-weight:600;color:var(--txt)">' + esc(name) + '</div>';
-    h += '<span style="font-size:17px;color:var(--muted)">›</span>';
-    h += '</div>';
-  });
-  cont.innerHTML = h;
-  cont.querySelectorAll('.welcome-row').forEach(function(row) {
-    row.addEventListener('click', function() {
-      welcomeSelectMe(row.getAttribute('data-name'));
-    });
-  });
-}
 
-function welcomeSelectMe(name) {
-  // Si es el administrador, hace falta el PIN (verificado contra el servidor)
-  if (name.trim().toLowerCase() === ADMIN_NAME.toLowerCase()) {
-    setName(name);
-    adminLoginFlow().then(function(ok) {
-      if (!ok) { setName(''); setAdminUnlocked(false); return; }  // sigue en el onboarding
-      closeModal('m-welcome');
-      renderAll();
-      toast('👋 ¡Hola, ' + name + '!');
-    });
-    return;
-  }
-  setName(name);
-  setAdminUnlocked(false);
-  closeModal('m-welcome');
-  renderAll();
-  toast('👋 ¡Hola, ' + name + '!');
-}
 
-function welcomeCreateMe() {
-  var inp = document.getElementById('welcome-new');
-  var name = inp.value.trim();
-  if (!name) { toast('⚠️ Escribe tu nombre'); return; }
-  // ¿Ya existe? (case-insensitive)
-  var existing = getFriends().find(function(f){ return f.trim().toLowerCase() === name.trim().toLowerCase(); });
-  if (existing) {
-    welcomeSelectMe(existing);
-    return;
-  }
-  // Crear el amigo y seleccionarlo
-  if (!Array.isArray(DB.friends)) DB.friends = [];
-  DB.friends.push(name);
-  revivedFriends[name] = true;
-  if (Array.isArray(DB.deleted)) {
-    DB.deleted = DB.deleted.filter(function(d){ return d !== 'fr:' + name; });
-  }
-  setName(name);
-  save();
-  inp.value = '';
-  closeModal('m-welcome');
-  renderAll();
-  toast('✅ ¡Hola, ' + name + '!');
-}
+
 
 async function init() {
   loadTheme();
@@ -3745,6 +4197,14 @@ async function connectFirebase() {
         if (!Array.isArray(g.settled))     g.settled     = [];
       });
       try { localStorage.setItem('sg_bk_fb', JSON.stringify(DB)); } catch(e) {}
+    }
+
+    // Con los datos YA frescos del servidor: dar código y rol a quien no lo tenga
+    // (usuarios antiguos). Se guarda inmediatamente para que el código sea el
+    // mismo en todos los dispositivos; si cada móvil generase el suyo, nadie
+    // podría entrar.
+    if (ensurePeople()) {
+      await fbWrite();
     }
 
     const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
@@ -3977,18 +4437,14 @@ if ('serviceWorker' in navigator) {
   <div class="modal-bg" id="m-welcome" style="z-index:10000">
     <div class="sheet" style="text-align:center">
       <div class="sheet-handle"></div>
-      <div style="font-size:44px;margin:8px 0 4px">👋</div>
-      <h2 style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:var(--txt);margin-bottom:6px">¡Bienvenido a SplitGuasa!</h2>
-      <p style="font-size:14px;color:var(--muted2);margin-bottom:18px">¿Quién eres? Selecciona tu nombre para empezar.</p>
-      <div id="welcome-list" style="text-align:left;max-height:44vh;overflow-y:auto;margin-bottom:14px"></div>
-      <div id="welcome-create" style="border-top:1px solid var(--border);padding-top:14px">
-        <p style="font-size:13px;color:var(--muted2);margin-bottom:8px">¿No estás en la lista?</p>
-        <div style="display:flex;gap:8px">
-          <input id="welcome-new" type="text" placeholder="Escribe tu nombre" style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;color:var(--txt);font-size:15px;font-family:var(--ff-body)">
-          <button onclick="welcomeCreateMe()" style="background:var(--acc);color:#04221d;border:none;font-family:var(--ff-head);font-weight:700;font-size:14px;padding:0 18px;border-radius:11px;cursor:pointer">Crear</button>
-        </div>
-      </div>
-      <p id="welcome-ask-admin" style="display:none;font-size:12px;color:var(--muted);text-align:center;margin-top:12px">🔒 ¿No apareces? Pide a <strong>Jota</strong> que te añada.</p>
+      <img id="welcome-logo" src="icon-192.png" alt="SplitGuasa" style="width:96px;height:96px;border-radius:24px;margin:10px auto 14px;display:block;box-shadow:0 8px 28px rgba(0,0,0,.35)">
+      <h2 style="font-family:var(--ff-head);font-weight:800;font-size:24px;color:var(--txt);margin-bottom:6px">SplitGuasa</h2>
+      <p style="font-size:14px;color:var(--muted2);margin-bottom:22px;line-height:1.5">Introduce tu <strong style="color:var(--txt2)">código de acceso</strong><br>para entrar con tu usuario.</p>
+      <div class="code-boxes" id="welcome-code-boxes"></div>
+      <div id="welcome-code-err" style="display:none;color:var(--acc3);font-size:13px;margin-top:12px;line-height:1.5"></div>
+      <button class="btn-primary" style="margin-top:20px" onclick="submitCode('welcome')">Entrar</button>
+      <p style="font-size:12px;color:var(--muted);margin-top:14px">¿No tienes código? Pídeselo al administrador.</p>
+      <div class="pb"></div>
     </div>
   </div>
   <!-- ══ MODAL SELECTOR USUARIO ══ -->
