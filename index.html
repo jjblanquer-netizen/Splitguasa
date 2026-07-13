@@ -162,12 +162,13 @@ body {
 
 /* ─── BOTTOM NAV ────────────────────────────────────────────────── */
 .bnav {
-  /* Barra de pestañas con ALTURA EXPLÍCITA:
-     56px de contenido + el área segura de iOS (indicador de inicio).
-     Con box-sizing:border-box, el padding-bottom queda DENTRO de la altura,
-     así el área de iconos siempre mide exactamente 56px. */
-  height: calc(56px + var(--sab));
-  padding-bottom: var(--sab);
+  /* Barra de pestañas con ALTURA EXPLÍCITA.
+     El área segura de iOS (--sab) son 34px: reservarla ENTERA dejaba un hueco
+     enorme bajo los iconos y la barra parecía "flotar" (en Android --sab es 0,
+     por eso allí quedaba pegada abajo). El indicador de inicio solo mide ~5px,
+     así que con poco más de la mitad basta para no taparlo y queda ajustada. */
+  height: calc(56px + var(--sab) * .5);
+  padding-bottom: calc(var(--sab) * .5);
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
@@ -532,7 +533,7 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; }
 /* ─── FAB ───────────────────────────────────────────────────────── */
 .fab {
   position: fixed;
-  bottom: calc(80px + var(--sab)); right: 20px;
+  bottom: calc(80px + var(--sab) * .5); right: 20px;
   width: 52px; height: 52px;
   background: var(--acc); border: none; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -2277,6 +2278,15 @@ function markCodeError(contId, errId, msg) {
 }
 
 
+
+// ¿Estamos en la app instalada (no en el navegador)?
+function esAppInstalada() {
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;   // iOS
+  } catch (e) { return false; }
+}
+
 // Si el enlace trae el código (?c=ABC123), lo rellenamos solo.
 // Así, tanto si se abre en el navegador como si Android lanza la app instalada,
 // la persona no tiene que teclear nada.
@@ -2324,6 +2334,14 @@ function openCodeModal(modo) {
       cleanUrl();
       setTimeout(function(){ submitCode('welcome'); }, 400);
     }
+    // Explicar por qué pide el código en la app recién instalada.
+    // iOS (y Android) dan a la app instalada un almacenamiento SEPARADO del
+    // navegador: la sesión de Safari/Chrome no se traspasa. No es un fallo.
+    var inst = document.getElementById('welcome-install-hint');
+    if (inst) {
+      inst.style.display = (esAppInstalada() && !pistaAdmin) ? 'block' : 'none';
+    }
+
     // Salvavidas del administrador que venía de la versión anterior
     var hint = document.getElementById('welcome-admin-hint');
     if (hint) {
@@ -5003,6 +5021,10 @@ if ('serviceWorker' in navigator) {
       <img id="welcome-logo" src="icon-192.png" alt="SplitGuasa" style="width:96px;height:96px;border-radius:24px;margin:10px auto 14px;display:block;box-shadow:0 8px 28px rgba(0,0,0,.35)">
       <h2 style="font-family:var(--ff-head);font-weight:800;font-size:24px;color:var(--txt);margin-bottom:6px">SplitGuasa</h2>
       <p style="font-size:14px;color:var(--muted2);margin-bottom:22px;line-height:1.5">Introduce tu <strong style="color:var(--txt2)">código de acceso</strong><br>para entrar con tu usuario.</p>
+      <div id="welcome-install-hint" style="display:none;background:rgba(94,234,212,.07);border:1px solid rgba(94,234,212,.22);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:12.5px;color:var(--muted2);line-height:1.6">
+        📲 <strong style="color:var(--txt2)">Has instalado la app.</strong><br>
+        Introduce tu código una vez y ya no volverá a pedírtelo.
+      </div>
       <div id="welcome-admin-hint" style="display:none;background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.3);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:var(--txt2);line-height:1.6"></div>
       <div class="code-boxes" id="welcome-code-boxes"></div>
       <div id="welcome-code-err" style="display:none;color:var(--acc3);font-size:13px;margin-top:12px;line-height:1.5"></div>
