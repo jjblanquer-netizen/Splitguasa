@@ -983,11 +983,7 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
   padding-top: 7px; font-family: var(--ff-head); font-weight: 800; font-size: 15px;
   color: rgba(255,255,255,.4);
 }
-.hv-resto {
-  border-top: 1px solid var(--border); margin-top: 2px; padding: 11px 2px;
-  display: flex; justify-content: space-between; font-size: 12px; color: var(--muted2);
-}
-.hv-resto b { color: var(--txt2); font-weight: 600; }
+
 
 /* Gastos más caros / movimientos */
 .hv-fila {
@@ -1096,6 +1092,45 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   max-width: 100%;
 }
+
+/* Lista con el RESTO del grupo (del 4º en adelante, y quien no ha puesto nada).
+   Barra proporcional al líder: se compara de un vistazo sin leer los números. */
+.hv-lista {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding: 6px 0 2px;
+}
+.hv-lrow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 2px;
+}
+.hv-lrow + .hv-lrow { border-top: 1px solid var(--border); }
+.hv-lpos {
+  width: 16px; flex-shrink: 0; text-align: center;
+  font-family: var(--ff-head); font-weight: 800; font-size: 12px;
+  color: var(--muted);
+}
+.hv-lnom {
+  font-size: 13px; font-weight: 600; color: var(--txt2);
+  flex-shrink: 0; max-width: 92px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hv-lbar {
+  flex: 1; min-width: 20px; height: 5px;
+  background: var(--s2); border-radius: 3px; overflow: hidden;
+}
+.hv-lbar span {
+  display: block; height: 100%; border-radius: 3px;
+  transition: width .4s cubic-bezier(.22,1,.36,1);
+}
+.hv-leur {
+  font-family: var(--ff-head); font-weight: 800; font-size: 13.5px;
+  color: var(--txt); flex-shrink: 0; min-width: 58px; text-align: right;
+}
+
+/* Podio de UNA sola persona: se centra en vez de quedarse en un tercio */
+.hv-gradas-1 { justify-content: center; }
+.hv-gradas-1 .hv-puesto { max-width: 130px; }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -3856,6 +3891,7 @@ function grupoMasReciente(lista) {
 // ── Cuánto ha pagado cada persona (para el podio) ──
 function aportaciones(g) {
   var tot = {};
+  // TODOS los miembros, aunque no hayan pagado nada: un 0 € también es un dato
   (g.members || []).forEach(function(m){ tot[m] = 0; });
   (g.expenses || []).forEach(function(e) {
     if (!e || e.isSettlement) return;
@@ -4041,52 +4077,75 @@ function bloqueCifras(g) {
 // Las alturas de las gradas son PROPORCIONALES a lo aportado: el podio es el
 // dato, no un adorno. Con menos de 3 personas se degrada con elegancia.
 function bloquePodio(g) {
-  var ap = aportaciones(g).filter(function(p){ return p.total > 0.005; });
-  if (ap.length < 2) return '';   // con una sola persona no hay competición
+  var ap = aportaciones(g);                       // TODOS los miembros
+  if (ap.length < 2) return '';                   // con uno solo no hay comparación
 
   var total = ap.reduce(function(a,p){ return a + p.total; }, 0);
-  if (total < 0.01) return '';
+  if (total < 0.01) return '';                    // nadie ha pagado nada aún
 
   var h = '<div class="hv-sec">';
-  h += '<div class="hv-sec-h"><div class="hv-sec-t">Ranking de gastadores</div>' +
+  h += '<div class="hv-sec-h"><div class="hv-sec-t">¿Cuánto ha aportado cada uno?</div>' +
        '<div class="hv-sec-m">de ' + fmt(total) + '</div></div>';
   h += '<div class="hv-podio">';
-  h += '<div class="hv-gradas">';
 
-  var top = ap.slice(0, 3);
-  var max = top[0].total;
+  // ── El podio: los tres primeros que HAYAN PAGADO algo ──
+  // Las alturas de las gradas son PROPORCIONALES a lo aportado: el podio es el
+  // dato, no un adorno.
+  // El podio muestra a quien HAYA PAGADO: uno, dos o tres. Siempre aparece.
+  var top = ap.slice(0, 3).filter(function(p){ return p.total > 0.005; });
+  var max = ap[0].total || 1;
 
-  // Orden visual del podio: 2º · 1º · 3º (el ganador, en el centro y más alto)
-  var orden = top.length >= 3 ? [1, 0, 2] : (top.length === 2 ? [1, 0] : [0]);
-  var medallas = ['🥇', '🥈', '🥉'];
-  var colores  = ['var(--acc2)', '#94a3b8', '#c2764a'];
-  var degrad   = [
-    'linear-gradient(180deg,#fbbf24 0%,rgba(251,191,36,.15) 100%)',
-    'linear-gradient(180deg,#94a3b8 0%,rgba(148,163,184,.13) 100%)',
-    'linear-gradient(180deg,#c2764a 0%,rgba(194,118,74,.13) 100%)'
-  ];
+  if (top.length) {
+    h += '<div class="hv-gradas' + (top.length === 1 ? ' hv-gradas-1' : '') + '">';
+    // Orden visual: 2º · 1º · 3º — el ganador, en el centro y más alto.
+    // Con dos: 2º · 1º.  Con uno: solo él, centrado.
+    var orden = top.length >= 3 ? [1, 0, 2]
+              : top.length === 2 ? [1, 0]
+              : [0];
+    var medallas = ['🥇', '🥈', '🥉'];
+    var colores  = ['var(--acc2)', '#94a3b8', '#c2764a'];
+    var degrad   = [
+      'linear-gradient(180deg,#fbbf24 0%,rgba(251,191,36,.15) 100%)',
+      'linear-gradient(180deg,#94a3b8 0%,rgba(148,163,184,.13) 100%)',
+      'linear-gradient(180deg,#c2764a 0%,rgba(194,118,74,.13) 100%)'
+    ];
 
-  orden.forEach(function(i) {
-    var p = top[i];
-    if (!p) return;
-    // Altura proporcional al importe (mínimo 30px para que se vea)
-    var alt = Math.max(30, Math.round(78 * (p.total / max)));
-    h += '<div class="hv-puesto">';
-    h +=   '<div class="hv-medalla">' + medallas[i] + '</div>';
-    h +=   '<div class="hv-cara" style="background:' + avc(p.name) + '">' + ini(p.name) + '</div>';
-    h +=   '<div class="hv-pnom">' + esc(p.name) + '</div>';
-    h +=   '<div class="hv-peur" style="color:' + colores[i] + '">' + fmt(p.total) + '</div>';
-    h +=   '<div class="hv-grada" style="height:' + alt + 'px;background:' + degrad[i] + '">' + (i+1) + '</div>';
+    orden.forEach(function(i) {
+      var p = top[i];
+      if (!p) return;
+      var alt = Math.max(30, Math.round(78 * (p.total / max)));
+      h += '<div class="hv-puesto">';
+      h +=   '<div class="hv-medalla">' + medallas[i] + '</div>';
+      h +=   '<div class="hv-cara" style="background:' + avc(p.name) + '">' + ini(p.name) + '</div>';
+      h +=   '<div class="hv-pnom">' + esc(p.name) + '</div>';
+      h +=   '<div class="hv-peur" style="color:' + colores[i] + '">' + fmt(p.total) + '</div>';
+      h +=   '<div class="hv-grada" style="height:' + alt + 'px;background:' + degrad[i] + '">' + (i+1) + '</div>';
+      h += '</div>';
+    });
     h += '</div>';
-  });
+  }
 
-  h += '</div>';
-
-  // La pulla: quién ha puesto menos (solo si hay más de 3)
-  if (ap.length > 3) {
-    var ultimo = ap[ap.length - 1];
-    h += '<div class="hv-resto"><span>Y el que menos: <b>' + esc(ultimo.name) + '</b></span>' +
-         '<span><b>' + fmt(ultimo.total) + '</b></span></div>';
+  // ── El resto del grupo: del 4º en adelante, y quien no ha puesto nada ──
+  // Con el título "¿Cuánto ha aportado cada uno?" hay que enseñarlos a TODOS,
+  // no solo el podio.
+  // La lista: todos los que no están en el podio (incluidos los de 0 €)
+  var resto = ap.slice(top.length);
+  if (resto.length) {
+    h += '<div class="hv-lista">';
+    resto.forEach(function(p, idx) {
+      var pct = total > 0 ? (p.total / max) * 100 : 0;
+      var cero = p.total < 0.005;
+      h += '<div class="hv-lrow">';
+      h +=   '<div class="hv-lpos">' + (top.length + idx + 1) + '</div>';
+      h +=   '<div class="hv-cara" style="width:30px;height:30px;font-size:11px;margin:0;background:' +
+             (cero ? 'var(--s2)' : avc(p.name)) + (cero ? ';color:var(--muted)' : '') + '">' + ini(p.name) + '</div>';
+      h +=   '<div class="hv-lnom">' + esc(p.name) + '</div>';
+      h +=   '<div class="hv-lbar"><span style="width:' + pct.toFixed(1) + '%;background:' +
+             (cero ? 'transparent' : avc(p.name)) + '"></span></div>';
+      h +=   '<div class="hv-leur"' + (cero ? ' style="color:var(--muted)"' : '') + '>' + fmt(p.total) + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
   } else {
     h += '<div style="height:14px"></div>';
   }
