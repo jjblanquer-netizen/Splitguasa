@@ -1061,16 +1061,15 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
 
 
 /* ── El grupo, compuesto como un cartel de viaje ── */
-.hv-titulo {
-  position: relative; z-index: 2;
-  animation: hvEntra .5s cubic-bezier(.22,1,.36,1) both;
-}
+.hv-titulo { position: relative; z-index: 2; }
+/* La animación solo se aplica al cambiar de grupo, no en cada repintado */
+.hv-anim { animation: hvEntra .5s cubic-bezier(.22,1,.36,1) both; }
 @keyframes hvEntra {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hv-titulo { animation: none; }
+  .hv-anim { animation: none; }
 }
 
 /* Medallón: el emoji del grupo en cristal esmerilado, como un sello.
@@ -3789,6 +3788,10 @@ function setHomeGidFromSettings(gid) {
   if (g) toast('🏠 Inicio: ' + (g.emoji || '') + ' ' + g.name);
 }
 
+// Memoria del último render, para no reconstruir el DOM sin necesidad
+var ultimoHtmlHome   = '';
+var ultimoGidAnimado = '';
+
 function homeStyle() {
   var elegido = null;
   try { elegido = localStorage.getItem('sg_home'); } catch (e) {}
@@ -3807,6 +3810,7 @@ function setHomeStyle(estilo) {
   try { localStorage.setItem('sg_home', v); } catch (e) {}
   updateHomeButtons(v);
   buildHomeGidSelect();     // el selector solo aparece en modo Avanzada
+  ultimoHtmlHome = '';      // forzar repintado: si no, la guarda lo bloquearía
   renderHome();
   toast(v === 'avanzada' ? '✨ Inicio avanzado' : '📋 Inicio clásico');
 }
@@ -3833,6 +3837,7 @@ function homeGid() {
 function setHomeGid(gid) {
   try { localStorage.setItem('sg_home_gid', gid); } catch (e) {}
   closeModal('m-home-grp');
+  ultimoHtmlHome = '';      // cambia el grupo: hay que repintar (y animar)
   renderHome();
 }
 
@@ -3883,16 +3888,28 @@ function renderHomeAvanzada() {
   var gid = homeGid();
   var g = vis.filter(function(x){ return x.id === gid; })[0] || vis[0];
 
+  // La animación de entrada del título SOLO cuando cambia el grupo.
+  // Si no, se repetía en cada repintado (cada sincronización con cambios) y
+  // el título "parpadeaba" al reaparecer con su fade.
+  var animar = (g.id !== ultimoGidAnimado);
+
   var h = '';
   h += bloqueCabecera();      // SplitGuasa 💸 + lema + versión (idéntica a la clásica)
   h += bloqueHola();          // Hola, Jota 👋  (antes del grupo, como en la clásica)
-  h += bloqueBanner(g, vis.length);
+  h += bloqueBanner(g, vis.length, animar);
   h += bloqueSaldo(g);        // monta sobre la foto: los dos se funden
   h += bloqueCifras(g);
   h += bloqueCategorias(g);   // En qué se va el dinero
   h += bloquePodio(g);        // Ranking de gastadores
   h += bloqueUltimos(g);      // Últimos gastos
   h += '<div style="height:90px"></div>';   // hueco para el botón + y la barra
+
+  // Si el resultado es EXACTAMENTE el mismo, no tocar el DOM.
+  // Reconstruirlo idéntico obliga al navegador a rehacer la foto de fondo y a
+  // repetir las animaciones: eso es lo que se veía como parpadeo.
+  if (h === ultimoHtmlHome && cont.innerHTML) return;
+  ultimoHtmlHome = h;
+  ultimoGidAnimado = g.id;
 
   cont.innerHTML = h;
 
@@ -3924,7 +3941,7 @@ function bloqueHola() {
          '</div>';
 }
 
-function bloqueBanner(g, nGrupos) {
+function bloqueBanner(g, nGrupos, animar) {
   var gente = (g.members || []).join(' · ');
 
   // Sin foto: degradado + el emoji del grupo, gigante y translúcido
@@ -3944,7 +3961,7 @@ function bloqueBanner(g, nGrupos) {
   }
 
   // ── El grupo, compuesto como un cartel: medallón + nombre + gente ──
-  h += '<div class="hv-titulo">';
+  h += '<div class="hv-titulo' + (animar ? ' hv-anim' : '') + '">';
   h +=   '<div class="hv-medallon">' + esc(g.emoji || '📁') + '</div>';
   h +=   '<div class="hv-nom">' + esc(g.name) + '</div>';
   h +=   '<div class="hv-gente">' + esc(gente) + '</div>';
@@ -4224,14 +4241,20 @@ function renderHome() {
   var estilo = homeStyle();
   var avanzada = (estilo === 'avanzada');
   updateHomeButtons(estilo);   // el estilo puede cambiar solo al entrar/salir de grupos
-  var ca = document.getElementById('home-clasica');
-  var av = document.getElementById('home-avanzada');
-  if (ca) ca.style.display = avanzada ? 'none'  : 'flex';   // flex, para que el .sb de dentro scrolle
-  if (av) av.style.display = avanzada ? 'block' : 'none';
 
-  // El botón + solo tiene sentido en la Avanzada, y si hay un grupo que ver
+  var ca  = document.getElementById('home-clasica');
+  var av  = document.getElementById('home-avanzada');
   var fab = document.getElementById('home-fab');
-  if (fab) fab.style.display = (avanzada && visibleGroups().length) ? 'flex' : 'none';
+
+  // Escribir style.display solo si CAMBIA. Reasignar el mismo valor en cada
+  // repintado provoca recálculos de estilo innecesarios.
+  var dCa  = avanzada ? 'none'  : 'flex';   // flex: para que el .sb de dentro scrolle
+  var dAv  = avanzada ? 'block' : 'none';
+  var dFab = (avanzada && visibleGroups().length) ? 'flex' : 'none';
+
+  if (ca  && ca.style.display  !== dCa)  ca.style.display  = dCa;
+  if (av  && av.style.display  !== dAv)  av.style.display  = dAv;
+  if (fab && fab.style.display !== dFab) fab.style.display = dFab;
 
   if (avanzada) { renderHomeAvanzada(); return; }
   renderHomeClasica();
