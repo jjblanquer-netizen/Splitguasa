@@ -1823,7 +1823,18 @@ body.light .inst-marca {
 <div class="modal-bg" id="m-edit-members" onclick="closeOut(event,'m-edit-members')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">👥 Editar Miembros</div>
+    <div class="sheet-title">✏️ Editar grupo</div>
+
+    <div class="field">
+      <label>Nombre del grupo</label>
+      <input id="em-name" type="text" placeholder="Viaje Asturias, Piso, Cena…" autocomplete="off" maxlength="40">
+    </div>
+
+    <div class="field">
+      <label>Icono</label>
+      <div class="emoji-grid" id="em-emoji-grid"></div>
+    </div>
+
     <div class="field">
       <label>Miembros actuales</label>
       <div id="em-chips" style="margin-bottom:8px"></div>
@@ -2047,7 +2058,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261812</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261942</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -4428,33 +4439,64 @@ function renderDebts(g) {
     paid.forEach(function(t){ h += row(t, true); });
   }
 
-  // ── DETALLE POR PERSONA — solo informa, NO se paga ──
-  // Solo tiene sentido si hay familias: sin ellas sería una copia de la lista
-  // de arriba. Y no lleva botones a propósito: si los llevara, alguien pagaría
-  // dos veces el mismo dinero.
+  // ── DENTRO DE CADA VÍNCULO — solo informa, NO se paga ──
+  // Responde a lo que uno se pregunta al ver "Miguel & Ana → Los Blanquer: 120 €":
+  // vale, ¿pero de ahí cuánto puse yo y cuánto mi pareja?
+  //
+  // Se muestran datos CONCRETOS (pagó / le tocaba), no un saldo neto. Motivo:
+  // el saldo del vínculo incluye los pagos hechos ENTRE vínculos, y ese dinero
+  // no se puede repartir entre sus miembros de forma justa. Si pusiera un neto
+  // en la cabecera, no cuadraría con la suma de abajo y parecería un error.
+  // "Pagó X, le tocaba Y" siempre cuadra y no engaña.
+  //
+  // Sin botones, a propósito: si los llevara, alguien pagaría dos veces el
+  // mismo dinero (una entre vínculos y otra aquí dentro).
   if (hayFam) {
     var ind = computeBalsRaw(g);
-    h += '<div class="sec-lbl" style="margin-top:18px">Detalle por persona</div>';
-    h += '<div class="card" style="padding:4px 13px">';
-    ind.forEach(function(b) {
-      var f = linkOf(g, b.name);        // su vínculo EN ESTE GRUPO
-      var enFam = !!f;
-      var col = Math.abs(b.net) < 0.005 ? 'var(--muted2)' : (b.net > 0 ? 'var(--acc)' : 'var(--acc3)');
+    var datos = {};
+    ind.forEach(function(b){ datos[b.name] = b; });
 
-      var ultimo = (ind.indexOf(b) === ind.length - 1);
-      h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0' +
-           (ultimo ? '' : ';border-bottom:1px solid var(--border)') + '">';
-      h +=   '<div class="avatar" style="width:28px;height:28px;font-size:11px;background:' + avc(b.name) + '22;color:' + avc(b.name) + '">' + ini(b.name) + '</div>';
-      h +=   '<div style="flex:1;min-width:0;font-size:13px;color:var(--txt2)">' + esc(b.name);
-      h +=     '<span style="font-size:10px;color:var(--muted);margin-left:5px">· ' +
-               (enFam ? esc(f.name) : 'sin vínculo') + '</span>';
+    var uds = unitsInGroup(g).filter(function(u){ return u.isFam; });
+
+    h += '<div class="sec-lbl" style="margin-top:18px">🔗 Dentro de cada vínculo</div>';
+
+    uds.forEach(function(u) {
+      h += '<div class="card" style="padding:0;margin-bottom:8px;overflow:hidden">';
+
+      h +=   '<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--s2);border-bottom:1px solid var(--border)">';
+      h +=     unitAvatars(u, 24);
+      h +=     '<div style="flex:1;min-width:0;font-family:var(--ff-head);font-weight:700;font-size:13.5px">' + esc(u.name) + '</div>';
       h +=   '</div>';
-      h +=   '<div style="font-family:var(--ff-head);font-weight:800;font-size:13.5px;color:' + col + '">' +
-             (b.net >= 0 ? '+' : '') + fmt(b.net) + '</div>';
+
+      h +=   '<div style="padding:2px 13px">';
+      u.members.forEach(function(m, idx) {
+        var d = datos[m] || { paid: 0, owes: 0 };
+        var dif = d.paid - d.owes;
+        var col = Math.abs(dif) < 0.005 ? 'var(--muted2)' : (dif > 0 ? 'var(--acc)' : 'var(--acc3)');
+        var ultimo = (idx === u.members.length - 1);
+
+        h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0' +
+             (ultimo ? '' : ';border-bottom:1px solid var(--border)') + '">';
+        h +=   '<div class="avatar" style="width:26px;height:26px;font-size:10px;background:' +
+               avc(m) + '22;color:' + avc(m) + '">' + ini(m) + '</div>';
+        h +=   '<div style="flex:1;min-width:0">';
+        h +=     '<div style="font-size:13px;color:var(--txt2);font-weight:600">' + esc(m) + '</div>';
+        h +=     '<div style="font-size:10.5px;color:var(--muted)">Puso ' + fmt(d.paid) +
+                 ' · le tocaban ' + fmt(d.owes) + '</div>';
+        h +=   '</div>';
+        h +=   '<div style="font-family:var(--ff-head);font-weight:700;font-size:13px;color:' + col + '">' +
+               (dif >= 0 ? '+' : '') + fmt(dif) + '</div>';
+        h += '</div>';
+      });
+      h +=   '</div>';
       h += '</div>';
     });
-    h += '</div>';
-    h += '<div class="info-box" style="margin-top:8px;font-size:12px">Quién ha puesto qué, <strong>persona a persona</strong>. Aquí no hay nada que pagar: el dinero se salda entre vínculos.</div>';
+
+    h += '<div class="info-box" style="font-size:12px">' +
+         '<strong>Solo informativo.</strong> Cuánto puso cada uno frente a lo que le tocaba. ' +
+         '<strong>Entre vosotros no se paga nada</strong>: compartís cartera, y el vínculo ya salda ' +
+         'por todos ahí arriba.' +
+         '</div>';
   }
 
   return h;
@@ -5086,19 +5128,20 @@ function bloqueSaldo(g) {
 
   } else {
     // ── MI SALDO INDIVIDUAL ──
-    // Cuánto he puesto de más (o de menos) respecto a lo que me tocaba.
+    // "Te deben" / "Debes": lo que la gente quiere saber. "Has puesto de más"
+    // describía la mecánica del cálculo, no la respuesta a la pregunta.
     var mio = computeBalsRaw(g).filter(function(b){ return isMe(b.name); })[0];
     var net = mio ? mio.net : 0;
 
     if (net > 0.005) {
-      h += '<div class="hv-saldo-lbl">Has puesto de más</div>';
+      h += '<div class="hv-saldo-lbl">Te deben</div>';
       h += '<div class="hv-saldo-num" style="color:var(--acc)">' + fmt(net) + '</div>';
     } else if (net < -0.005) {
-      h += '<div class="hv-saldo-lbl" style="color:var(--acc3)">Has puesto de menos</div>';
+      h += '<div class="hv-saldo-lbl" style="color:var(--acc3)">Debes</div>';
       h += '<div class="hv-saldo-num" style="color:var(--acc3)">' + fmt(Math.abs(net)) + '</div>';
     } else {
-      h += '<div class="hv-saldo-lbl">Tu aportación</div>';
-      h += '<div class="hv-saldo-num" style="color:var(--txt)">Justa 🎯</div>';
+      h += '<div class="hv-saldo-lbl">Tu saldo</div>';
+      h += '<div class="hv-saldo-num" style="color:var(--txt)">Todo en paz 🎉</div>';
     }
     h += '<div class="hv-fam-tag"><div class="u-avs"><div class="u-av" style="width:22px;height:22px;font-size:9px;background:' + avc(me) + '">' + ini(me) + '</div></div><span>' + esc(me) + ' · solo tú</span></div>';
     if (enFamilia) {
@@ -7106,11 +7149,41 @@ function renderEmBgGrid(currentBgUrl) {
   buildBgGrid('em-bg-grid', emSelectedBg, function(id){ emSelectedBg = id; });
 }
 
+
+var emEmoji = '';    // icono elegido al editar el grupo
+
+// Rejilla de iconos del modal de EDITAR. Es propia: si reutilizara la de
+// "nuevo grupo" (mismos ids y clase .emoji-opt), al abrir una se desmarcaría
+// la otra.
+function renderEmEmojiGrid() {
+  var eg = document.getElementById('em-emoji-grid');
+  if (!eg) return;
+  eg.innerHTML = '';
+  EMOJIS.forEach(function(e) {
+    var d = document.createElement('div');
+    d.className = 'emoji-opt' + (e === emEmoji ? ' sel' : '');
+    d.textContent = e;
+    d.addEventListener('click', function() {
+      emEmoji = e;
+      eg.querySelectorAll('.emoji-opt').forEach(function(x) { x.classList.remove('sel'); });
+      d.classList.add('sel');
+    });
+    eg.appendChild(d);
+  });
+}
+
 function initEditMembers() {
   const g = grp(); if (!g) return;
   // Los vínculos, en un try: si algo fallara aquí, no debe impedir editar
   // los miembros (openModal llama a esta función ANTES de abrir el modal).
   try { renderLinks(); } catch (e) { console.error('renderLinks:', e); }
+
+  // Nombre e icono actuales
+  var inpN = document.getElementById('em-name');
+  if (inpN) inpN.value = g.name || '';
+  emEmoji = g.emoji || EMOJIS[0];
+  renderEmEmojiGrid();
+
   emMembers = g.members.slice();
   const srch = document.getElementById('em-search');
   if (srch) srch.value = '';
@@ -7177,6 +7250,16 @@ function emAdd() {}
 function saveMembers() {
   const g = grp(); if (!g) return;
   if (emMembers.length < 2) { toast('⚠️ El grupo necesita al menos 2 personas'); return; }
+
+  // Nombre e icono
+  var inpN = document.getElementById('em-name');
+  var nombreNuevo = inpN ? (inpN.value || '').trim() : g.name;
+  if (!nombreNuevo) { toast('⚠️ El grupo necesita un nombre'); return; }
+
+  var nombreAntes = g.name;
+  var emojiAntes  = g.emoji;
+  g.name  = nombreNuevo;
+  g.emoji = emEmoji || g.emoji;
   const added   = emMembers.filter(m => !g.members.includes(m));
   const quitados = g.members.filter(m => !emMembers.includes(m));
   g.members = emMembers.slice();
@@ -7197,11 +7280,25 @@ function saveMembers() {
   // Resolver la URL real del fondo (extensión correcta) antes de guardar
   resolveBgUrl(emSelectedBg, function(url) {
     if (url) g.bg = url; else delete g.bg;
-    logAction('grupo', '👥', 'Editó los miembros del grupo "' + g.name + '"', g.id);
+    // Contar en el historial lo que de verdad ha cambiado
+    var cambios = [];
+    if (nombreAntes !== g.name)   cambios.push('lo renombró (antes "' + nombreAntes + '")');
+    if (emojiAntes  !== g.emoji)  cambios.push('cambió el icono');
+    if (added.length)             cambios.push('añadió a ' + added.join(', '));
+    if (quitados.length)          cambios.push('quitó a ' + quitados.join(', '));
+
+    logAction('grupo', '✏️', 'Editó el grupo "' + g.name + '"' +
+              (cambios.length ? ' · ' + cambios.join(' · ') : ''), g.id);
     save();
     closeModal('m-edit-members');
     var memsEl = document.getElementById('g-mems');
     if (memsEl) memsEl.textContent = g.members.join(' · ');
+    // El nombre y el icono también se ven en la cabecera del grupo, y son
+    // elementos SEPARADOS: meter el emoji en el nombre lo duplicaría.
+    var nomEl = document.getElementById('g-name');
+    var emoEl = document.getElementById('g-emoji');
+    if (nomEl) nomEl.textContent = g.name;
+    if (emoEl) emoEl.textContent = g.emoji || '';
     applyGroupHeaderBg(g);
     renderGTab();
     renderHome();
