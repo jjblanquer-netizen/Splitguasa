@@ -1687,27 +1687,30 @@ body.light .inst-marca {
   <div class="inst-panel" id="inst-panel"></div>
 </div>
 
-<!-- ══ MODAL: CREAR / EDITAR FAMILIA ══ -->
-<div class="modal-bg" id="m-familia" onclick="closeOut(event,'m-familia')">
+<!-- ══ MODAL: CREAR / EDITAR VÍNCULO (dentro de un grupo) ══ -->
+<div class="modal-bg" id="m-link" onclick="closeOut(event,'m-link')">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="fam-title">Nueva familia</div>
-    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">
-      Elige quiénes comparten cartera y ponle nombre.
+    <div class="sheet-title" id="lnk-title">Nuevo vínculo</div>
+    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:14px">
+      Quienes comparten cartera en este grupo. Liquidan como uno solo.
     </p>
 
-    <div class="sec-lbl" style="margin-top:0">Miembros</div>
-    <div id="fam-people" class="chip-wrap" style="margin-bottom:16px"></div>
+    <div id="lnk-reuse" style="display:none;margin-bottom:16px"></div>
+
+    <div class="sec-lbl" style="margin-top:0">Quiénes</div>
+    <div id="lnk-people" class="chip-wrap" style="margin-bottom:6px"></div>
+    <div id="lnk-warn" style="font-size:11.5px;color:var(--muted);margin-bottom:16px"></div>
 
     <div class="field">
-      <label>Nombre de la familia</label>
-      <input id="fam-name" type="text" placeholder="Los Blanquer" autocomplete="off" autocapitalize="words" maxlength="30">
+      <label>Nombre del vínculo</label>
+      <input id="lnk-name" type="text" placeholder="Los Blanquer" autocomplete="off" autocapitalize="words" maxlength="30" oninput="hintLink()">
     </div>
-    <div id="fam-hint" style="font-size:11.5px;color:var(--muted);margin:-6px 0 16px"></div>
+    <div id="lnk-hint" style="font-size:11.5px;color:var(--muted);margin:-6px 0 16px"></div>
 
-    <button class="btn-primary" style="width:100%" onclick="saveFamilia()">Guardar familia</button>
-    <button class="btn-secondary" id="fam-del" style="width:100%;margin-top:8px;color:var(--acc3);border-color:rgba(251,113,133,.3);display:none" onclick="deleteFamilia()">Deshacer familia</button>
-    <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeModal('m-familia')">Cancelar</button>
+    <button class="btn-primary" style="width:100%" onclick="saveLink()">Guardar vínculo</button>
+    <button class="btn-secondary" id="lnk-del" style="width:100%;margin-top:8px;color:var(--acc3);border-color:rgba(251,113,133,.3);display:none" onclick="deleteLink()">Deshacer vínculo</button>
+    <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeModal('m-link')">Cancelar</button>
     <div class="pb"></div>
   </div>
 </div>
@@ -1820,6 +1823,19 @@ body.light .inst-marca {
       <label>Miembros actuales</label>
       <div id="em-chips" style="margin-bottom:8px"></div>
     </div>
+    <!-- ══ VÍNCULOS ══ -->
+    <div class="field">
+      <label style="display:flex;align-items:center;justify-content:space-between">
+        <span>Vínculos</span>
+        <span id="lnk-add" onclick="openLink('')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--acc);background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.3);padding:4px 10px;border-radius:8px;cursor:pointer;text-transform:none;letter-spacing:0">+ Crear</span>
+      </label>
+      <div id="lnk-list" style="margin-bottom:6px"></div>
+      <div style="background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:10px 12px;font-size:11.5px;color:var(--muted2);line-height:1.5">
+        <b style="color:var(--txt2)">Quienes comparten cartera en este grupo.</b>
+        Entre ellos no hay deudas, y liquidan como uno solo. Una pareja, o los del coche.
+      </div>
+    </div>
+
     <div class="field">
       <label>Fondo de la tarjeta</label>
       <div class="bg-grid" id="em-bg-grid"></div>
@@ -1858,16 +1874,6 @@ body.light .inst-marca {
         <button class="chip-add" onclick="addFriend()">+</button>
       </div>
     </div>
-    <!-- ══ FAMILIAS ══ -->
-    <div class="sec-lbl" style="display:flex;align-items:center;justify-content:space-between">
-      <span>Familias</span>
-      <span id="fam-add" onclick="openFamilia('')" style="display:none;font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--acc);background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.3);padding:4px 10px;border-radius:8px;cursor:pointer;text-transform:none;letter-spacing:0">+ Crear</span>
-    </div>
-    <div id="fam-list" style="margin-bottom:6px"></div>
-    <div id="fam-info" style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:16px;font-size:12px;color:var(--muted2);line-height:1.55">
-      <b style="color:var(--txt2)">Una familia comparte cartera.</b> Entre sus miembros no se generan deudas, y el grupo liquida con la familia entera.
-    </div>
-
     <div class="sec-lbl">Amigos creados</div>
     <div id="yo-person-list" class="person-grid" style="margin-bottom:14px"></div>
     <div id="yo-empty" style="display:none;text-align:center;padding:20px 0;color:var(--muted2);font-size:13px">
@@ -2036,7 +2042,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261204</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261302</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -2189,6 +2195,32 @@ function paintSyncState() {
 // FIREBASE READ
 // ════════════════════════════════════════════
 // Convierte objetos con claves numéricas de Firebase de vuelta a arrays
+
+// Migración: si existiera DB.families de una versión anterior, se convierte en
+// vínculos de cada grupo donde tuviera 2+ miembros. Después se descarta.
+function migrateFamiliesIn(DB) {
+  if (!Array.isArray(DB.families) || !DB.families.length) return;
+
+  (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
+    if (!Array.isArray(g.links)) g.links = [];
+    DB.families.forEach(function(f) {
+      var dentro = (Array.isArray(f.members) ? f.members : [])
+                     .filter(function(m){ return esMiembro(g, m); });
+      if (dentro.length < 2) return;
+      var ya = g.links.some(function(l) {
+        return String(l.name).trim().toLowerCase() === String(f.name).trim().toLowerCase();
+      });
+      if (ya) return;
+      // Y que ninguno esté ya pillado por otro vínculo de este grupo
+      var pillado = dentro.some(function(m){ return !!linkOfAny(g, m); });
+      if (pillado) return;
+      g.links.push({ id: uid(), name: f.name, members: dentro });
+    });
+  });
+
+  delete DB.families;
+}
+
 function fixArrays(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
   const keys = Object.keys(obj);
@@ -2409,19 +2441,6 @@ function mergeDB(remote, local) {
           : (Array.isArray(remote.hiddenGroups) ? remote.hiddenGroups : []));
   result.hiddenGroups = hg;
 
-  // ── Familias ──
-  // Se fusionan por id. Si se deshizo una familia, su tombstone ('fam:id')
-  // impide que el servidor la resucite (mismo patrón que grupos y amigos).
-  // En conflicto gana la LOCAL: es la que acaba de editar el usuario.
-  var famById = {};
-  (Array.isArray(remote.families) ? remote.families : []).forEach(function(f) {
-    if (f && f.id && !deleted['fam:' + f.id]) famById[f.id] = f;
-  });
-  (Array.isArray(local.families) ? local.families : []).forEach(function(f) {
-    if (f && f.id && !deleted['fam:' + f.id]) famById[f.id] = f;
-  });
-  result.families = Object.keys(famById).map(function(k){ return famById[k]; });
-
   // Fusionar friends (unión), respetando tombstones de amigos borrados
   var friendsSet = {};
   (Array.isArray(local.friends)?local.friends:[]).forEach(function(f){ if(!deleted['fr:'+f]) friendsSet[f]=true; });
@@ -2480,6 +2499,19 @@ function mergeGroup(remote, local, deleted) {
   }
   addSettled(remote.settled); addSettled(local.settled);
   g.settled = Object.keys(setByKey).map(function(k){ return setByKey[k]; });
+  // ── Vínculos del grupo ──
+  // Se fusionan por id, con tombstone 'lnk:id' para que un vínculo deshecho
+  // no resucite desde el servidor. En conflicto gana el LOCAL (es quien acaba
+  // de editar). Sin esto, los vínculos se perderían entre móviles.
+  var lnkById = {};
+  (Array.isArray(remote.links) ? remote.links : []).forEach(function(l) {
+    if (l && l.id && !deleted['lnk:' + l.id]) lnkById[l.id] = l;
+  });
+  (Array.isArray(local.links) ? local.links : []).forEach(function(l) {
+    if (l && l.id && !deleted['lnk:' + l.id]) lnkById[l.id] = l;
+  });
+  out.links = Object.keys(lnkById).map(function(k){ return lnkById[k]; });
+
   return g;
 }
 
@@ -2506,7 +2538,6 @@ async function sync(silent = false) {
       if (remoteV >= prevV && !pendingWrite && !busy) {
         DB = migrateSettlements(remote);
         if (!Array.isArray(DB.groups))  DB.groups  = [];
-  if (!Array.isArray(DB.families)) DB.families = [];
         if (!Array.isArray(DB.friends)) DB.friends = [];
         if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
         DB.groups.forEach(function(g) {
@@ -2552,7 +2583,6 @@ async function manualSync() {
     if (remote && typeof remote === 'object') {
       DB = migrateSettlements(remote);
       if (!Array.isArray(DB.groups))  DB.groups  = [];
-  if (!Array.isArray(DB.families)) DB.families = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
       if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
       DB.groups.forEach(g => {
@@ -3871,18 +3901,26 @@ function computeBals(g) {
 // Lo único que se agrupa es la DEUDA.
 // ══════════════════════════════════════════════════════════════
 
-function families() {
-  return Array.isArray(DB.families) ? DB.families : [];
+// Los vínculos de un grupo. Viven DENTRO del grupo (g.links), no en Amigos.
+// Así una persona puede ir con su pareja en un viaje, con otros amigos en el
+// siguiente, y sola en el de más allá. Y como cada vínculo pertenece a un solo
+// grupo, es IMPOSIBLE que dos se solapen: el conflicto desaparece por diseño.
+function links(g) {
+  return (g && Array.isArray(g.links)) ? g.links : [];
 }
 
 // ¿A qué familia pertenece esta persona? (null si va suelta)
-function familyOf(name) {
+// ¿En qué vínculo está esta persona, DENTRO de este grupo? (null si va suelta)
+// Solo cuenta si el vínculo tiene 2+ miembros presentes en el grupo.
+function linkOf(g, name) {
   if (!name) return null;
   var n = String(name).trim().toLowerCase();
-  return families().filter(function(f) {
-    return (Array.isArray(f.members) ? f.members : []).some(function(m) {
-      return String(m).trim().toLowerCase() === n;
-    });
+  return links(g).filter(function(l) {
+    var miem = Array.isArray(l.members) ? l.members : [];
+    if (!miem.some(function(m){ return String(m).trim().toLowerCase() === n; })) return false;
+    // El vínculo solo aplica si de verdad hay 2+ de sus miembros en el grupo
+    var dentro = miem.filter(function(m){ return esMiembro(g, m); });
+    return dentro.length >= 2;
   })[0] || null;
 }
 
@@ -3901,41 +3939,43 @@ function unitsInGroup(g) {
   function meter(n) {
     if (!n) return;
     var k = String(n).trim().toLowerCase();
-    if (visto[k]) return;      // sin duplicados
+    if (visto[k]) return;
     visto[k] = true;
     gente.push(n);
   }
   members.forEach(meter);
   expenses.forEach(function(e){ if (e && typeof e.amount === 'number') meter(e.paidBy); });
 
-  var out = [], asignado = {}, hechas = {};
+  var out = [], asignado = {}, hechos = {};
 
   gente.forEach(function(m) {
     var k = String(m).trim().toLowerCase();
-    if (asignado[k]) return;               // esta persona ya está en una unidad
+    if (asignado[k]) return;               // ya está en una unidad
 
-    var f = familyOf(m);
+    // Su vínculo en ESTE grupo (si lo tiene)
+    var l = links(g).filter(function(x) {
+      var miem = Array.isArray(x.members) ? x.members : [];
+      return miem.some(function(p){ return String(p).trim().toLowerCase() === k; });
+    })[0];
 
-    // Miembros de esa familia presentes en el grupo, sin duplicados y sin los
-    // que ya estén asignados a otra unidad. Así nadie se cuenta dos veces
-    // aunque los datos estén sucios (nombre repetido, o alguien en 2 familias).
+    // Miembros del vínculo presentes, sin duplicados y sin los ya asignados.
+    // Nadie se cuenta dos veces aunque los datos vengan sucios.
     var dentro = [];
-    if (f) {
+    if (l) {
       var vis2 = {};
-      (Array.isArray(f.members) ? f.members : []).forEach(function(x) {
+      (Array.isArray(l.members) ? l.members : []).forEach(function(x) {
         var kx = String(x).trim().toLowerCase();
-        if (vis2[kx] || asignado[kx]) return;
-        if (!visto[kx]) return;            // esa persona no pinta nada en este grupo
+        if (vis2[kx] || asignado[kx] || !visto[kx]) return;
         vis2[kx] = true;
         dentro.push(x);
       });
     }
 
-    // La familia solo cuenta si tiene 2+ presentes. Si no, cada uno va suelto.
-    if (f && dentro.length >= 2 && !hechas['fam:' + f.id]) {
-      hechas['fam:' + f.id] = true;
+    // El vínculo solo cuenta si quedan 2+ presentes. Si no, cada uno va suelto.
+    if (l && dentro.length >= 2 && !hechos[l.id]) {
+      hechos[l.id] = true;
       dentro.forEach(function(x){ asignado[String(x).trim().toLowerCase()] = true; });
-      out.push({ key: 'fam:' + f.id, name: f.name, members: dentro, isFam: true });
+      out.push({ key: 'lnk:' + l.id, name: l.name, members: dentro, isFam: true });
     } else {
       asignado[k] = true;
       out.push({ key: 'per:' + m, name: m, members: [m], isFam: false });
@@ -3978,6 +4018,7 @@ function isMyUnit(g, unitName) {
 }
 
 // ¿Hay alguna familia REAL en este grupo? (con 2+ miembros dentro)
+// ¿Hay algún vínculo REAL en este grupo? (con 2+ miembros dentro)
 function hasFamilies(g) {
   return unitsInGroup(g).some(function(u){ return u.isFam; });
 }
@@ -4130,7 +4171,7 @@ function renderBals(g) {
 
   h += buildPaidDonut(bals);
 
-  h += '<div class="sec-lbl">' + (hayFam ? 'Saldo de cada familia' : 'Saldo de cada persona') + '</div>';
+  h += '<div class="sec-lbl">' + (hayFam ? 'Saldo de cada vínculo' : 'Saldo de cada persona') + '</div>';
 
   h += '<div class="card">';
   bals.forEach(function(b){
@@ -4160,7 +4201,7 @@ function renderBals(g) {
   h += '</div>';
 
   if (hayFam) {
-    h += '<div class="info-box" style="margin-top:10px;font-size:12px">👨‍👩‍👧 Las <strong>familias</strong> comparten cartera: entre sus miembros no hay deudas. En <strong>Deudas</strong> tienes el detalle persona a persona.</div>';
+    h += '<div class="info-box" style="margin-top:10px;font-size:12px">🔗 Los <strong>vínculos</strong> comparten cartera: entre sus miembros no hay deudas. En <strong>Deudas</strong> tienes el detalle persona a persona.</div>';
   } else {
     h += '<div class="info-box" style="margin-top:10px;font-size:12px">💡 <strong>Le deben</strong>: pagó más de lo que le tocaba. <strong>Debe</strong>: pagó menos. Ve a <strong>Deudas</strong> para ver quién paga a quién.</div>';
   }
@@ -4284,7 +4325,7 @@ function renderDebts(g) {
     h += '<div class="sec-lbl">💸 Pendiente de pago</div>';
     pending.forEach(function(t){ h += row(t, false); });
     if (hayFam) {
-      h += '<div class="info-box" style="margin-top:8px;font-size:12px">👨‍👩‍👧 El dinero se mueve <strong>entre familias</strong>. Dentro de una familia no hay nada que saldar.</div>';
+      h += '<div class="info-box" style="margin-top:8px;font-size:12px">🔗 El dinero se mueve <strong>entre vínculos</strong>. Dentro de un vínculo no hay nada que saldar.</div>';
     }
   } else {
     h += '<div class="sec-lbl">💸 Pendiente de pago</div>';
@@ -4305,9 +4346,8 @@ function renderDebts(g) {
     h += '<div class="sec-lbl" style="margin-top:18px">Detalle por persona</div>';
     h += '<div class="card" style="padding:4px 13px">';
     ind.forEach(function(b) {
-      var f = familyOf(b.name);
-      var enFam = f && esMiembro(g, b.name) &&
-                  (f.members || []).filter(function(x){ return esMiembro(g, x); }).length >= 2;
+      var f = linkOf(g, b.name);        // su vínculo EN ESTE GRUPO
+      var enFam = !!f;
       var col = Math.abs(b.net) < 0.005 ? 'var(--muted2)' : (b.net > 0 ? 'var(--acc)' : 'var(--acc3)');
 
       var ultimo = (ind.indexOf(b) === ind.length - 1);
@@ -4316,14 +4356,14 @@ function renderDebts(g) {
       h +=   '<div class="avatar" style="width:28px;height:28px;font-size:11px;background:' + avc(b.name) + '22;color:' + avc(b.name) + '">' + ini(b.name) + '</div>';
       h +=   '<div style="flex:1;min-width:0;font-size:13px;color:var(--txt2)">' + esc(b.name);
       h +=     '<span style="font-size:10px;color:var(--muted);margin-left:5px">· ' +
-               (enFam ? esc(f.name) : 'sin familia') + '</span>';
+               (enFam ? esc(f.name) : 'sin vínculo') + '</span>';
       h +=   '</div>';
       h +=   '<div style="font-family:var(--ff-head);font-weight:800;font-size:13.5px;color:' + col + '">' +
              (b.net >= 0 ? '+' : '') + fmt(b.net) + '</div>';
       h += '</div>';
     });
     h += '</div>';
-    h += '<div class="info-box" style="margin-top:8px;font-size:12px">Quién ha puesto qué, <strong>persona a persona</strong>. Aquí no hay nada que pagar: el dinero se salda entre familias.</div>';
+    h += '<div class="info-box" style="margin-top:8px;font-size:12px">Quién ha puesto qué, <strong>persona a persona</strong>. Aquí no hay nada que pagar: el dinero se salda entre vínculos.</div>';
   }
 
   return h;
@@ -4401,6 +4441,7 @@ function togglePaid(gid, key) {
   var g = DB.groups.find(function(x){ return x.id===gid; });
   if (!g) return;
   if (!Array.isArray(g.settled)) g.settled = [];
+    if (!Array.isArray(g.links))   g.links   = [];
   // settled puede contener strings (formato viejo) u objetos {key,...}
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   var tomb = 'set:' + gid + '|' + key;     // marca de "este pago se ha desmarcado"
@@ -4888,7 +4929,7 @@ function bloqueSaldo(g) {
 
   // El botón ⇄ solo aparece si estás en una familia EN ESTE grupo
   if (enFamilia) {
-    h += '<button class="hv-swap" onclick="toggleSaldoView()" title="Cambiar entre tu saldo y el de tu familia">';
+    h += '<button class="hv-swap" onclick="toggleSaldoView()" title="Cambiar entre tu saldo y el del vínculo">';
     h +=   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
            '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
            '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
@@ -6241,43 +6282,60 @@ function confirmDelPerson() {
 
 // Renderizar modal Amigos
 
+
 // ══════════════════════════════════════════════════
-// FAMILIAS — interfaz (pantalla Amigos)
+// VÍNCULOS — interfaz (dentro de la edición del grupo)
+// ──────────────────────────────────────────────────
+// Un vínculo pertenece a UN grupo. La misma persona puede ir con su pareja en
+// un viaje y con otros amigos en el siguiente. Y como cada vínculo vive en su
+// grupo, dos no pueden solaparse: el conflicto no existe.
+//
+// Dentro de un grupo, sí: cada persona en un único vínculo. La interfaz lo
+// impide (los ya vinculados salen apagados), y el cálculo lo vuelve a
+// comprobar por si acaso — un error aquí desmontaría las cuentas.
 // ══════════════════════════════════════════════════
 
-var famEdit = '';        // id de la familia que se está editando ('' = nueva)
-var famSel  = [];        // miembros seleccionados en el modal
+var lnkEdit = '';    // id del vínculo que se edita ('' = nuevo)
+var lnkSel  = [];    // quiénes van dentro
 
-function renderFamilias() {
-  var cont = document.getElementById('fam-list');
-  var add  = document.getElementById('fam-add');
-  var info = document.getElementById('fam-info');
+function grupoEnEdicion() {
+  return DB.groups.find(function(x){ return x.id === curGroup; });
+}
+
+function renderLinks() {
+  var cont = document.getElementById('lnk-list');
+  var add  = document.getElementById('lnk-add');
   if (!cont) return;
+
+  var g = grupoEnEdicion();
+  if (!g) { cont.innerHTML = ''; return; }
 
   if (add) add.style.display = isAdmin() ? 'inline-block' : 'none';
 
-  var fams = families();
-  if (!fams.length) {
-    cont.innerHTML = '<div style="text-align:center;padding:14px 0;color:var(--muted);font-size:12.5px">' +
-      (isAdmin() ? 'Sin familias. Crea una si hay parejas en tus grupos.'
-                 : 'Sin familias todavía.') + '</div>';
-    if (info) info.style.display = fams.length ? 'none' : 'block';
+  var ls = links(g);
+  if (!ls.length) {
+    cont.innerHTML = '<div style="text-align:center;padding:12px 0;color:var(--muted);font-size:12.5px">' +
+      'Sin vínculos. Cada uno liquida por su cuenta.</div>';
     return;
   }
-  if (info) info.style.display = 'block';
 
   var h = '';
-  fams.forEach(function(f) {
-    var miem = Array.isArray(f.members) ? f.members : [];
-    h += '<div class="fam-card"' + (isAdmin() ? ' onclick="openFamilia(\'' + f.id + '\')"' : '') + '>';
+  ls.forEach(function(l) {
+    var miem = Array.isArray(l.members) ? l.members : [];
+    var dentro = miem.filter(function(m){ return esMiembro(g, m); });
+    var activo = dentro.length >= 2;
+
+    h += '<div class="fam-card"' + (activo ? '' : ' style="opacity:.5"') +
+         (isAdmin() ? ' onclick="openLink(\'' + l.id + '\')"' : '') + '>';
     h +=   '<div class="fam-avs">';
     miem.slice(0, 3).forEach(function(m) {
       h += '<div class="fam-av" style="background:' + avc(m) + '">' + ini(m) + '</div>';
     });
     h +=   '</div>';
     h +=   '<div style="flex:1;min-width:0">';
-    h +=     '<div class="fam-nom">' + esc(f.name) + '</div>';
-    h +=     '<div class="fam-sub">' + esc(miem.join(' · ')) + '</div>';
+    h +=     '<div class="fam-nom">' + esc(l.name) + '</div>';
+    h +=     '<div class="fam-sub">' + esc(miem.join(' · ')) +
+             (activo ? '' : ' · <span style="color:var(--acc2)">inactivo</span>') + '</div>';
     h +=   '</div>';
     if (isAdmin()) {
       h += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -6287,130 +6345,224 @@ function renderFamilias() {
   cont.innerHTML = h;
 }
 
-// Abrir el modal (con id = editar, sin id = crear)
-function openFamilia(id) {
+function openLink(id) {
   if (!isAdmin()) { toast('🔒 Solo el administrador'); return; }
+  var g = grupoEnEdicion();
+  if (!g) return;
 
-  famEdit = id || '';
-  var f = famEdit ? families().filter(function(x){ return x.id === famEdit; })[0] : null;
+  lnkEdit = id || '';
+  var l = lnkEdit ? links(g).filter(function(x){ return x.id === lnkEdit; })[0] : null;
 
-  famSel = f ? (Array.isArray(f.members) ? f.members.slice() : []) : [];
+  lnkSel = l ? (Array.isArray(l.members) ? l.members.slice() : []) : [];
 
-  document.getElementById('fam-title').textContent = f ? 'Editar familia' : 'Nueva familia';
-  document.getElementById('fam-name').value = f ? (f.name || '') : '';
-  document.getElementById('fam-del').style.display = f ? 'block' : 'none';
+  document.getElementById('lnk-title').textContent = l ? 'Editar vínculo' : 'Nuevo vínculo';
+  document.getElementById('lnk-name').value = l ? (l.name || '') : '';
+  document.getElementById('lnk-del').style.display = l ? 'block' : 'none';
 
-  renderFamPeople();
-  openModal('m-familia');
+  renderReuse();
+  renderLinkPeople();
+  openModal('m-link');
 }
 
-// Las personas disponibles: todas menos las que ya están en OTRA familia
-function renderFamPeople() {
-  var cont = document.getElementById('fam-people');
+// ── Reutilizar un vínculo de otro grupo ──
+// Sin esto habría que recrear "Los Blanquer" en cada viaje. Con esto, un toque.
+function renderReuse() {
+  var cont = document.getElementById('lnk-reuse');
   if (!cont) return;
+  var g = grupoEnEdicion();
+  if (!g || lnkEdit) { cont.style.display = 'none'; return; }   // solo al crear
 
+  // Vínculos de OTROS grupos cuyos miembros estén (2+) en este
+  var vistos = {}, sug = [];
+  DB.groups.forEach(function(og) {
+    if (og.id === g.id) return;
+    links(og).forEach(function(l) {
+      var miem = Array.isArray(l.members) ? l.members : [];
+      var dentro = miem.filter(function(m){ return esMiembro(g, m); });
+      if (dentro.length < 2) return;
+      // Que no exista ya aquí, y que nadie esté pillado por otro vínculo
+      var yaEsta = links(g).some(function(x){
+        return String(x.name).trim().toLowerCase() === String(l.name).trim().toLowerCase();
+      });
+      if (yaEsta) return;
+      var pillado = dentro.some(function(m){ return !!linkOfAny(g, m); });
+      if (pillado) return;
+
+      var k = dentro.slice().sort().join('|');
+      if (vistos[k]) return;
+      vistos[k] = true;
+      sug.push({ name: l.name, members: dentro });
+    });
+  });
+
+  if (!sug.length) { cont.style.display = 'none'; return; }
+
+  var h = '<div class="sec-lbl" style="margin-top:0">De otros grupos · un toque</div>';
+  sug.slice(0, 4).forEach(function(s, i) {
+    h += '<div class="fam-card" onclick="usarSugerido(' + i + ')" style="margin-bottom:6px">';
+    h +=   '<div class="fam-avs">';
+    s.members.slice(0, 3).forEach(function(m) {
+      h += '<div class="fam-av" style="background:' + avc(m) + '">' + ini(m) + '</div>';
+    });
+    h +=   '</div>';
+    h +=   '<div style="flex:1;min-width:0">';
+    h +=     '<div class="fam-nom">' + esc(s.name) + '</div>';
+    h +=     '<div class="fam-sub">' + esc(s.members.join(' · ')) + '</div>';
+    h +=   '</div>';
+    h +=   '<span style="font-size:11px;font-weight:700;color:var(--acc)">Usar</span>';
+    h += '</div>';
+  });
+  cont.innerHTML = h;
+  cont.style.display = 'block';
+  window._lnkSug = sug;
+}
+
+function usarSugerido(i) {
+  var s = (window._lnkSug || [])[i];
+  if (!s) return;
+  lnkSel = s.members.slice();
+  document.getElementById('lnk-name').value = s.name;
+  renderLinkPeople();
+  hintLink();
+}
+
+// ¿Está esta persona en ALGÚN vínculo de este grupo? (aunque solo tenga 1 dentro)
+function linkOfAny(g, name) {
+  var n = String(name || '').trim().toLowerCase();
+  return links(g).filter(function(l) {
+    return (Array.isArray(l.members) ? l.members : []).some(function(m) {
+      return String(m).trim().toLowerCase() === n;
+    });
+  })[0] || null;
+}
+
+function renderLinkPeople() {
+  var cont = document.getElementById('lnk-people');
+  var warn = document.getElementById('lnk-warn');
+  if (!cont) return;
+  var g = grupoEnEdicion();
+  if (!g) return;
+
+  var miembros = Array.isArray(g.members) ? g.members : [];
   var h = '';
-  getFriends().forEach(function(n) {
-    var otra = familyOf(n);
-    var ocupada = otra && otra.id !== famEdit;      // ya está en otra familia
-    var on = famSel.some(function(x){ return x === n; });
 
-    if (ocupada) {
-      h += '<span class="chip-p off" title="Ya está en ' + esc(otra.name) + '">' +
+  miembros.forEach(function(n) {
+    var otro = linkOfAny(g, n);
+    var ocupado = otro && otro.id !== lnkEdit;    // ya está en OTRO vínculo de este grupo
+    var on = lnkSel.indexOf(n) >= 0;
+
+    if (ocupado) {
+      h += '<span class="chip-p off" title="Ya está en ' + esc(otro.name) + '">' +
            '<span class="chip-dot" style="background:' + avc(n) + '"></span>' + esc(n) +
-           '<span style="font-size:9.5px;color:var(--muted);margin-left:4px">' + esc(otra.name) + '</span></span>';
+           '<span style="font-size:9.5px;color:var(--muted);margin-left:4px">' + esc(otro.name) + '</span></span>';
     } else {
-      h += '<span class="chip-p' + (on ? ' on' : '') + '" onclick="toggleFamPerson(\'' + esc(n).replace(/'/g, "\\'") + '\')">' +
+      h += '<span class="chip-p' + (on ? ' on' : '') + '" onclick="toggleLinkPerson(\'' +
+           esc(n).replace(/'/g, "\\'") + '\')">' +
            '<span class="chip-dot" style="background:' + avc(n) + '"></span>' + esc(n) +
            (on ? ' ✓' : '') + '</span>';
     }
   });
-  cont.innerHTML = h || '<span style="font-size:12.5px;color:var(--muted)">Crea amigos primero.</span>';
 
-  sugerirNombreFamilia();
+  cont.innerHTML = h || '<span style="font-size:12.5px;color:var(--muted)">Añade miembros al grupo primero.</span>';
+
+  if (warn) {
+    if (lnkSel.length === 1)      warn.innerHTML = '<span style="color:var(--acc2)">Elige a alguien más: un vínculo necesita 2 personas o más.</span>';
+    else if (lnkSel.length === 0) warn.textContent = 'Marca a quienes comparten cartera.';
+    else                          warn.innerHTML = '<span style="color:var(--acc)">' + lnkSel.length + ' personas · liquidarán como una sola.</span>';
+  }
+  hintLink();
 }
 
-function toggleFamPerson(n) {
-  var i = famSel.indexOf(n);
-  if (i >= 0) famSel.splice(i, 1);
-  else        famSel.push(n);
-  renderFamPeople();
+function toggleLinkPerson(n) {
+  var i = lnkSel.indexOf(n);
+  if (i >= 0) lnkSel.splice(i, 1);
+  else        lnkSel.push(n);
+  renderLinkPeople();
 }
 
-// Sugerir un nombre a partir de los elegidos, pero SIN pisar lo que ya escribió
-function sugerirNombreFamilia() {
-  var inp  = document.getElementById('fam-name');
-  var hint = document.getElementById('fam-hint');
+// Sugerir nombre sin pisar lo que ya haya escrito
+function hintLink() {
+  var inp  = document.getElementById('lnk-name');
+  var hint = document.getElementById('lnk-hint');
   if (!inp || !hint) return;
 
-  if (famSel.length < 2) { hint.textContent = ''; return; }
+  if (lnkSel.length < 2) { hint.textContent = ''; return; }
 
-  var sug = famSel.slice(0, 2).join(' & ');
-  if (famSel.length > 2) sug += ' +' + (famSel.length - 2);
+  var sug = lnkSel.slice(0, 2).join(' & ');
+  if (lnkSel.length > 2) sug += ' +' + (lnkSel.length - 2);
+  inp.placeholder = sug;
 
   if (!inp.value.trim()) {
     hint.innerHTML = 'Sugerido: <span style="color:var(--acc)">' + esc(sug) + '</span> · puedes cambiarlo';
-    inp.placeholder = sug;
   } else {
     hint.textContent = '';
   }
 }
 
-function saveFamilia() {
+function saveLink() {
   if (!isAdmin()) return;
+  var g = grupoEnEdicion();
+  if (!g) return;
 
-  if (famSel.length < 2) { toast('⚠️ Una familia necesita 2 personas o más'); return; }
+  if (lnkSel.length < 2) { toast('⚠️ Un vínculo necesita 2 personas o más'); return; }
 
-  var inp = document.getElementById('fam-name');
-  var nombre = (inp.value || '').trim().replace(/\|/g, '');   // '|' separa las claves de pago
-  if (!nombre) nombre = famSel.slice(0, 2).join(' & ');       // el sugerido, si lo dejó vacío
-
-  // Que no se repita el nombre con otra familia
-  var choca = families().some(function(f) {
-    return f.id !== famEdit && String(f.name).trim().toLowerCase() === nombre.toLowerCase();
+  // Defensa: nadie puede estar en dos vínculos del mismo grupo. Si esto se
+  // colara, una persona se contaría dos veces y las cuentas mentirían.
+  var choque = lnkSel.filter(function(n) {
+    var o = linkOfAny(g, n);
+    return o && o.id !== lnkEdit;
   });
-  if (choca) { toast('⚠️ Ya hay una familia con ese nombre'); return; }
+  if (choque.length) { toast('⚠️ ' + choque[0] + ' ya está en otro vínculo'); return; }
 
-  if (!Array.isArray(DB.families)) DB.families = [];
+  var inp = document.getElementById('lnk-name');
+  var nombre = (inp.value || '').trim().replace(/\|/g, '');   // '|' separa las claves de pago
+  if (!nombre) nombre = lnkSel.slice(0, 2).join(' & ');
 
-  if (famEdit) {
-    var f = DB.families.filter(function(x){ return x.id === famEdit; })[0];
-    if (f) { f.name = nombre; f.members = famSel.slice(); }
-    logAction('friend', '👨‍👩‍👧', 'Editó la familia ' + nombre, null);
+  var repe = links(g).some(function(l) {
+    return l.id !== lnkEdit && String(l.name).trim().toLowerCase() === nombre.toLowerCase();
+  });
+  if (repe) { toast('⚠️ Ya hay un vínculo con ese nombre'); return; }
+
+  if (!Array.isArray(g.links)) g.links = [];
+
+  if (lnkEdit) {
+    var l = g.links.filter(function(x){ return x.id === lnkEdit; })[0];
+    if (l) { l.name = nombre; l.members = lnkSel.slice(); }
+    logAction('friend', '🔗', 'Editó el vínculo ' + nombre, g.id);
   } else {
-    DB.families.push({ id: uid(), name: nombre, members: famSel.slice() });
-    logAction('friend', '👨‍👩‍👧', 'Creó la familia ' + nombre + ' (' + famSel.join(', ') + ')', null);
+    g.links.push({ id: uid(), name: nombre, members: lnkSel.slice() });
+    logAction('friend', '🔗', 'Creó el vínculo ' + nombre + ' (' + lnkSel.join(', ') + ')', g.id);
   }
 
   save();
-  closeModal('m-familia');
-  renderFamilias();
-  renderAll();                 // los saldos cambian en TODAS las vistas
-  toast('👨‍👩‍👧 Familia guardada');
+  closeModal('m-link');
+  renderLinks();
+  renderAll();               // los saldos cambian en TODAS las vistas
+  toast('🔗 Vínculo guardado');
 }
 
-function deleteFamilia() {
-  if (!isAdmin() || !famEdit) return;
+function deleteLink() {
+  if (!isAdmin() || !lnkEdit) return;
+  var g = grupoEnEdicion();
+  if (!g) return;
 
-  var f = families().filter(function(x){ return x.id === famEdit; })[0];
-  if (!f) return;
-  if (!confirm('¿Deshacer la familia "' + f.name + '"?\n\nSus miembros volverán a liquidar por separado.')) return;
+  var l = links(g).filter(function(x){ return x.id === lnkEdit; })[0];
+  if (!l) return;
+  if (!confirm('¿Deshacer el vínculo "' + l.name + '"?\n\nSus miembros volverán a liquidar por separado.')) return;
 
-  DB.families = families().filter(function(x){ return x.id !== famEdit; });
-  // Tombstone: si no, la fusión con el servidor la resucitaría
+  g.links = links(g).filter(function(x){ return x.id !== lnkEdit; });
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
-  if (DB.deleted.indexOf('fam:' + famEdit) < 0) DB.deleted.push('fam:' + famEdit);
-  logAction('friend', '👨‍👩‍👧', 'Deshizo la familia ' + f.name, null);
+  if (DB.deleted.indexOf('lnk:' + lnkEdit) < 0) DB.deleted.push('lnk:' + lnkEdit);
 
+  logAction('friend', '🔗', 'Deshizo el vínculo ' + l.name, g.id);
   save();
-  closeModal('m-familia');
-  renderFamilias();
+  closeModal('m-link');
+  renderLinks();
   renderAll();
-  toast('Familia deshecha');
+  toast('Vínculo deshecho');
 }
 
 function renderYoModal() {
-  renderFamilias();
   var list  = document.getElementById('yo-person-list');
   var empty = document.getElementById('yo-empty');
   if (!list) return;
@@ -6732,6 +6884,7 @@ function renderEmBgGrid(currentBgUrl) {
 }
 
 function initEditMembers() {
+  renderLinks();
   const g = grp(); if (!g) return;
   emMembers = g.members.slice();
   const srch = document.getElementById('em-search');
@@ -6972,6 +7125,11 @@ function migrateSettlements(db) {
   });
   // Normalizar las URLs de fondo al formato actual (.webp)
   normalizeBgUrls(db);
+  // Las familias globales (v1.6) pasan a ser vínculos de cada grupo.
+  // Se encadena aquí porque migrateSettlements ya corre en todos los puntos
+  // de entrada de datos: arranque, sync y reconexión.
+  migrateFamiliesIn(db);
+
   return db;
 }
 
