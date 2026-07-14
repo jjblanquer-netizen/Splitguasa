@@ -986,15 +986,8 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
 
 
 /* Gastos más caros / movimientos */
-.hv-fila {
-  display: flex; align-items: center; gap: 11px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 13px; padding: 11px 13px; margin-bottom: 7px; cursor: pointer;
-}
-.hv-pos {
-  width: 20px; font-family: var(--ff-head); font-weight: 800; font-size: 13px;
-  color: var(--muted); flex-shrink: 0; text-align: center;
-}
+
+
 .hv-fico {
   width: 34px; height: 34px; border-radius: 10px; background: var(--s2);
   display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
@@ -1223,6 +1216,151 @@ body.light .rep-hero::after {
   display: block; font-size: 9.5px; color: rgba(255,255,255,.7);
   margin-top: 1px; text-transform: uppercase; letter-spacing: .05em;
 }
+
+/* ══════════════════════════════════════════════════
+   PANEL DE INSTALACIÓN
+   Dos zonas: la MARCA (presenta la app con gracia) y la ACCIÓN (qué hacer).
+   Si solo dijera "instala", sería una molestia. Presentándose, es una
+   invitación — y eso es lo que hace que la gente lo haga.
+   ══════════════════════════════════════════════════ */
+.inst-velo { align-items: center; }
+.inst-panel {
+  width: 100%; max-width: 380px; margin: 0 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px; overflow: hidden;
+  max-height: 92vh; overflow-y: auto;
+  box-shadow: 0 22px 60px rgba(0,0,0,.55);
+  position: relative;
+  animation: instSube .4s cubic-bezier(.22,1,.36,1);
+}
+@keyframes instSube {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.inst-x {
+  position: absolute; top: 13px; right: 13px; z-index: 3;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(10,11,15,.5); backdrop-filter: blur(8px);
+  border: 1px solid var(--border); color: var(--muted2);
+  font-size: 18px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.inst-x:active { color: var(--txt); }
+
+/* ── ZONA 1: LA MARCA ── */
+.inst-marca {
+  padding: 30px 22px 22px; text-align: center;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(94,234,212,.16) 0%, rgba(94,234,212,0) 62%),
+    linear-gradient(180deg, #171b26 0%, var(--surface) 100%);
+  border-bottom: 1px solid var(--border);
+}
+body.light .inst-marca {
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(13,148,136,.12) 0%, rgba(13,148,136,0) 62%),
+    linear-gradient(180deg, #eef1f7 0%, var(--surface) 100%);
+}
+.inst-icono {
+  width: 72px; height: 72px; border-radius: 20px;
+  margin: 0 auto 14px; display: block;
+  box-shadow: 0 12px 34px rgba(94,234,212,.3);
+}
+.inst-nom {
+  font-family: var(--ff-head); font-weight: 800; font-size: 25px;
+  color: var(--txt); letter-spacing: -.02em; margin-bottom: 7px;
+}
+.inst-claim {
+  font-size: 14px; color: var(--txt2); line-height: 1.5;
+  max-width: 270px; margin: 0 auto 16px;
+}
+/* El Lannister, como un sello. Es lo que le da la personalidad. */
+.inst-lema {
+  display: inline-block;
+  font-size: 11.5px; font-style: italic; color: var(--acc2);
+  background: rgba(251,191,36,.09);
+  border: 1px solid rgba(251,191,36,.24);
+  border-radius: 999px; padding: 6px 14px;
+}
+
+/* ── ZONA 2: LA ACCIÓN ── */
+.inst-accion { padding: 20px 22px 18px; }
+.inst-tit {
+  font-family: var(--ff-head); font-weight: 800; font-size: 16px;
+  color: var(--txt); margin-bottom: 14px;
+}
+.inst-vent { display: flex; flex-direction: column; gap: 9px; margin-bottom: 18px; }
+.inst-v { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--txt2); }
+.inst-v b { color: var(--txt); }
+.inst-vi {
+  width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+  background: rgba(94,234,212,.11); border: 1px solid rgba(94,234,212,.22);
+  display: flex; align-items: center; justify-content: center; color: var(--acc);
+}
+
+.inst-btn {
+  width: 100%; background: var(--acc); color: #04221d; border: none;
+  font-family: var(--ff-head); font-weight: 800; font-size: 15px;
+  padding: 15px; border-radius: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.inst-btn:active { transform: scale(.98); }
+.inst-sec {
+  width: 100%; background: none; border: none; color: var(--muted);
+  font-size: 13px; padding: 12px 0 2px; cursor: pointer;
+}
+
+/* Pasos (iPhone) */
+.inst-pasos { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
+.inst-paso {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 14px; padding: 13px 14px;
+}
+.inst-num {
+  width: 27px; height: 27px; border-radius: 50%; flex-shrink: 0;
+  background: var(--acc); color: #04221d;
+  font-family: var(--ff-head); font-weight: 800; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.inst-ptxt { font-size: 13.5px; color: var(--txt2); line-height: 1.45; }
+.inst-ptxt b { color: var(--txt); }
+.inst-ios {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border-radius: 6px;
+  background: rgba(94,234,212,.13); border: 1px solid rgba(94,234,212,.3);
+  color: var(--acc); vertical-align: -6px; margin: 0 1px;
+}
+.inst-nota {
+  font-size: 12.5px; color: var(--muted); text-align: center;
+  line-height: 1.5; margin-bottom: 4px;
+}
+.inst-nota b { color: var(--txt2); }
+
+/* La flecha señala ABAJO: ahí está el botón de Compartir de Safari, y ahí es
+   donde se pierde todo el mundo (lo busca en el menú de arriba). */
+.inst-flecha {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--acc); margin-top: 4px;
+  animation: instBota 1.4s ease-in-out infinite;
+}
+.inst-flecha span { font-size: 11px; font-weight: 700; font-family: var(--ff-head); }
+@keyframes instBota {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(7px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inst-flecha { animation: none; }
+  .inst-panel  { animation: none; }
+}
+
+.inst-alerta {
+  background: rgba(251,191,36,.09); border: 1px solid rgba(251,191,36,.28);
+  border-radius: 13px; padding: 12px 14px; margin-bottom: 16px;
+  font-size: 12.5px; color: var(--txt2); line-height: 1.55;
+}
+.inst-alerta b { color: var(--acc2); }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -1456,6 +1594,20 @@ body.light .rep-hero::after {
     <button class="btn-secondary" style="width:100%;margin-top:9px" onclick="closeModal('m-code-switch')">Cancelar</button>
     <div class="pb"></div>
   </div>
+</div>
+
+
+
+
+
+<!-- ══════════════════════════════════════════════════
+     INSTALAR LA APP
+     Sale en CADA apertura hasta que se instale. Se puede cerrar con la ×,
+     pero vuelve la próxima vez. El contenido se construye según el caso:
+     Android (diálogo nativo) · iPhone (3 pasos) · WhatsApp (salir a Chrome).
+     ══════════════════════════════════════════════════ -->
+<div class="modal-bg inst-velo" id="m-install">
+  <div class="inst-panel" id="inst-panel"></div>
 </div>
 
 <!-- ══ MODAL: FILTRAR INFORME POR GRUPO ══ -->
@@ -1772,7 +1924,7 @@ body.light .rep-hero::after {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720260908</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261012</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -1789,6 +1941,43 @@ body.light .rep-hero::after {
 </div><!-- /app -->
 
 <script>
+// ══════════════════════════════════════════════════
+// NAVEGADOR EMBEBIDO (WhatsApp, Instagram, Facebook…)
+// ──────────────────────────────────────────────────
+// Al tocar un enlace en WhatsApp, la web NO se abre en Chrome: se abre en un
+// navegador interno (WebView). Ahí el evento 'beforeinstallprompt' no se
+// dispara NUNCA, así que la app no se puede instalar por mucho que insistas.
+//
+// En Android se puede saltar con un enlace 'intent://', que fuerza a Chrome.
+// En iOS no existe equivalente: solo queda explicarlo.
+// ══════════════════════════════════════════════════
+
+function esNavegadorEmbebido() {
+  var ua = navigator.userAgent || '';
+  // La marca del WebView de Android es "; wv)". Chrome normal NO la lleva.
+  if (/; wv\)/.test(ua)) return true;
+  // Y los navegadores internos de las redes sociales se identifican aparte
+  if (/FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger/i.test(ua)) return true;
+  return false;
+}
+
+function esAndroid() { return /Android/i.test(navigator.userAgent || ''); }
+function esIOS()     { return /iPhone|iPad|iPod/i.test(navigator.userAgent || ''); }
+
+// Enlace que fuerza la apertura en Chrome (solo Android).
+// Conserva el ?c=CODIGO, para que el acceso siga funcionando.
+function enlaceChrome() {
+  return 'intent://' + location.host + location.pathname + location.search +
+         '#Intent;scheme=https;package=com.android.chrome;end';
+}
+
+function abrirEnChrome() {
+  window.location.href = enlaceChrome();
+}
+
+
+
+
 
 
 
@@ -2852,6 +3041,126 @@ function openCodeModal(modo) {
 }
 
 // Valida el código introducido y asigna el usuario
+// ══════════════════════════════════════════════════
+// INSTALAR LA APP
+// ──────────────────────────────────────────────────
+// No se puede forzar: Chrome exige un gesto del usuario y pinta su propio
+// diálogo. No hay API para instalar en silencio (y menos mal).
+//
+// Lo que sí hacemos: mostrarlo en CADA apertura hasta que se instale, a
+// pantalla completa, con la marca delante para que no parezca una molestia.
+// Se cierra con la ×, pero vuelve la próxima vez.
+// ══════════════════════════════════════════════════
+
+// La zona de marca, común a los tres casos
+function instMarca() {
+  var h = '<button class="inst-x" onclick="closeModal(\'m-install\')" aria-label="Cerrar">×</button>';
+  h += '<div class="inst-marca">';
+  h +=   '<img class="inst-icono" src="icon-192.png" alt="" onerror="this.style.display=\'none\'">';
+  h +=   '<div class="inst-nom">SplitGuasa 💸</div>';
+  h +=   '<div class="inst-claim">Divide gastos con amigos<br>sin drama y sin excusas</div>';
+  h +=   '<div class="inst-lema">“Un Lannister siempre paga sus deudas”</div>';
+  h += '</div>';
+  return h;
+}
+
+var TIC = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
+
+// ── Caso 1: Android/Chrome — hay diálogo nativo ──
+function panelAndroid() {
+  var h = instMarca();
+  h += '<div class="inst-accion">';
+  h +=   '<div class="inst-tit">📲 Instálala en tu móvil</div>';
+  h +=   '<div class="inst-vent">';
+  h +=     '<div class="inst-v"><span class="inst-vi">' + TIC + '</span><span><b>No volverá a pedirte el código</b></span></div>';
+  h +=     '<div class="inst-v"><span class="inst-vi">' + TIC + '</span><span>Se abre de un toque, como una app</span></div>';
+  h +=     '<div class="inst-v"><span class="inst-vi">' + TIC + '</span><span>Ocupa menos de 1 MB</span></div>';
+  h +=   '</div>';
+  h +=   '<button class="inst-btn" onclick="lanzarInstalacion()">';
+  h +=     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>';
+  h +=     'Instalar ahora';
+  h +=   '</button>';
+  h +=   '<button class="inst-sec" onclick="closeModal(\'m-install\')">Ahora no</button>';
+  h += '</div>';
+  return h;
+}
+
+// ── Caso 2: iPhone — Apple no permite el diálogo. Hay que guiar. ──
+function panelIOS() {
+  var h = instMarca();
+  h += '<div class="inst-accion">';
+  h +=   '<div class="inst-tit">📲 Instálala · solo 3 pasos</div>';
+  h +=   '<div class="inst-pasos">';
+  h +=     '<div class="inst-paso"><div class="inst-num">1</div><div class="inst-ptxt">Toca ' +
+           '<span class="inst-ios"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="M8 8l4-4 4 4"/><path d="M20 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5"/></svg></span>' +
+           ' <b>Compartir</b>, aquí abajo</div></div>';
+  h +=     '<div class="inst-paso"><div class="inst-num">2</div><div class="inst-ptxt">Desliza y elige <b>Añadir a pantalla de inicio</b></div></div>';
+  h +=     '<div class="inst-paso"><div class="inst-num">3</div><div class="inst-ptxt">Pulsa <b>Añadir</b>, arriba a la derecha</div></div>';
+  h +=   '</div>';
+  h +=   '<div class="inst-nota">Después <b>no volverá a pedirte el código</b></div>';
+  // La flecha señala abajo: el botón de Compartir de Safari está AHÍ, y es
+  // donde se pierde todo el mundo (lo buscan en el menú de arriba).
+  h +=   '<div class="inst-flecha"><span>Ahí abajo</span>';
+  h +=     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>';
+  h +=   '</div>';
+  h += '</div>';
+  return h;
+}
+
+// ── Caso 3: dentro de WhatsApp — aquí NO se puede instalar ──
+function panelEmbebido() {
+  var h = instMarca();
+  h += '<div class="inst-accion">';
+  h +=   '<div class="inst-alerta"><b>⚠️ Estás dentro de WhatsApp.</b><br>' +
+         'Desde aquí no se puede instalar. Hay que abrirla en el navegador.</div>';
+
+  if (esAndroid()) {
+    h += '<div class="inst-nota" style="margin-bottom:16px">Un toque y sigues donde estabas.<br><b>Tu código se conserva.</b></div>';
+    h += '<button class="inst-btn" onclick="abrirEnChrome()">';
+    h +=   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
+    h +=   'Abrir en Chrome';
+    h += '</button>';
+  } else {
+    // iOS: no existe intent://. Solo se puede explicar.
+    h += '<div class="inst-pasos">';
+    h +=   '<div class="inst-paso"><div class="inst-num">1</div><div class="inst-ptxt">Toca <b>⋯</b>, arriba a la derecha</div></div>';
+    h +=   '<div class="inst-paso"><div class="inst-num">2</div><div class="inst-ptxt">Elige <b>Abrir en Safari</b></div></div>';
+    h += '</div>';
+  }
+
+  h +=   '<button class="inst-sec" onclick="closeModal(\'m-install\')">Ahora no</button>';
+  h += '</div>';
+  return h;
+}
+
+// Decide el caso y muestra el panel. Se llama en CADA apertura.
+function ofrecerInstalacion() {
+  if (esAppInstalada()) return;          // ya la tiene: nunca más
+  if (necesitaCodigo()) return;          // aún no ha entrado: primero el código
+
+  var cont = document.getElementById('inst-panel');
+  if (!cont) return;
+
+  var h;
+  if (esNavegadorEmbebido())                                   h = panelEmbebido();
+  else if (window.sgPuedeInstalar && window.sgPuedeInstalar()) h = panelAndroid();
+  else if (esIOS())                                            h = panelIOS();
+  else return;                                                 // escritorio u otros: no molestar
+
+  cont.innerHTML = h;
+  openModal('m-install');
+}
+
+function lanzarInstalacion() {
+  if (!window.sgInstalar) { closeModal('m-install'); return; }
+  // Esto SÍ va dentro de un gesto del usuario (ha pulsado el botón),
+  // que es lo único que Chrome acepta para abrir su diálogo nativo.
+  window.sgInstalar().then(function(aceptada) {
+    closeModal('m-install');
+    if (aceptada) toast('🎉 ¡App instalada!');
+  });
+}
+
 async function submitCode(modo) {
   var boxId = modo === 'welcome' ? 'welcome-code-boxes' : 'switch-code-boxes';
   var errId = modo === 'welcome' ? 'welcome-code-err'   : 'switch-code-err';
@@ -2893,6 +3202,9 @@ async function submitCode(modo) {
   closeModal(modo === 'welcome' ? 'm-welcome' : 'm-code-switch');
   clearCode(boxId);
   toast('👋 ¡Hola, ' + name + '!');
+
+  // Momento de máxima intención: acaba de entrar con su código.
+  if (modo === 'welcome') setTimeout(ofrecerInstalacion, 900);
 }
 
 
@@ -4070,7 +4382,7 @@ function renderHomeAvanzada() {
   h += bloqueSaldo(g);        // monta sobre la foto: los dos se funden
   h += bloqueCifras(g);
   h += bloqueCategorias(g);   // En qué se va el dinero
-  h += bloquePodio(g);        // Ranking de gastadores
+  h += bloquePodio(g);        // ¿Cuánto ha aportado cada uno?
   h += bloqueUltimos(g);      // Últimos gastos
   h += '<div style="height:90px"></div>';   // hueco para el botón + y la barra
 
@@ -5944,6 +6256,11 @@ async function init() {
   document.getElementById('app').style.display = 'flex';
 
   if (!pideCodigo) logAppOpen();
+
+  // Ofrecer la instalación en CADA apertura, hasta que la instale.
+  // Damos margen a que llegue 'beforeinstallprompt' (Chrome lo dispara con
+  // algo de retraso); si no llega, ofrecerInstalacion() decide igual el caso.
+  if (!pideCodigo) setTimeout(ofrecerInstalacion, 1600);
 }
 
 // ¿Este dispositivo debe introducir un código?
@@ -6177,11 +6494,10 @@ init();
     } catch(e) { return false; }
   }
 
-  function show() {
-    if (!banner) return;
-    if (isStandalone() || recentlyDismissed()) return;
-    banner.style.display = 'block';
-  }
+  // El banner de abajo queda RETIRADO: lo sustituye el panel a pantalla
+  // completa (#m-install), que sale en cada apertura hasta que se instale.
+  // Mantenemos el resto del bloque solo para capturar 'beforeinstallprompt'.
+  function show() { return; }
 
   function dismiss() {
     if (banner) banner.style.display = 'none';
@@ -6218,8 +6534,32 @@ init();
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
-    show();
+    // Puede llegar DESPUÉS de que init() haya intentado ofrecerlo. Si el panel
+    // no está abierto y aún se puede instalar, ofrecerlo ahora.
+    setTimeout(function() {
+      var m = document.getElementById('m-install');
+      if (m && !m.classList.contains('on') && typeof ofrecerInstalacion === 'function') {
+        ofrecerInstalacion();
+      }
+    }, 400);
   });
+
+  // ── Puente para poder instalar desde otras partes de la app ──
+  // El diálogo NO se puede lanzar al cargar la página: Chrome solo lo permite
+  // dentro de un gesto del usuario (un toque). Por eso lo exponemos y lo
+  // disparamos desde un botón real.
+  window.sgPuedeInstalar = function() {
+    return !!deferredPrompt && !isStandalone();
+  };
+  window.sgInstalar = function() {
+    if (!deferredPrompt) return Promise.resolve(false);
+    deferredPrompt.prompt();
+    return deferredPrompt.userChoice.then(function(c) {
+      deferredPrompt = null;
+      if (banner) banner.style.display = 'none';
+      return c && c.outcome === 'accepted';
+    });
+  };
 
   // Si ya está instalada, ocultar
   window.addEventListener('appinstalled', function() {
@@ -6237,6 +6577,14 @@ init();
   function init() {
     ready();
     if (isStandalone() || recentlyDismissed()) return;
+
+    // Si estamos dentro de WhatsApp (o similar), el banner normal NO sirve:
+    // 'beforeinstallprompt' jamás se disparará y las instrucciones del menú ⋮
+    // de Chrome son inútiles porque no estamos en Chrome. Aviso propio.
+    if (esNavegadorEmbebido()) {
+      setTimeout(avisoNavegadorEmbebido, 1200);
+      return;
+    }
 
     if (isIos()) {
       // iPhone: instrucciones manuales tras 3s
@@ -6324,6 +6672,7 @@ if ('serviceWorker' in navigator) {
   }, 30 * 60 * 1000);
 }
 </script>
+
   <!-- ══ BANNER INSTALAR APP ══ -->
   <div id="install-banner" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:9999;background:linear-gradient(135deg,#1a1d26,#0e0f14);border-top:1px solid var(--border);padding:16px 18px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 30px rgba(0,0,0,.5);animation:slideUp .35s ease">
     <div style="display:flex;align-items:center;gap:13px;max-width:480px;margin:0 auto">
