@@ -2058,7 +2058,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261942</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720262035</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -4167,13 +4167,27 @@ function computeBalsRaw(g) {
   expenses.forEach(function(e) {
     if (!gastoValido(e)) return;      // sin importe o sin pagador: no se puede repartir
 
-    // Liquidaciones: usar splitAmong original (solo el acreedor)
-    // Gastos normales: dividir entre TODOS los miembros actuales
+    // ¿Entre quiénes se reparte este gasto?
+    //
+    // Se RESPETA splitAmong: si marcaste que el taxi era solo para Jota y Cris,
+    // solo lo pagan ellos. Antes se ignoraba y se repartía entre todos, así que
+    // la app te enseñaba "50 € cada uno" al crearlo... y luego se lo cobraba a
+    // los cuatro. La interfaz mentía.
+    //
+    // Pero con un filtro: solo cuenta la gente que SIGUE en el grupo. Si alguien
+    // del reparto se fue, su parte se redistribuye entre los que quedan. Es
+    // necesario: quien no es miembro ni ha pagado nada no forma unidad, así que
+    // su deuda se evaporaría y los saldos dejarían de sumar cero.
     var among;
     if (e.isSettlement) {
       among = Array.isArray(e.splitAmong) ? e.splitAmong : Object.values(e.splitAmong || {});
     } else {
-      among = members;
+      var sa = Array.isArray(e.splitAmong) ? e.splitAmong
+             : (e.splitAmong ? Object.values(e.splitAmong) : []);
+      var vivos = sa.filter(function(m){ return members.indexOf(m) >= 0; });
+      // Sin splitAmong (gastos antiguos) o si ya no queda nadie de aquel
+      // reparto: entre todos los miembros actuales.
+      among = vivos.length ? vivos : members;
     }
 
     if (!(e.paidBy in p)) { p[e.paidBy] = 0; o[e.paidBy] = 0; }
@@ -4440,62 +4454,34 @@ function renderDebts(g) {
   }
 
   // ── DENTRO DE CADA VÍNCULO — solo informa, NO se paga ──
-  // Responde a lo que uno se pregunta al ver "Miguel & Ana → Los Blanquer: 120 €":
-  // vale, ¿pero de ahí cuánto puse yo y cuánto mi pareja?
-  //
-  // Se muestran datos CONCRETOS (pagó / le tocaba), no un saldo neto. Motivo:
-  // el saldo del vínculo incluye los pagos hechos ENTRE vínculos, y ese dinero
-  // no se puede repartir entre sus miembros de forma justa. Si pusiera un neto
-  // en la cabecera, no cuadraría con la suma de abajo y parecería un error.
-  // "Pagó X, le tocaba Y" siempre cuadra y no engaña.
-  //
+  // Misma lista de siempre; lo que cambia es que ahora se dice PARA QUÉ sirve.
   // Sin botones, a propósito: si los llevara, alguien pagaría dos veces el
   // mismo dinero (una entre vínculos y otra aquí dentro).
   if (hayFam) {
     var ind = computeBalsRaw(g);
-    var datos = {};
-    ind.forEach(function(b){ datos[b.name] = b; });
-
-    var uds = unitsInGroup(g).filter(function(u){ return u.isFam; });
-
     h += '<div class="sec-lbl" style="margin-top:18px">🔗 Dentro de cada vínculo</div>';
+    h += '<div class="card" style="padding:4px 13px">';
+    ind.forEach(function(b) {
+      var f = linkOf(g, b.name);        // su vínculo EN ESTE GRUPO
+      var enFam = !!f;
+      var col = Math.abs(b.net) < 0.005 ? 'var(--muted2)' : (b.net > 0 ? 'var(--acc)' : 'var(--acc3)');
 
-    uds.forEach(function(u) {
-      h += '<div class="card" style="padding:0;margin-bottom:8px;overflow:hidden">';
-
-      h +=   '<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--s2);border-bottom:1px solid var(--border)">';
-      h +=     unitAvatars(u, 24);
-      h +=     '<div style="flex:1;min-width:0;font-family:var(--ff-head);font-weight:700;font-size:13.5px">' + esc(u.name) + '</div>';
+      var ultimo = (ind.indexOf(b) === ind.length - 1);
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0' +
+           (ultimo ? '' : ';border-bottom:1px solid var(--border)') + '">';
+      h +=   '<div class="avatar" style="width:28px;height:28px;font-size:11px;background:' + avc(b.name) + '22;color:' + avc(b.name) + '">' + ini(b.name) + '</div>';
+      h +=   '<div style="flex:1;min-width:0;font-size:13px;color:var(--txt2)">' + esc(b.name);
+      h +=     '<span style="font-size:10px;color:var(--muted);margin-left:5px">· ' +
+               (enFam ? esc(f.name) : 'sin vínculo') + '</span>';
       h +=   '</div>';
-
-      h +=   '<div style="padding:2px 13px">';
-      u.members.forEach(function(m, idx) {
-        var d = datos[m] || { paid: 0, owes: 0 };
-        var dif = d.paid - d.owes;
-        var col = Math.abs(dif) < 0.005 ? 'var(--muted2)' : (dif > 0 ? 'var(--acc)' : 'var(--acc3)');
-        var ultimo = (idx === u.members.length - 1);
-
-        h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0' +
-             (ultimo ? '' : ';border-bottom:1px solid var(--border)') + '">';
-        h +=   '<div class="avatar" style="width:26px;height:26px;font-size:10px;background:' +
-               avc(m) + '22;color:' + avc(m) + '">' + ini(m) + '</div>';
-        h +=   '<div style="flex:1;min-width:0">';
-        h +=     '<div style="font-size:13px;color:var(--txt2);font-weight:600">' + esc(m) + '</div>';
-        h +=     '<div style="font-size:10.5px;color:var(--muted)">Puso ' + fmt(d.paid) +
-                 ' · le tocaban ' + fmt(d.owes) + '</div>';
-        h +=   '</div>';
-        h +=   '<div style="font-family:var(--ff-head);font-weight:700;font-size:13px;color:' + col + '">' +
-               (dif >= 0 ? '+' : '') + fmt(dif) + '</div>';
-        h += '</div>';
-      });
-      h +=   '</div>';
+      h +=   '<div style="font-family:var(--ff-head);font-weight:800;font-size:13.5px;color:' + col + '">' +
+             (b.net >= 0 ? '+' : '') + fmt(b.net) + '</div>';
       h += '</div>';
     });
-
-    h += '<div class="info-box" style="font-size:12px">' +
-         '<strong>Solo informativo.</strong> Cuánto puso cada uno frente a lo que le tocaba. ' +
-         '<strong>Entre vosotros no se paga nada</strong>: compartís cartera, y el vínculo ya salda ' +
-         'por todos ahí arriba.' +
+    h += '</div>';
+    h += '<div class="info-box" style="margin-top:8px;font-size:12px">' +
+         '<strong>Solo informativo.</strong> Quién puso más y quién menos dentro de su vínculo. ' +
+         '<strong>Aquí no se paga nada</strong>: el dinero se salda entre vínculos, ahí arriba.' +
          '</div>';
   }
 
