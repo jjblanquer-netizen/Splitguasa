@@ -1131,6 +1131,98 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
 /* Podio de UNA sola persona: se centra en vez de quedarse en un tercio */
 .hv-gradas-1 { justify-content: center; }
 .hv-gradas-1 .hv-puesto { max-width: 130px; }
+
+/* Punto en el botón de filtro cuando NO está en "Todos" */
+.btn-icon { position: relative; }
+.btn-dot {
+  position: absolute; top: 5px; right: 5px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--acc);
+  border: 1.5px solid var(--bg);
+}
+/* Chip que recuerda qué grupo se está filtrando */
+.act-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(94,234,212,.1); border: 1px solid rgba(94,234,212,.3);
+  color: var(--acc); border-radius: 999px;
+  padding: 6px 8px 6px 12px; font-size: 12.5px; font-weight: 600;
+}
+.act-chip button {
+  background: none; border: none; color: var(--acc);
+  cursor: pointer; padding: 0 2px; font-size: 15px; line-height: 1;
+  display: flex; align-items: center;
+}
+
+/* ══════════════════════════════════════════════════
+   INFORME — tarjeta de grupo con portada
+   ══════════════════════════════════════════════════ */
+
+/* La tarjeta pierde su padding: la portada va a sangre dentro de ella */
+.rep-card-hero { padding: 0; overflow: hidden; }
+.rep-body { padding: 14px; }
+
+.rep-hero {
+  position: relative;
+  min-height: 152px;
+  background-size: cover;
+  background-position: center;
+  display: flex; align-items: flex-end;
+}
+/* Velo suave arriba y peso abajo: las cifras se leen sin ensuciar la foto */
+.rep-hero::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(10,11,15,.28) 0%, rgba(10,11,15,.05) 30%,
+    rgba(10,11,15,.55) 62%, rgba(10,11,15,.92) 100%);
+}
+body.light .rep-hero::after {
+  background: linear-gradient(180deg,
+    rgba(0,0,0,.25) 0%, rgba(0,0,0,.05) 30%,
+    rgba(0,0,0,.5) 62%, rgba(0,0,0,.86) 100%);
+}
+/* Grupo sin foto: el emoji, gigante y translúcido */
+.rep-hero-eco {
+  position: absolute; right: -6px; top: 50%; transform: translateY(-50%);
+  font-size: 92px; opacity: .1; z-index: 1;
+}
+.rep-hero-in {
+  position: relative; z-index: 2;
+  width: 100%; padding: 14px;
+}
+.rep-hero-nom {
+  font-family: var(--ff-head); font-weight: 800; font-size: 21px;
+  color: #fff; letter-spacing: -.02em; line-height: 1.15;
+  text-shadow: 0 2px 14px rgba(0,0,0,.7);
+}
+.rep-hero-sub {
+  font-size: 11.5px; color: rgba(255,255,255,.75); margin-top: 2px;
+  text-shadow: 0 1px 8px rgba(0,0,0,.8);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Las cifras, fundidas en la foto en cristal esmerilado.
+   Antes eran dos cajas grises debajo del título: ocupaban el doble y no
+   aportaban nada visualmente. */
+.rep-hero-stats {
+  display: flex; gap: 6px; margin-top: 11px;
+}
+.rep-stat {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,.11);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 11px; padding: 8px 6px; text-align: center;
+}
+.rep-stat span {
+  display: block;
+  font-family: var(--ff-head); font-weight: 800; font-size: 14px;
+  color: #fff; letter-spacing: -.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rep-stat small {
+  display: block; font-size: 9.5px; color: rgba(255,255,255,.7);
+  margin-top: 1px; text-transform: uppercase; letter-spacing: .05em;
+}
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -1185,13 +1277,29 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
 
 <!-- ══ ACTIVITY ══ -->
 <div class="scr" id="scr-activity">
-  <div class="topbar"><button class="btn-back" onclick="goTab('home')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button><span class="topbar-title">Actividad</span></div>
+  <div class="topbar">
+    <button class="btn-back" onclick="goTab('home')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title" style="flex:1">Actividad</span>
+    <button class="btn-icon" id="act-filter-btn" onclick="openActFilter()" title="Filtrar por grupo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span class="btn-dot" id="act-filter-dot" style="display:none"></span>
+    </button>
+  </div>
+  <div id="act-chip" style="display:none;padding:0 16px 8px"></div>
   <div class="sb"><div id="act-list"></div></div>
 </div>
 
 <!-- ══ REPORT ══ -->
 <div class="scr" id="scr-report">
-  <div class="topbar"><button class="btn-back" onclick="goTab('home')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button><span class="topbar-title">Informe Global</span></div>
+  <div class="topbar">
+    <button class="btn-back" onclick="goTab('home')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span class="topbar-title" style="flex:1">Informe</span>
+    <button class="btn-icon" id="rep-filter-btn" onclick="openRepFilter()" title="Filtrar por grupo">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+      <span class="btn-dot" id="rep-filter-dot" style="display:none"></span>
+    </button>
+  </div>
+  <div id="rep-chip" style="display:none;padding:0 16px 8px"></div>
   <div class="sb" id="rep-cont"></div>
 </div>
 
@@ -1346,6 +1454,28 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
     <div id="switch-code-err" style="display:none;color:var(--acc3);font-size:13px;margin-top:12px;line-height:1.5"></div>
     <button class="btn-primary" style="margin-top:20px" onclick="submitCode('switch')">Entrar</button>
     <button class="btn-secondary" style="width:100%;margin-top:9px" onclick="closeModal('m-code-switch')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: FILTRAR INFORME POR GRUPO ══ -->
+<div class="modal-bg" id="m-rep-filter" onclick="closeOut(event,'m-rep-filter')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Filtrar por grupo</div>
+    <div id="rep-filter-list" style="max-height:56vh;overflow-y:auto;margin-bottom:12px"></div>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-rep-filter')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: FILTRAR ACTIVIDAD POR GRUPO ══ -->
+<div class="modal-bg" id="m-act-filter" onclick="closeOut(event,'m-act-filter')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Filtrar por grupo</div>
+    <div id="act-filter-list" style="max-height:56vh;overflow-y:auto;margin-bottom:12px"></div>
+    <button class="btn-secondary" style="width:100%" onclick="closeModal('m-act-filter')">Cancelar</button>
     <div class="pb"></div>
   </div>
 </div>
@@ -1638,7 +1768,11 @@ body.light .hv-saldo { box-shadow: 0 -10px 34px rgba(0,0,0,.1); }
     <div style="text-align:center;padding:10px 0 24px">
       <img src="data:image/webp;base64,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" alt="SG" style="width:88px;height:88px;border-radius:20px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,.3)">
       <div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:var(--txt);margin-bottom:4px">SplitGuasa</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:20px">Versión 1.5</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Versión 1.5</div>
+      <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
+           vistazo qué versión tiene instalada cada móvil (útil con las PWA,
+           que se quedan pegadas a versiones viejas). -->
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720260908</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -4475,11 +4609,96 @@ function renderBanner() {
 // ════════════════════════════════════════════
 // ACTIVITY
 // ════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════
+// FILTRO DE ACTIVIDAD POR GRUPO
+// ──────────────────────────────────────────────────
+// Por defecto: TODOS los grupos en los que estás (visibleGroups ya se encarga
+// de que solo veas los tuyos). Preferencia personal, guardada en el móvil.
+// ══════════════════════════════════════════════════
+
+function actFilter() {
+  var f = '';
+  try { f = localStorage.getItem('sg_act_grp') || ''; } catch (e) {}
+  if (!f) return '';                                   // '' = todos
+  // Si el grupo guardado ya no existe o no lo ves, volver a "todos"
+  return visibleGroups().some(function(g){ return g.id === f; }) ? f : '';
+}
+
+function setActFilter(gid) {
+  try {
+    if (gid) localStorage.setItem('sg_act_grp', gid);
+    else     localStorage.removeItem('sg_act_grp');
+  } catch (e) {}
+  closeModal('m-act-filter');
+  renderActivity();
+}
+
+// Los grupos que alimentan la Actividad: todos los tuyos, o solo el filtrado
+function actGroups() {
+  var f = actFilter();
+  var vis = visibleGroups();
+  return f ? vis.filter(function(g){ return g.id === f; }) : vis;
+}
+
+function openActFilter() {
+  var vis = visibleGroups();
+  if (!vis.length) { toast('No estás en ningún grupo'); return; }
+
+  var actual = actFilter();
+  var cont = document.getElementById('act-filter-list');
+  if (!cont) return;
+
+  var h = '';
+
+  // "Todos" primero: es el estado por defecto
+  h += '<div class="hv-gitem' + (!actual ? ' on' : '') + '" onclick="setActFilter(\'\')">';
+  h +=   '<div class="hv-gem">📋</div>';
+  h +=   '<div class="hv-gt"><div class="hv-gn">Todos los grupos</div>' +
+         '<div class="hv-gs">' + vis.length + ' grupo' + (vis.length === 1 ? '' : 's') + '</div></div>';
+  h +=   (!actual ? '<span style="color:var(--acc);font-size:15px">✓</span>' : '');
+  h += '</div>';
+
+  vis.forEach(function(g) {
+    var nExp = (Array.isArray(g.expenses) ? g.expenses : [])
+                 .filter(function(e){ return e && !e.isSettlement; }).length;
+    h += '<div class="hv-gitem' + (g.id === actual ? ' on' : '') + '" onclick="setActFilter(\'' + g.id + '\')">';
+    h +=   '<div class="hv-gem">' + esc(g.emoji || '📁') + '</div>';
+    h +=   '<div class="hv-gt"><div class="hv-gn">' + esc(g.name) + '</div>' +
+           '<div class="hv-gs">' + nExp + ' gasto' + (nExp === 1 ? '' : 's') + '</div></div>';
+    h +=   (g.id === actual ? '<span style="color:var(--acc);font-size:15px">✓</span>' : '');
+    h += '</div>';
+  });
+
+  cont.innerHTML = h;
+  openModal('m-act-filter');
+}
+
+// Punto en el botón + chip con el grupo filtrado
+function pintaActFiltro() {
+  var f = actFilter();
+  var dot  = document.getElementById('act-filter-dot');
+  var chip = document.getElementById('act-chip');
+  if (dot) dot.style.display = f ? 'block' : 'none';
+  if (!chip) return;
+
+  if (!f) { chip.style.display = 'none'; chip.innerHTML = ''; return; }
+
+  var g = visibleGroups().filter(function(x){ return x.id === f; })[0];
+  if (!g) { chip.style.display = 'none'; return; }
+
+  chip.style.display = 'block';
+  chip.innerHTML = '<span class="act-chip">' + esc(g.emoji || '📁') + ' ' + esc(g.name) +
+                   '<button onclick="setActFilter(\'\')" title="Quitar filtro">×</button></span>';
+}
+
 function renderActivity() {
   var c = document.getElementById('act-list');
+  pintaActFiltro();
+
   var all = [];
-  // Gastos normales
-  visibleGroups().forEach(function(g){
+  // Gastos normales — solo de los grupos que pasan el filtro
+  actGroups().forEach(function(g){
     (Array.isArray(g.expenses)?g.expenses:[]).forEach(function(e){
       if (e && !e.isSettlement) all.push({type:'expense', date:e.date, desc:e.desc, category:e.category, paidBy:e.paidBy, amount:e.amount, gn:g.name, ge:g.emoji});
     });
@@ -4492,7 +4711,18 @@ function renderActivity() {
       });
     }
   });
-  if (!all.length) { c.innerHTML='<div class="empty"><div class="empty-icon">💸</div><p>Sin actividad todavía en ningún grupo.</p></div>'; return; }
+  if (!all.length) {
+    var f = actFilter();
+    if (f) {
+      var g = visibleGroups().filter(function(x){ return x.id === f; })[0];
+      c.innerHTML = '<div class="empty"><div class="empty-icon">💸</div>' +
+        '<p>Sin actividad en ' + esc(g ? g.name : 'este grupo') + '.</p>' +
+        '<button onclick="setActFilter(\'\')" style="margin-top:14px;background:var(--s2);color:var(--txt2);border:1px solid var(--border);font-family:var(--ff-head);font-weight:700;font-size:13px;padding:10px 18px;border-radius:11px;cursor:pointer">Ver todos los grupos</button></div>';
+    } else {
+      c.innerHTML = '<div class="empty"><div class="empty-icon">💸</div><p>Sin actividad todavía en ningún grupo.</p></div>';
+    }
+    return;
+  }
   all.sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
   c.innerHTML=''; var lastD='';
   all.forEach(function(e){
@@ -4516,28 +4746,132 @@ function renderActivity() {
 // ════════════════════════════════════════════
 // REPORT
 // ════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════
+// FILTRO DEL INFORME POR GRUPO
+// Por defecto TODOS los grupos en los que estás (visibleGroups ya excluye los
+// ajenos, así que los totales nunca incluyen grupos que no son tuyos).
+// ══════════════════════════════════════════════════
+
+function repFilter() {
+  var f = '';
+  try { f = localStorage.getItem('sg_rep_grp') || ''; } catch (e) {}
+  if (!f) return '';
+  return visibleGroups().some(function(g){ return g.id === f; }) ? f : '';
+}
+
+function setRepFilter(gid) {
+  try {
+    if (gid) localStorage.setItem('sg_rep_grp', gid);
+    else     localStorage.removeItem('sg_rep_grp');
+  } catch (e) {}
+  closeModal('m-rep-filter');
+  renderReport();
+}
+
+// Los grupos que alimentan el informe (y sus gráficos globales)
+function repGroups() {
+  var f = repFilter();
+  var vis = visibleGroups();
+  return f ? vis.filter(function(g){ return g.id === f; }) : vis;
+}
+
+function openRepFilter() {
+  var vis = visibleGroups();
+  if (!vis.length) { toast('No estás en ningún grupo'); return; }
+  var actual = repFilter();
+  var cont = document.getElementById('rep-filter-list');
+  if (!cont) return;
+
+  var h = '';
+  h += '<div class="hv-gitem' + (!actual ? ' on' : '') + '" onclick="setRepFilter(\'\')">';
+  h +=   '<div class="hv-gem">📊</div>';
+  h +=   '<div class="hv-gt"><div class="hv-gn">Todos los grupos</div>' +
+         '<div class="hv-gs">' + vis.length + ' grupo' + (vis.length === 1 ? '' : 's') + '</div></div>';
+  h +=   (!actual ? '<span style="color:var(--acc);font-size:15px">✓</span>' : '');
+  h += '</div>';
+
+  vis.forEach(function(g) {
+    var tot = (Array.isArray(g.expenses) ? g.expenses : [])
+                .reduce(function(a,e){ return a + ((e && !e.isSettlement) ? (Number(e.amount)||0) : 0); }, 0);
+    h += '<div class="hv-gitem' + (g.id === actual ? ' on' : '') + '" onclick="setRepFilter(\'' + g.id + '\')">';
+    h +=   '<div class="hv-gem">' + esc(g.emoji || '📁') + '</div>';
+    h +=   '<div class="hv-gt"><div class="hv-gn">' + esc(g.name) + '</div>' +
+           '<div class="hv-gs">' + fmt(tot) + '</div></div>';
+    h +=   (g.id === actual ? '<span style="color:var(--acc);font-size:15px">✓</span>' : '');
+    h += '</div>';
+  });
+
+  cont.innerHTML = h;
+  openModal('m-rep-filter');
+}
+
+function pintaRepFiltro() {
+  var f = repFilter();
+  var dot  = document.getElementById('rep-filter-dot');
+  var chip = document.getElementById('rep-chip');
+  if (dot) dot.style.display = f ? 'block' : 'none';
+  if (!chip) return;
+  if (!f) { chip.style.display = 'none'; chip.innerHTML = ''; return; }
+  var g = visibleGroups().filter(function(x){ return x.id === f; })[0];
+  if (!g) { chip.style.display = 'none'; return; }
+  chip.style.display = 'block';
+  chip.innerHTML = '<span class="act-chip">' + esc(g.emoji || '📁') + ' ' + esc(g.name) +
+                   '<button onclick="setRepFilter(\'\')" title="Quitar filtro">×</button></span>';
+}
+
 function renderReport() {
   const c = document.getElementById('rep-cont');
-  const vis = visibleGroups();
+  pintaRepFiltro();
+
+  const vis = repGroups();        // tus grupos, con el filtro aplicado
   if (!vis.length) {
-    c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>Crea grupos y añade gastos para ver el informe.</p></div>';
+    if (repFilter()) {
+      c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>Ese grupo ya no está disponible.</p>' +
+        '<button onclick="setRepFilter(\'\')" style="margin-top:14px;background:var(--s2);color:var(--txt2);border:1px solid var(--border);font-family:var(--ff-head);font-weight:700;font-size:13px;padding:10px 18px;border-radius:11px;cursor:pointer">Ver todos</button></div>';
+    } else {
+      c.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><p>Crea grupos y añade gastos para ver el informe.</p></div>';
+    }
     return;
   }
   const me = myName();
   let h = '';
 
+  var bgPend = [];   // fotos que aplicar tras pintar el HTML
+
   vis.forEach(g => {
-    const tot = g.expenses.reduce((a, e) => a + (e && !e.isSettlement ? e.amount : 0), 0);
+    var exps = (Array.isArray(g.expenses) ? g.expenses : [])
+                 .filter(function(e){ return e && !e.isSettlement; });
+    const tot = exps.reduce(function(a, e){ return a + (Number(e.amount) || 0); }, 0);
+    var nMiem = (g.members || []).length || 1;
 
     const bals = computeBals(g);
     const txs  = computeDebts(g);
 
-    h += '<div class="rep-card">';
-    h += '<h3>' + esc(g.emoji) + ' ' + esc(g.name) + '</h3>';
-    h += '<div class="stats-grid">';
-    h += '<div class="stat-box"><div class="stat-lbl">Total gastado</div><div class="stat-val" style="font-size:17px">' + fmt(tot) + '</div></div>';
-    h += '<div class="stat-box"><div class="stat-lbl">Nº gastos</div><div class="stat-val" style="font-size:17px">' + g.expenses.length + '</div></div>';
+    h += '<div class="rep-card rep-card-hero">';
+
+    // ── PORTADA: la foto del grupo, con las cifras fundidas encima ──
+    // Antes eran dos cajas grises debajo del título. Metidas en la imagen,
+    // la tarjeta se identifica de un vistazo y ocupa menos.
+    var hid = 'rep-bg-' + g.id;
+    var sinFoto = !g.bg;
+    h += '<div class="rep-hero" id="' + hid + '"' +
+         (sinFoto ? ' style="background:linear-gradient(135deg,#1e2a45 0%,#0f1119 100%)"' : '') + '>';
+    if (sinFoto) h += '<div class="rep-hero-eco">' + esc(g.emoji || '📁') + '</div>';
+    if (!sinFoto) bgPend.push({ id: hid, bg: g.bg });
+
+    h += '<div class="rep-hero-in">';
+    h +=   '<div class="rep-hero-nom">' + esc(g.emoji || '') + ' ' + esc(g.name) + '</div>';
+    h +=   '<div class="rep-hero-sub">' + esc((g.members || []).join(' · ')) + '</div>';
+    h +=   '<div class="rep-hero-stats">';
+    h +=     '<div class="rep-stat"><span>' + fmt(tot) + '</span><small>Total</small></div>';
+    h +=     '<div class="rep-stat"><span>' + exps.length + '</span><small>Gasto' + (exps.length === 1 ? '' : 's') + '</small></div>';
+    h +=     '<div class="rep-stat"><span>' + fmt(tot / nMiem) + '</span><small>Por persona</small></div>';
+    h +=   '</div>';
     h += '</div>';
+    h += '</div>';
+
+    h += '<div class="rep-body">';
 
     // Gráfico de barras del grupo con ESCALA PROPIA:
     // del primer al último gasto del grupo, independiente del filtro global.
@@ -4599,13 +4933,21 @@ function renderReport() {
         h += '</div>';
       });
     }
-    if (!pending.length && g.expenses.length) {
+    if (!pending.length && exps.length) {
       h += '<hr><div class="info-box">🎉 ¡Sin deudas pendientes!</div>';
     }
-    h += '</div>';
+    h += '</div>';   // /rep-body
+    h += '</div>';   // /rep-card
   });
 
   c.innerHTML = h;
+
+  // Las fotos, después de pintar (con verificación y reintento)
+  bgPend.forEach(function(b) {
+    var el = document.getElementById(b.id);
+    if (el) applyBgWithRetry(el, b.bg);
+  });
+
   // Insertar al principio: categorías (del periodo) y luego la gráfica encima
   renderCategoryCard();
   renderDailyChart();
@@ -4809,9 +5151,12 @@ function niceDate(iso) {
 }
 
 // Todos los gastos de todos los grupos
+// Los gastos que alimentan los gráficos globales del Informe.
+// repGroups() ya excluye los grupos ocultos Y los que no son tuyos, y aplica
+// el filtro de grupo si hay uno puesto.
 function allExpenses() {
   var out = [];
-  visibleGroups().forEach(function(g) {          // excluye grupos ocultos
+  repGroups().forEach(function(g) {
     (Array.isArray(g.expenses) ? g.expenses : []).forEach(function(e){ out.push(e); });
   });
   return out;
