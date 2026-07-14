@@ -1361,6 +1361,17 @@ body.light .inst-marca {
   font-size: 12.5px; color: var(--txt2); line-height: 1.55;
 }
 .inst-alerta b { color: var(--acc2); }
+
+/* "Ya la tengo instalada": el escape para iPhone.
+   Gris, pequeño y tras una línea, para que nadie lo pulse por inercia:
+   quien lo toque, lo toca a sabiendas (no vuelve a salir el panel). */
+.inst-ya {
+  width: 100%; background: none; border: none;
+  border-top: 1px solid var(--border);
+  margin-top: 16px; padding: 14px 0 2px;
+  color: var(--muted); font-size: 12.5px; cursor: pointer;
+}
+.inst-ya:active { color: var(--txt2); }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -1924,7 +1935,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261012</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261028</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -3052,6 +3063,22 @@ function openCodeModal(modo) {
 // Se cierra con la ×, pero vuelve la próxima vez.
 // ══════════════════════════════════════════════════
 
+
+// En iOS, la app instalada y Safari tienen almacenamientos SEPARADOS: desde
+// Safari no hay forma de saber si el icono está en la pantalla de inicio.
+// Y como Apple no dispara 'beforeinstallprompt', tampoco tenemos esa pista.
+// Única salida limpia: que la persona nos lo diga.
+function yaDeclaroInstalada() {
+  try { return localStorage.getItem('sg_ya_instalada') === '1'; }
+  catch (e) { return false; }
+}
+
+function declararInstalada() {
+  try { localStorage.setItem('sg_ya_instalada', '1'); } catch (e) {}
+  closeModal('m-install');
+  toast('👍 No volveremos a preguntarte');
+}
+
 // La zona de marca, común a los tres casos
 function instMarca() {
   var h = '<button class="inst-x" onclick="closeModal(\'m-install\')" aria-label="Cerrar">×</button>';
@@ -3103,6 +3130,12 @@ function panelIOS() {
   h +=   '<div class="inst-flecha"><span>Ahí abajo</span>';
   h +=     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></svg>';
   h +=   '</div>';
+
+  // Escape para quien YA la tiene instalada. En iOS no hay forma de detectarlo
+  // (almacenamiento separado + sin beforeinstallprompt), así que se lo
+  // preguntamos. Va gris, pequeño y separado: no compite con el botón principal.
+  h +=   '<button class="inst-ya" onclick="declararInstalada()">Ya la tengo instalada</button>';
+
   h += '</div>';
   return h;
 }
@@ -3135,7 +3168,8 @@ function panelEmbebido() {
 
 // Decide el caso y muestra el panel. Se llama en CADA apertura.
 function ofrecerInstalacion() {
-  if (esAppInstalada()) return;          // ya la tiene: nunca más
+  if (esAppInstalada()) return;          // se está ejecutando como app: nunca más
+  if (yaDeclaroInstalada()) return;      // nos ha dicho que ya la tiene (iOS)
   if (necesitaCodigo()) return;          // aún no ha entrado: primero el código
 
   var cont = document.getElementById('inst-panel');
