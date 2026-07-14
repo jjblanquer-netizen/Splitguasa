@@ -2047,7 +2047,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261538</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261620</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -3845,7 +3845,12 @@ function settleAdjust(g) {
   var lista = Array.isArray(g.settled) ? g.settled : [];
   if (!lista.length) return adj;
 
-  var plan = null;   // solo se calcula si hay entradas antiguas (sin importe)
+  // Las unidades que EXISTEN ahora mismo en el grupo
+  var us = unitsInGroup(g);
+  var existe = {};
+  us.forEach(function(u){ existe[u.name] = true; });
+
+  var plan = null;   // solo si hay entradas antiguas (sin importe)
 
   lista.forEach(function(s) {
     var from, to, amount;
@@ -3862,12 +3867,18 @@ function settleAdjust(g) {
     }
     if (!from || !to) return;
 
-    // Resolver a UNIDADES. Un pago guardado con nombres de persona (antes de
-    // existir las familias) sigue valiendo: se imputa a la familia de cada uno.
+    // Resolver a UNIDADES. Un pago guardado con nombres de persona (de antes de
+    // existir los vínculos) sigue valiendo: se imputa a la unidad de cada uno.
     var uf = unitNameFor(g, from);
     var ut = unitNameFor(g, to);
 
-    // Pago DENTRO de la misma familia: no mueve nada (comparten cartera)
+    // ⚠️ Si alguno de los dos NO corresponde a una unidad real (p. ej. el pago
+    // apuntaba a un vínculo que después se deshizo), el pago queda huérfano:
+    // se IGNORA entero. Antes se inventaba una unidad con ese nombre y aparecía
+    // un deudor fantasma llamado como el vínculo borrado.
+    if (!existe[uf] || !existe[ut]) return;
+
+    // Pago DENTRO de la misma unidad: no mueve nada (comparten cartera)
     if (uf === ut) return;
 
     if (!amount) {
@@ -3887,15 +3898,9 @@ function settleAdjust(g) {
 // Esto es lo que ven el banner de Inicio, la pestaña Balances y el Informe.
 function computeBals(g) {
   var bals = unitBalsRaw(g);
-  var adj  = settleAdjust(g);
+  var adj  = settleAdjust(g);   // solo trae unidades que EXISTEN
   bals.forEach(function(b) {
     if (adj[b.name]) b.net += adj[b.name];
-  });
-  // Alguien que solo aparece en los pagos y no en los gastos
-  Object.keys(adj).forEach(function(n) {
-    if (!bals.some(function(b){ return b.name === n; })) {
-      bals.push({ key:'per:'+n, name:n, members:[n], isFam:false, paid:0, owes:0, net:adj[n] });
-    }
   });
   return bals;
 }
@@ -6668,13 +6673,42 @@ function deleteLink() {
 
   var l = links(g).filter(function(x){ return x.id === lnkEdit; })[0];
   if (!l) return;
-  if (!confirm('¿Deshacer el vínculo "' + l.name + '"?\n\nSus miembros volverán a liquidar por separado.')) return;
+
+  // ¿Hay pagos hechos a nombre de este vínculo? Si los hay, se perderán:
+  // no se pueden repartir entre sus miembros de forma justa.
+  var afectados = (Array.isArray(g.settled) ? g.settled : []).filter(function(s) {
+    var f, t;
+    if (typeof s === 'string') { var p = s.split('|'); f = p[0]; t = p[1]; }
+    else if (s && s.key)       { f = s.from; t = s.to; }
+    else return false;
+    return f === l.name || t === l.name;
+  });
+
+  var aviso = '¿Deshacer el vínculo "' + l.name + '"?\n\nSus miembros volverán a liquidar por separado.';
+  if (afectados.length) {
+    aviso += '\n\n⚠️ Hay ' + afectados.length + ' pago(s) registrado(s) a nombre de "' + l.name +
+             '". Se borrarán, y esas deudas volverán a aparecer como pendientes.';
+  }
+  if (!confirm(aviso)) return;
+
+  // Quitar los pagos huérfanos, con tombstone para que no vuelvan del servidor
+  if (afectados.length) {
+    if (!Array.isArray(DB.deleted)) DB.deleted = [];
+    afectados.forEach(function(s) {
+      var k = (typeof s === 'string') ? s : s.key;
+      var tomb = 'set:' + g.id + '|' + k;
+      delete revivedSettles[tomb];
+      if (DB.deleted.indexOf(tomb) < 0) DB.deleted.push(tomb);
+    });
+    g.settled = g.settled.filter(function(s){ return afectados.indexOf(s) < 0; });
+  }
 
   g.links = links(g).filter(function(x){ return x.id !== lnkEdit; });
   if (!Array.isArray(DB.deleted)) DB.deleted = [];
   if (DB.deleted.indexOf('lnk:' + lnkEdit) < 0) DB.deleted.push('lnk:' + lnkEdit);
 
-  logAction('friend', '🔗', 'Deshizo el vínculo ' + l.name, g.id);
+  logAction('friend', '🔗', 'Deshizo el vínculo ' + l.name +
+            (afectados.length ? ' (y ' + afectados.length + ' pago/s asociado/s)' : ''), g.id);
   save();
   closeModal('m-link');
   renderLinks();
