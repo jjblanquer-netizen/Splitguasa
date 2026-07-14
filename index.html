@@ -1593,6 +1593,7 @@ body.light .inst-marca {
     <div class="field"><label>Importe (€)</label><input id="ae-amt" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="0.00" autocomplete="off"></div>
     <div class="field"><label>Categoría</label><div class="cat-grid" id="cat-grid"></div></div>
     <div class="field"><label>Pagado por</label><select id="ae-pby"></select></div>
+      <div id="ae-pby-note" style="display:none;background:rgba(251,191,36,.09);border:1px solid rgba(251,191,36,.28);border-radius:10px;padding:9px 11px;margin-top:7px;font-size:12px;color:var(--txt2);line-height:1.5"></div>
     <div class="field"><label>Dividir entre</label><div class="split-list" id="ae-split"></div></div>
     <div class="field"><label>Fecha</label><input id="ae-date" type="date"></div>
     <div style="height:8px"></div>
@@ -2046,7 +2047,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261412</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261445</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -4555,6 +4556,8 @@ function openAddExpense() {
   document.getElementById('ae-save-btn').textContent='Guardar Gasto';
   buildCatGrid(); buildSplitList(g);
   document.getElementById('ae-amt').oninput=updShares;
+  var n0 = document.getElementById('ae-pby-note');
+  if (n0) n0.style.display = 'none';     // limpiar el aviso del gasto anterior
   openModal('m-exp');
   setTimeout(()=>document.getElementById('ae-desc').focus(),350);
 }
@@ -4568,7 +4571,35 @@ function openEditExpense(expId) {
   g.members.forEach(m=>splits[m]=false);
   (exp.splitAmong||[]).forEach(m=>splits[m]=true);
   const pb=document.getElementById('ae-pby'); pb.innerHTML='';
-  g.members.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; if(m===exp.paidBy)o.selected=true; pb.appendChild(o); });
+
+  // Si quien pagó ya NO está en el grupo (lo borraron de Amigos), hay que
+  // ofrecerlo igualmente. Si no, ninguna opción coincidiría, el desplegable se
+  // quedaría en el primer miembro, y al guardar CUALQUIER cambio el pagador
+  // cambiaría solo, en silencio, moviendo los saldos sin que nadie lo pidiera.
+  const pagador = exp.paidBy || '';
+  const sigue = g.members.some(m => m === pagador);
+  if (pagador && !sigue) {
+    const o = document.createElement('option');
+    o.value = pagador;
+    o.textContent = pagador + ' (ya no está en el grupo)';
+    o.selected = true;
+    pb.appendChild(o);
+  }
+
+  g.members.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; if(m===pagador)o.selected=true; pb.appendChild(o); });
+
+  // Aviso visible: hay que cambiar el pagador, o el gasto queda a nombre de un fantasma
+  const nota = document.getElementById('ae-pby-note');
+  if (nota) {
+    if (pagador && !sigue) {
+      nota.innerHTML = '⚠️ <b>' + esc(pagador) + '</b> ya no está en el grupo. ' +
+                       'Elige quién lo pagó de verdad, o déjalo como está.';
+      nota.style.display = 'block';
+    } else {
+      nota.style.display = 'none';
+    }
+  }
+
   document.getElementById('ae-desc').value=exp.desc||'';
   document.getElementById('ae-amt').value=exp.amount||'';
   document.getElementById('ae-date').value=exp.date||tod();
