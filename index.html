@@ -2047,7 +2047,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261445</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261538</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -6202,6 +6202,17 @@ function renamePersonTo(oldName, nuevo) {
         e.splitAmong = e.splitAmong.map(function(m){ return m === oldName ? nuevo : m; });
       }
     });
+    // Los VÍNCULOS también guardan nombres. Sin esto, al renombrar a alguien el
+    // vínculo seguiría apuntando al nombre viejo: se quedaría con un fantasma
+    // dentro y dejaría de aplicarse.
+    if (Array.isArray(g.links)) {
+      g.links.forEach(function(l) {
+        if (Array.isArray(l.members)) {
+          l.members = l.members.map(function(m){ return m === oldName ? nuevo : m; });
+        }
+      });
+    }
+
     if (Array.isArray(g.settled)) {
       g.settled = g.settled.map(function(s) {
         if (typeof s === 'string') return s.split('|').map(function(n){ return n===oldName?nuevo:n; }).join('|');
@@ -6559,6 +6570,39 @@ function hintLink() {
   }
 }
 
+
+// Renombrar una unidad obliga a reescribir las claves de los pagos ya hechos.
+// Si no, "Los Blanquer|Marta" quedaría huérfano y la deuda reaparecería.
+function migrarNombreEnPagos(g, viejo, nuevo) {
+  if (!Array.isArray(g.settled) || !g.settled.length) return;
+  function sust(n) { return n === viejo ? nuevo : n; }
+
+  g.settled = g.settled.map(function(s) {
+    if (typeof s === 'string') {
+      return s.split('|').map(sust).join('|');
+    }
+    if (s && s.key) {
+      return {
+        key:    String(s.key).split('|').map(sust).join('|'),
+        from:   sust(s.from),
+        to:     sust(s.to),
+        amount: s.amount,
+        date:   s.date
+      };
+    }
+    return s;
+  });
+
+  // Y los tombstones de pagos desmarcados ('set:gid|from|to')
+  if (Array.isArray(DB.deleted)) {
+    DB.deleted = DB.deleted.map(function(d) {
+      if (String(d).indexOf('set:' + g.id + '|') !== 0) return d;
+      var resto = String(d).slice(('set:' + g.id + '|').length);
+      return 'set:' + g.id + '|' + resto.split('|').map(sust).join('|');
+    });
+  }
+}
+
 function saveLink() {
   if (!isAdmin()) return;
   var g = grupoEnEdicion();
@@ -6583,11 +6627,27 @@ function saveLink() {
   });
   if (repe) { toast('⚠️ Ya hay un vínculo con ese nombre'); return; }
 
+  // Y no puede llamarse igual que una PERSONA: los saldos se identifican por
+  // nombre, así que "Jota" (vínculo) y "Jota" (persona) se pisarían.
+  var choca = (Array.isArray(g.members) ? g.members : []).some(function(m) {
+    return String(m).trim().toLowerCase() === nombre.toLowerCase();
+  });
+  if (choca) { toast('⚠️ Ya hay una persona que se llama así'); return; }
+
   if (!Array.isArray(g.links)) g.links = [];
 
   if (lnkEdit) {
     var l = g.links.filter(function(x){ return x.id === lnkEdit; })[0];
-    if (l) { l.name = nombre; l.members = lnkSel.slice(); }
+    if (l) {
+      var antes = l.name;
+      l.name = nombre;
+      l.members = lnkSel.slice();
+
+      // Los pagos guardados usan el NOMBRE de la unidad como clave
+      // ("Los Blanquer|Miguel & Ana"). Si renombramos el vínculo sin migrarlos,
+      // esos pagos dejan de casar y una deuda ya saldada VOLVERÍA a aparecer.
+      if (antes && antes !== nombre) migrarNombreEnPagos(g, antes, nombre);
+    }
     logAction('friend', '🔗', 'Editó el vínculo ' + nombre, g.id);
   } else {
     g.links.push({ id: uid(), name: nombre, members: lnkSel.slice() });
@@ -6917,7 +6977,7 @@ function createGroup() {
   if (ngMem.length < 2) { toast('⚠️ Selecciona al menos 2 amigos'); return; }
   // Resolver la URL real del fondo (extensión correcta) antes de guardar
   resolveBgUrl(ngSelectedBg, function(url) {
-    const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settlements:[], createdBy:myName(), createdAt:new Date().toISOString()};
+    const g = {id:uid(), name, emoji:ngEmoji, members:ngMem.slice(), expenses:[], settled:[], links:[], createdBy:myName(), createdAt:new Date().toISOString()};
     if (url) g.bg = url;
     DB.groups.unshift(g);
     logAction('grupo', '📁', 'Creó el grupo "' + name + '"', g.id);
@@ -7014,8 +7074,23 @@ function emAdd() {}
 function saveMembers() {
   const g = grp(); if (!g) return;
   if (emMembers.length < 2) { toast('⚠️ El grupo necesita al menos 2 personas'); return; }
-  const added = emMembers.filter(m => !g.members.includes(m));
+  const added   = emMembers.filter(m => !g.members.includes(m));
+  const quitados = g.members.filter(m => !emMembers.includes(m));
   g.members = emMembers.slice();
+
+  // Quien sale del grupo, sale de su vínculo. Si no, el vínculo se queda con
+  // alguien que ya no está y muestra un nombre fantasma.
+  if (quitados.length && Array.isArray(g.links)) {
+    g.links = g.links.filter(function(l) {
+      l.members = (Array.isArray(l.members) ? l.members : [])
+                    .filter(function(m){ return quitados.indexOf(m) < 0; });
+      if (l.members.length >= 2) return true;
+      // Un vínculo de una sola persona no tiene sentido: se deshace
+      if (!Array.isArray(DB.deleted)) DB.deleted = [];
+      if (DB.deleted.indexOf('lnk:' + l.id) < 0) DB.deleted.push('lnk:' + l.id);
+      return false;
+    });
+  }
   // Resolver la URL real del fondo (extensión correcta) antes de guardar
   resolveBgUrl(emSelectedBg, function(url) {
     if (url) g.bg = url; else delete g.bg;
