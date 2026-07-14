@@ -1438,6 +1438,10 @@ body.light .inst-marca {
 }
 .hv-fam-tag span { font-size: 12.5px; color: var(--muted2); }
 .hv-fam-tag .u-av { border-color: var(--surface); }
+
+/* Un modal abierto DESDE otro modal tiene que ir por encima. Sin esto se abría
+   por debajo de "Editar miembros" y solo aparecía al cerrar el de abajo. */
+.modal-bg.modal-top { z-index: 300; }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -1688,7 +1692,7 @@ body.light .inst-marca {
 </div>
 
 <!-- ══ MODAL: CREAR / EDITAR VÍNCULO (dentro de un grupo) ══ -->
-<div class="modal-bg" id="m-link" onclick="closeOut(event,'m-link')">
+<div class="modal-bg modal-top" id="m-link" onclick="closeOut(event,'m-link')">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="lnk-title">Nuevo vínculo</div>
@@ -2042,7 +2046,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261336</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261412</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -3709,7 +3713,11 @@ function openModal(id) {
 }
 function closeModal(id) {
   const el = document.getElementById(id);
-  if (el) { el.classList.remove('on'); document.body.style.overflow = ''; }
+  if (el) el.classList.remove('on');
+  // Si aún queda algún modal abierto (p. ej. cierro Vínculo pero sigo en
+  // Editar miembros), el scroll debe seguir bloqueado.
+  var quedan = document.querySelectorAll('.modal-bg.on').length;
+  document.body.style.overflow = quedan ? 'hidden' : '';
 }
 function closeOut(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
@@ -6257,6 +6265,21 @@ function confirmDelPerson() {
   (Array.isArray(DB.groups) ? DB.groups : []).forEach(function(g) {
     if (Array.isArray(g.members)) {
       g.members = g.members.filter(function(m){ return m !== name; });
+    }
+
+    // Y sacarlo de los VÍNCULOS de cada grupo. Si no, se queda dentro como
+    // fantasma y el vínculo sigue mostrando a alguien que ya no existe.
+    if (Array.isArray(g.links)) {
+      g.links = g.links.filter(function(l) {
+        l.members = (Array.isArray(l.members) ? l.members : [])
+                      .filter(function(m){ return m !== name; });
+        if (l.members.length >= 2) return true;
+        // Un vínculo de una persona no tiene sentido: se deshace,
+        // con tombstone para que no resucite al sincronizar.
+        if (!Array.isArray(DB.deleted)) DB.deleted = [];
+        if (DB.deleted.indexOf('lnk:' + l.id) < 0) DB.deleted.push('lnk:' + l.id);
+        return false;
+      });
     }
   });
 
