@@ -1372,6 +1372,72 @@ body.light .inst-marca {
   color: var(--muted); font-size: 12.5px; cursor: pointer;
 }
 .inst-ya:active { color: var(--txt2); }
+
+/* ── FAMILIAS (pantalla Amigos) ── */
+.fam-card {
+  display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(135deg, rgba(129,140,248,.08), rgba(94,234,212,.04));
+  border: 1px solid rgba(129,140,248,.28);
+  border-radius: 16px; padding: 13px 14px; margin-bottom: 8px;
+  cursor: pointer;
+}
+.fam-card:active { transform: scale(.99); }
+/* Avatares solapados = una familia. Se lee sin explicar nada. */
+.fam-avs { display: flex; flex-shrink: 0; }
+.fam-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-head); font-weight: 800; font-size: 12px; color: #0a0b0f;
+  border: 2px solid var(--surface);
+}
+.fam-av:not(:first-child) { margin-left: -12px; }
+.fam-nom { font-family: var(--ff-head); font-weight: 800; font-size: 15px; color: var(--txt); }
+.fam-sub {
+  font-size: 11.5px; color: var(--muted); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Selector de personas del modal */
+.chip-wrap { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip-p {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 12px;
+  font-size: 13px; color: var(--txt2); cursor: pointer;
+}
+.chip-p.on {
+  background: rgba(94,234,212,.11); border-color: rgba(94,234,212,.4); color: var(--txt);
+}
+.chip-p.off { opacity: .42; cursor: not-allowed; }
+.chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Los dos avatares también en deudas y balances */
+.u-avs { display: flex; flex-shrink: 0; }
+.u-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-head); font-weight: 800; font-size: 12px; color: #0a0b0f;
+  border: 2px solid var(--surface);
+}
+.u-av:not(:first-child) { margin-left: -12px; }
+
+/* Botón ⇄ de la caja de saldo: alterna entre tu saldo y el de tu familia */
+.hv-swap {
+  position: absolute; top: 14px; right: 14px;
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--s2); border: 1px solid var(--border); color: var(--muted2);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: color .15s, border-color .15s, transform .12s;
+}
+.hv-swap:active { transform: scale(.9); }
+.hv-swap:hover { color: var(--acc); border-color: rgba(94,234,212,.4); }
+
+/* Quién es el titular del saldo: los avatares lo dicen sin explicar nada */
+.hv-fam-tag {
+  display: flex; align-items: center; gap: 8px; margin-top: 11px;
+}
+.hv-fam-tag span { font-size: 12.5px; color: var(--muted2); }
+.hv-fam-tag .u-av { border-color: var(--surface); }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -1400,13 +1466,13 @@ body.light .inst-marca {
 
   <!-- ══ HOME CLÁSICA (la de siempre) ══ -->
   <div id="home-clasica">
-    <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.5</span></div>
+    <div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between"><div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div><span onclick="openModal('m-about')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0;transition:color .15s;" onmouseover="this.style.color='var(--acc)'" onmouseout="this.style.color='var(--muted)'">v1.6</span></div>
     <div id="greeting" style="display:none;padding:0 16px 10px;">
       <div style="font-family:var(--ff-head);font-size:20px;font-weight:800;color:var(--txt)">Hola, <span id="greeting-name" style="color:var(--acc)"></span> 👋</div>
     </div>
     <div class="banner">
-      <div class="ban-item"><div class="ban-lbl">Debes</div><div class="ban-val" id="b-deb" style="color:var(--acc3)">0,00 €</div></div>
-      <div class="ban-item"><div class="ban-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
+      <div class="ban-item"><div class="ban-lbl" id="b-deb-lbl">Debes</div><div class="ban-val" id="b-deb" style="color:var(--acc3)">0,00 €</div></div>
+      <div class="ban-item"><div class="ban-lbl" id="b-ted-lbl">Te deben</div><div class="ban-val" id="b-ted" style="color:var(--acc)">0,00 €</div></div>
       <div class="ban-item"><div class="ban-lbl">Grupos</div><div class="ban-val" id="b-grp">0</div></div>
     </div>
     <div class="sb">
@@ -1621,6 +1687,31 @@ body.light .inst-marca {
   <div class="inst-panel" id="inst-panel"></div>
 </div>
 
+<!-- ══ MODAL: CREAR / EDITAR FAMILIA ══ -->
+<div class="modal-bg" id="m-familia" onclick="closeOut(event,'m-familia')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="fam-title">Nueva familia</div>
+    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:16px">
+      Elige quiénes comparten cartera y ponle nombre.
+    </p>
+
+    <div class="sec-lbl" style="margin-top:0">Miembros</div>
+    <div id="fam-people" class="chip-wrap" style="margin-bottom:16px"></div>
+
+    <div class="field">
+      <label>Nombre de la familia</label>
+      <input id="fam-name" type="text" placeholder="Los Blanquer" autocomplete="off" autocapitalize="words" maxlength="30">
+    </div>
+    <div id="fam-hint" style="font-size:11.5px;color:var(--muted);margin:-6px 0 16px"></div>
+
+    <button class="btn-primary" style="width:100%" onclick="saveFamilia()">Guardar familia</button>
+    <button class="btn-secondary" id="fam-del" style="width:100%;margin-top:8px;color:var(--acc3);border-color:rgba(251,113,133,.3);display:none" onclick="deleteFamilia()">Deshacer familia</button>
+    <button class="btn-secondary" style="width:100%;margin-top:8px" onclick="closeModal('m-familia')">Cancelar</button>
+    <div class="pb"></div>
+  </div>
+</div>
+
 <!-- ══ MODAL: FILTRAR INFORME POR GRUPO ══ -->
 <div class="modal-bg" id="m-rep-filter" onclick="closeOut(event,'m-rep-filter')">
   <div class="sheet">
@@ -1767,6 +1858,16 @@ body.light .inst-marca {
         <button class="chip-add" onclick="addFriend()">+</button>
       </div>
     </div>
+    <!-- ══ FAMILIAS ══ -->
+    <div class="sec-lbl" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Familias</span>
+      <span id="fam-add" onclick="openFamilia('')" style="display:none;font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--acc);background:rgba(94,234,212,.1);border:1px solid rgba(94,234,212,.3);padding:4px 10px;border-radius:8px;cursor:pointer;text-transform:none;letter-spacing:0">+ Crear</span>
+    </div>
+    <div id="fam-list" style="margin-bottom:6px"></div>
+    <div id="fam-info" style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:16px;font-size:12px;color:var(--muted2);line-height:1.55">
+      <b style="color:var(--txt2)">Una familia comparte cartera.</b> Entre sus miembros no se generan deudas, y el grupo liquida con la familia entera.
+    </div>
+
     <div class="sec-lbl">Amigos creados</div>
     <div id="yo-person-list" class="person-grid" style="margin-bottom:14px"></div>
     <div id="yo-empty" style="display:none;text-align:center;padding:20px 0;color:var(--muted2);font-size:13px">
@@ -1931,11 +2032,11 @@ body.light .inst-marca {
     <div style="text-align:center;padding:10px 0 24px">
       <img src="data:image/webp;base64,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" alt="SG" style="width:88px;height:88px;border-radius:20px;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,0,0,.3)">
       <div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:var(--txt);margin-bottom:4px">SplitGuasa</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Versión 1.5</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">Versión 1.6</div>
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261028</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261204</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -2308,6 +2409,19 @@ function mergeDB(remote, local) {
           : (Array.isArray(remote.hiddenGroups) ? remote.hiddenGroups : []));
   result.hiddenGroups = hg;
 
+  // ── Familias ──
+  // Se fusionan por id. Si se deshizo una familia, su tombstone ('fam:id')
+  // impide que el servidor la resucite (mismo patrón que grupos y amigos).
+  // En conflicto gana la LOCAL: es la que acaba de editar el usuario.
+  var famById = {};
+  (Array.isArray(remote.families) ? remote.families : []).forEach(function(f) {
+    if (f && f.id && !deleted['fam:' + f.id]) famById[f.id] = f;
+  });
+  (Array.isArray(local.families) ? local.families : []).forEach(function(f) {
+    if (f && f.id && !deleted['fam:' + f.id]) famById[f.id] = f;
+  });
+  result.families = Object.keys(famById).map(function(k){ return famById[k]; });
+
   // Fusionar friends (unión), respetando tombstones de amigos borrados
   var friendsSet = {};
   (Array.isArray(local.friends)?local.friends:[]).forEach(function(f){ if(!deleted['fr:'+f]) friendsSet[f]=true; });
@@ -2392,6 +2506,7 @@ async function sync(silent = false) {
       if (remoteV >= prevV && !pendingWrite && !busy) {
         DB = migrateSettlements(remote);
         if (!Array.isArray(DB.groups))  DB.groups  = [];
+  if (!Array.isArray(DB.families)) DB.families = [];
         if (!Array.isArray(DB.friends)) DB.friends = [];
         if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
         DB.groups.forEach(function(g) {
@@ -2437,6 +2552,7 @@ async function manualSync() {
     if (remote && typeof remote === 'object') {
       DB = migrateSettlements(remote);
       if (!Array.isArray(DB.groups))  DB.groups  = [];
+  if (!Array.isArray(DB.families)) DB.families = [];
       if (!Array.isArray(DB.friends)) DB.friends = [];
       if (!Array.isArray(DB.hiddenGroups)) DB.hiddenGroups = [];
       DB.groups.forEach(g => {
@@ -3661,7 +3777,7 @@ function renderGastos(g) {
 // Plan de deudas SIN tener en cuenta los pagos marcados.
 // Sirve para saber el importe de un pago antiguo guardado como texto.
 function rawPlan(g) {
-  var bals = computeBalsRaw(g);
+  var bals = unitBalsRaw(g);           // por unidad, no por persona
   var d  = bals.filter(function(b){return b.net<-0.005;}).map(function(b){return {name:b.name,amount:Math.abs(b.net)};});
   var cr = bals.filter(function(b){return b.net>0.005;}).map(function(b){return {name:b.name,amount:b.net};});
   d.sort(function(a,b){return b.amount-a.amount;});
@@ -3684,37 +3800,48 @@ function settleAdjust(g) {
   var lista = Array.isArray(g.settled) ? g.settled : [];
   if (!lista.length) return adj;
 
-  var plan = null;   // solo se calcula si hay entradas antiguas (texto)
+  var plan = null;   // solo se calcula si hay entradas antiguas (sin importe)
 
   lista.forEach(function(s) {
     var from, to, amount;
+
     if (typeof s === 'string') {
-      // Formato antiguo: "Deudor|Acreedor" sin importe → buscarlo en el plan
       var p = s.split('|');
       from = p[0]; to = p[1];
-      if (plan === null) plan = rawPlan(g);
-      amount = plan[s] || 0;
+      amount = 0;
     } else if (s && s.key) {
       from = s.from; to = s.to;
       amount = typeof s.amount === 'number' ? s.amount : 0;
-      if (!amount) {
-        if (plan === null) plan = rawPlan(g);
-        amount = plan[s.key] || 0;
-      }
     } else {
       return;
     }
-    if (!from || !to || !amount) return;
-    adj[from] = (adj[from] || 0) + amount;   // ha pagado: su deuda baja
-    adj[to]   = (adj[to]   || 0) - amount;   // ha cobrado: le deben menos
+    if (!from || !to) return;
+
+    // Resolver a UNIDADES. Un pago guardado con nombres de persona (antes de
+    // existir las familias) sigue valiendo: se imputa a la familia de cada uno.
+    var uf = unitNameFor(g, from);
+    var ut = unitNameFor(g, to);
+
+    // Pago DENTRO de la misma familia: no mueve nada (comparten cartera)
+    if (uf === ut) return;
+
+    if (!amount) {
+      if (plan === null) plan = rawPlan(g);
+      amount = plan[uf + '|' + ut] || 0;
+    }
+    if (!amount) return;
+
+    adj[uf] = (adj[uf] || 0) + amount;   // ha pagado: su deuda baja
+    adj[ut] = (adj[ut] || 0) - amount;   // ha cobrado: le deben menos
   });
+
   return adj;
 }
 
 // Saldos REALES: gastos + pagos ya realizados.
 // Esto es lo que ven el banner de Inicio, la pestaña Balances y el Informe.
 function computeBals(g) {
-  var bals = computeBalsRaw(g);
+  var bals = unitBalsRaw(g);
   var adj  = settleAdjust(g);
   bals.forEach(function(b) {
     if (adj[b.name]) b.net += adj[b.name];
@@ -3722,13 +3849,171 @@ function computeBals(g) {
   // Alguien que solo aparece en los pagos y no en los gastos
   Object.keys(adj).forEach(function(n) {
     if (!bals.some(function(b){ return b.name === n; })) {
-      bals.push({ name: n, net: adj[n] });
+      bals.push({ key:'per:'+n, name:n, members:[n], isFam:false, paid:0, owes:0, net:adj[n] });
     }
   });
   return bals;
 }
 
 // Saldos solo con los GASTOS (sin descontar los pagos hechos)
+
+// ══════════════════════════════════════════════════════════════
+// FAMILIAS — unidades de liquidación
+// ──────────────────────────────────────────────────────────────
+// Una familia comparte cartera: entre sus miembros NO se generan deudas, y el
+// grupo liquida con la familia entera.
+//
+// REGLA MAESTRA: una persona sin familia es una familia de uno.
+// Gracias a eso no hay casos especiales: el mismo algoritmo sirve para todo,
+// y si nadie usa familias el resultado es EXACTAMENTE el de siempre.
+//
+// Los gastos siguen siendo de personas (quién pagó, el podio, el informe).
+// Lo único que se agrupa es la DEUDA.
+// ══════════════════════════════════════════════════════════════
+
+function families() {
+  return Array.isArray(DB.families) ? DB.families : [];
+}
+
+// ¿A qué familia pertenece esta persona? (null si va suelta)
+function familyOf(name) {
+  if (!name) return null;
+  var n = String(name).trim().toLowerCase();
+  return families().filter(function(f) {
+    return (Array.isArray(f.members) ? f.members : []).some(function(m) {
+      return String(m).trim().toLowerCase() === n;
+    });
+  })[0] || null;
+}
+
+// Las UNIDADES de liquidación de un grupo.
+// Una familia solo cuenta como tal si tiene 2+ miembros EN ESTE grupo: si Jota
+// se va de esquí sin Cris, Jota liquida como persona suelta. Nadie configura
+// nada; la familia aparece y desaparece según el grupo.
+function unitsInGroup(g) {
+  var members  = Array.isArray(g.members)  ? g.members  : [];
+  var expenses = Array.isArray(g.expenses) ? g.expenses : [];
+
+  // La gente que interviene = miembros + cualquiera que haya PAGADO algo,
+  // aunque ya no sea miembro. Si dejáramos fuera a un ex-miembro que puso
+  // dinero, ese dinero se esfumaría y los saldos no sumarían cero.
+  var gente = [], visto = {};
+  function meter(n) {
+    if (!n) return;
+    var k = String(n).trim().toLowerCase();
+    if (visto[k]) return;      // sin duplicados
+    visto[k] = true;
+    gente.push(n);
+  }
+  members.forEach(meter);
+  expenses.forEach(function(e){ if (e && typeof e.amount === 'number') meter(e.paidBy); });
+
+  var out = [], asignado = {}, hechas = {};
+
+  gente.forEach(function(m) {
+    var k = String(m).trim().toLowerCase();
+    if (asignado[k]) return;               // esta persona ya está en una unidad
+
+    var f = familyOf(m);
+
+    // Miembros de esa familia presentes en el grupo, sin duplicados y sin los
+    // que ya estén asignados a otra unidad. Así nadie se cuenta dos veces
+    // aunque los datos estén sucios (nombre repetido, o alguien en 2 familias).
+    var dentro = [];
+    if (f) {
+      var vis2 = {};
+      (Array.isArray(f.members) ? f.members : []).forEach(function(x) {
+        var kx = String(x).trim().toLowerCase();
+        if (vis2[kx] || asignado[kx]) return;
+        if (!visto[kx]) return;            // esa persona no pinta nada en este grupo
+        vis2[kx] = true;
+        dentro.push(x);
+      });
+    }
+
+    // La familia solo cuenta si tiene 2+ presentes. Si no, cada uno va suelto.
+    if (f && dentro.length >= 2 && !hechas['fam:' + f.id]) {
+      hechas['fam:' + f.id] = true;
+      dentro.forEach(function(x){ asignado[String(x).trim().toLowerCase()] = true; });
+      out.push({ key: 'fam:' + f.id, name: f.name, members: dentro, isFam: true });
+    } else {
+      asignado[k] = true;
+      out.push({ key: 'per:' + m, name: m, members: [m], isFam: false });
+    }
+  });
+
+  return out;
+}
+
+// La unidad a la que pertenece una persona dentro de un grupo
+function unitOf(g, person) {
+  if (!person) return null;
+  var n = String(person).trim().toLowerCase();
+  return unitsInGroup(g).filter(function(u) {
+    return u.members.some(function(m){ return String(m).trim().toLowerCase() === n; });
+  })[0] || null;
+}
+
+// Nombre de unidad a partir de un nombre que puede ser de PERSONA o de UNIDAD.
+// Esto es lo que hace que los pagos antiguos (guardados con nombres de persona)
+// sigan siendo válidos cuando después se crea una familia.
+function unitNameFor(g, name) {
+  if (!name) return '';
+  var n = String(name).trim().toLowerCase();
+  var us = unitsInGroup(g);
+
+  var u = us.filter(function(x){ return String(x.name).trim().toLowerCase() === n; })[0];
+  if (u) return u.name;
+
+  var u2 = unitOf(g, name);
+  return u2 ? u2.name : name;
+}
+
+// ¿Es mi unidad? (para saber si una deuda me toca a mí)
+function isMyUnit(g, unitName) {
+  var me = myName();
+  if (!me) return false;
+  var u = unitOf(g, me);
+  return !!u && u.name === unitName;
+}
+
+// ¿Hay alguna familia REAL en este grupo? (con 2+ miembros dentro)
+function hasFamilies(g) {
+  return unitsInGroup(g).some(function(u){ return u.isFam; });
+}
+
+// Saldos por UNIDAD, solo gastos (sin descontar pagos)
+
+// Los avatares de una unidad: uno si va suelta, varios solapados si es familia.
+// Ese solape es lo que hace que una familia se reconozca sin leer nada.
+function unitAvatars(u, size) {
+  var s = size || 34;
+  var miem = (u && Array.isArray(u.members) && u.members.length) ? u.members : [u ? u.name : '?'];
+  var h = '<div class="u-avs">';
+  miem.slice(0, 3).forEach(function(m) {
+    h += '<div class="u-av" style="width:' + s + 'px;height:' + s + 'px;font-size:' +
+         Math.round(s * 0.36) + 'px;background:' + avc(m) + '">' + ini(m) + '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function unitBalsRaw(g) {
+  var ind = computeBalsRaw(g);
+  var porNombre = {};
+  ind.forEach(function(b){ porNombre[b.name] = b; });
+
+  return unitsInGroup(g).map(function(u) {
+    var paid = 0, owes = 0, net = 0;
+    u.members.forEach(function(m) {
+      var b = porNombre[m];
+      if (b) { paid += (b.paid || 0); owes += (b.owes || 0); net += (b.net || 0); }
+    });
+    return { key: u.key, name: u.name, members: u.members, isFam: u.isFam,
+             paid: paid, owes: owes, net: net };
+  });
+}
+
 function computeBalsRaw(g) {
   var p = {}, o = {};
   var members  = Array.isArray(g.members)  ? g.members  : Object.values(g.members  || {});
@@ -3818,50 +4103,55 @@ function buildPaidDonut(bals) {
 }
 
 function renderBals(g) {
-  var bals = computeBals(g);
-  var total = (Array.isArray(g.expenses)?g.expenses:[]).reduce(function(a,e){ return a + (e.isSettlement?0:e.amount); }, 0);
+  var bals = computeBals(g);          // por UNIDAD (familia o persona suelta)
+  var hayFam = hasFamilies(g);
   var me = myName();
-  var nMembers = (Array.isArray(g.members)?g.members:[]).length || 1;
+  var miU = me ? unitOf(g, me) : null;
 
   var h = '';
 
-  // Tu saldo destacado
-  var myb = bals.find(function(b){ return me && b.name.trim().toLowerCase()===me.trim().toLowerCase(); });
+  // Tu saldo destacado — el de tu UNIDAD, que es lo que se transfiere
+  var myb = miU ? bals.filter(function(b){ return b.name === miU.name; })[0] : null;
   if (myb) {
     var net = myb.net;
     var color = Math.abs(net)<0.005 ? 'var(--muted2)' : (net>0 ? 'var(--acc)' : 'var(--acc3)');
-    var msg = Math.abs(net)<0.005 ? 'Estás al día 🎉' : (net>0 ? 'Te deben ' + fmt(net) : 'Debes ' + fmt(Math.abs(net)));
+    var esFam = myb.isFam;
+    var msg;
+    if (Math.abs(net) < 0.005)  msg = esFam ? 'Estáis al día 🎉' : 'Estás al día 🎉';
+    else if (net > 0)           msg = (esFam ? 'Os deben ' : 'Te deben ') + fmt(net);
+    else                        msg = (esFam ? 'Debéis ' : 'Debes ') + fmt(Math.abs(net));
+
     h += '<div style="background:' + color + '18;border:1px solid ' + color + '30;border-radius:var(--rs);padding:13px 14px;margin-bottom:12px;text-align:center">';
-    h += '<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">Tu saldo</div>';
+    h += '<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">' +
+         (esFam ? 'Saldo de ' + esc(myb.name) : 'Tu saldo') + '</div>';
     h += '<div style="font-family:var(--ff-head);font-weight:800;font-size:22px;color:' + color + '">' + msg + '</div>';
     h += '</div>';
   }
 
-  // Gráfico circular: quién ha pagado cuánto
   h += buildPaidDonut(bals);
 
-  // Cabecera explicativa
-  h += '<div class="sec-lbl">Saldo de cada persona</div>';
+  h += '<div class="sec-lbl">' + (hayFam ? 'Saldo de cada familia' : 'Saldo de cada persona') + '</div>';
 
   h += '<div class="card">';
   bals.forEach(function(b){
-    var col = avc(b.name);
-    var isMe = me && b.name.trim().toLowerCase()===me.trim().toLowerCase();
+    var esMio = miU && b.name === miU.name;
 
-    // Frase clara de saldo
     var saldoLine;
     if (Math.abs(b.net) < 0.005) {
-      saldoLine = '<span style="color:var(--muted2);font-weight:600">Está al día ✓</span>';
+      saldoLine = '<span style="color:var(--muted2);font-weight:600">' + (b.isFam ? 'Están al día ✓' : 'Está al día ✓') + '</span>';
     } else if (b.net > 0) {
-      saldoLine = '<span style="color:var(--acc);font-weight:700">Le deben ' + fmt(b.net) + '</span>';
+      saldoLine = '<span style="color:var(--acc);font-weight:700">Le' + (b.isFam ? 's' : '') + ' deben ' + fmt(b.net) + '</span>';
     } else {
-      saldoLine = '<span style="color:var(--acc3);font-weight:700">Debe ' + fmt(Math.abs(b.net)) + '</span>';
+      saldoLine = '<span style="color:var(--acc3);font-weight:700">Debe' + (b.isFam ? 'n' : '') + ' ' + fmt(Math.abs(b.net)) + '</span>';
     }
 
-    h += '<div class="bal-row" style="align-items:flex-start;' + (isMe ? 'background:rgba(94,234,212,.05);border-radius:10px;padding:11px 10px;margin:0 -10px;' : '') + '">';
-    h += '<div class="avatar" style="background:' + col + '22;color:' + col + '">' + ini(b.name) + '</div>';
-    h += '<div class="bal-info" style="flex:1">';
-    h += '<div class="bal-name">' + esc(b.name) + (isMe ? ' <span style="font-size:11px;color:var(--muted2)">(tú)</span>' : '') + '</div>';
+    h += '<div class="bal-row" style="align-items:flex-start;' + (esMio ? 'background:rgba(94,234,212,.05);border-radius:10px;padding:11px 10px;margin:0 -10px;' : '') + '">';
+    h += unitAvatars(b, 38);
+    h += '<div class="bal-info" style="flex:1;margin-left:10px">';
+    h += '<div class="bal-name">' + esc(b.name) + (esMio ? ' <span style="font-size:11px;color:var(--muted2)">(tú)</span>' : '') + '</div>';
+    if (b.isFam) {
+      h += '<div style="font-size:11px;color:var(--muted);margin-top:1px">' + esc(b.members.join(' · ')) + '</div>';
+    }
     h += '<div style="font-size:13px;margin-top:3px">' + saldoLine + '</div>';
     h += '<div class="bal-sub" style="margin-top:2px">Pagó ' + fmt(b.paid) + ' de ' + fmt(b.owes) + ' que le tocaban</div>';
     h += '</div>';
@@ -3869,8 +4159,11 @@ function renderBals(g) {
   });
   h += '</div>';
 
-  // Leyenda explicativa
-  h += '<div class="info-box" style="margin-top:10px;font-size:12px">💡 <strong>Le deben</strong>: pagó más de lo que le tocaba. <strong>Debe</strong>: pagó menos. Ve a <strong>Deudas</strong> para ver quién paga a quién.</div>';
+  if (hayFam) {
+    h += '<div class="info-box" style="margin-top:10px;font-size:12px">👨‍👩‍👧 Las <strong>familias</strong> comparten cartera: entre sus miembros no hay deudas. En <strong>Deudas</strong> tienes el detalle persona a persona.</div>';
+  } else {
+    h += '<div class="info-box" style="margin-top:10px;font-size:12px">💡 <strong>Le deben</strong>: pagó más de lo que le tocaba. <strong>Debe</strong>: pagó menos. Ve a <strong>Deudas</strong> para ver quién paga a quién.</div>';
+  }
 
   return h;
 }
@@ -3884,10 +4177,12 @@ function renderBals(g) {
 // una deuda marcada como pagada desaparece de aquí (no se queda tachada).
 // Los pagos hechos se muestran aparte, leyéndolos de g.settled.
 function computeDebts(g) {
-  var bals = computeBals(g);   // gastos MENOS pagos ya hechos
+  var bals = computeBals(g);   // por unidad · gastos MENOS pagos ya hechos
 
-  var d  = bals.filter(function(b){return b.net<-0.005;}).map(function(b){return {name:b.name,amount:Math.abs(b.net)};});
-  var cr = bals.filter(function(b){return b.net>0.005;}).map(function(b){return {name:b.name,amount:b.net};});
+  var d  = bals.filter(function(b){return b.net<-0.005;})
+               .map(function(b){return {u:b, amount:Math.abs(b.net)};});
+  var cr = bals.filter(function(b){return b.net>0.005;})
+               .map(function(b){return {u:b, amount:b.net};});
   d.sort(function(a,b){return b.amount-a.amount;});
   cr.sort(function(a,b){return b.amount-a.amount;});
 
@@ -3896,11 +4191,13 @@ function computeDebts(g) {
     var a = Math.min(d[di].amount, cr[ci].amount);
     if (a > 0.005) {
       txs.push({
-        from: d[di].name,
-        to: cr[ci].name,
+        from: d[di].u.name,
+        to:   cr[ci].u.name,
         amount: a,
-        key: d[di].name + '|' + cr[ci].name,
-        settled: false
+        key: d[di].u.name + '|' + cr[ci].u.name,
+        settled: false,
+        fromU: d[di].u,       // la unidad completa, para pintar los avatares
+        toU:   cr[ci].u
       });
     }
     d[di].amount -= a; cr[ci].amount -= a;
@@ -3932,34 +4229,47 @@ function settledList(g) {
   return out;
 }
 function renderDebts(g) {
-  var pending = computeDebts(g);    // lo que QUEDA por pagar
-  var paid    = settledList(g);     // lo que YA se ha pagado
-  var me = myName();
-  var soyYo = function(n){ return me && n && n.trim().toLowerCase() === me.trim().toLowerCase(); };
+  var pending = computeDebts(g);    // entre UNIDADES · lo que queda por pagar
+  var paid    = settledList(g);     // lo que ya se ha pagado
+  var me      = myName();
+  var miU     = me ? unitOf(g, me) : null;
+  var hayFam  = hasFamilies(g);
+
+  // Para pintar los avatares de una unidad a partir de su nombre
+  var us = unitsInGroup(g);
+  function uPorNombre(n) {
+    return us.filter(function(u){ return u.name === n; })[0] || { name:n, members:[n], isFam:false };
+  }
+  var esMia = function(n){ return !!miU && n === miU.name; };
 
   if (!pending.length && !paid.length) {
     return '<div class="empty"><div class="empty-icon">🎉</div><p>¡Todo liquidado!<br>Sin deudas pendientes.</p></div>';
   }
 
   function row(t, isPaid) {
-    var fc = avc(t.from);
-    var meDebe   = soyYo(t.to);      // me deben a mí
-    var yoDebo   = soyYo(t.from);    // yo debo
-    var bc = isPaid ? 'rgba(94,234,212,.2)' : (yoDebo ? 'rgba(251,113,133,.25)' : 'var(--border)');
+    var uf = t.fromU || uPorNombre(t.from);
+    var ut = t.toU   || uPorNombre(t.to);
+    var meDeben = esMia(t.to);      // el dinero es PARA mi unidad
+    var yoDebo  = esMia(t.from);    // lo debe mi unidad
+    var bc = isPaid ? 'rgba(94,234,212,.2)' : (yoDebo ? 'rgba(251,113,133,.25)' : (meDeben ? 'rgba(94,234,212,.3)' : 'var(--border)'));
 
     var s = '<div class="debt-row" style="border-color:' + bc + (isPaid ? ';opacity:.65' : '') + '">';
-    s += '<div class="avatar" style="background:' + fc + '22;color:' + fc + ';width:30px;height:30px;font-size:11px">' + ini(t.from) + '</div>';
-    s += '<div class="debt-txt"' + (isPaid ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>';
-    s += '<strong>' + esc(t.from) + '</strong> → <strong>' + esc(t.to) + '</strong></div>';
+    s += unitAvatars(uf, 30);
+    s += '<div class="debt-txt" style="margin-left:8px' + (isPaid ? ';text-decoration:line-through;color:var(--muted)' : '') + '">';
+    s += '<strong>' + esc(t.from) + '</strong> → <strong>' + esc(t.to) + '</strong>';
+    if (!isPaid && (meDeben || yoDebo)) {
+      s += ' <span style="font-size:10px;font-weight:800;letter-spacing:.04em;background:rgba(94,234,212,.14);color:var(--acc);border-radius:5px;padding:2px 5px;margin-left:3px">TÚ</span>';
+    }
+    s += '</div>';
     s += '<div class="debt-amt"' + (isPaid ? ' style="text-decoration:line-through;color:var(--muted)"' : '') + '>' + fmt(t.amount) + '</div>';
 
     if (isPaid) {
       s += '<button class="btn-settle btn-pay" data-gid="' + g.id + '" data-key="' + esc(t.key) + '" style="background:rgba(94,234,212,.15);color:var(--acc);border-color:transparent">✓ Pagado</button>';
     } else {
-      // Reclamar: solo tiene sentido si el dinero es PARA MÍ (o soy admin del grupo)
-      if (meDebe) {
+      // Reclamar: SOLO si el dinero es para mi unidad
+      if (meDeben) {
         s += '<button class="btn-claim" data-gid="' + g.id + '" data-key="' + esc(t.key) + '" title="Reclamar por WhatsApp">';
-        s += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>';
+        s += '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
         s += '</button>';
       }
       s += '<button class="btn-settle btn-pay" data-gid="' + g.id + '" data-key="' + esc(t.key) + '">Pagar</button>';
@@ -3969,19 +4279,53 @@ function renderDebts(g) {
   }
 
   var h = '';
+
   if (pending.length) {
-    h += '<div class="sec-lbl">Pagos pendientes</div>';
+    h += '<div class="sec-lbl">💸 Pendiente de pago</div>';
     pending.forEach(function(t){ h += row(t, false); });
+    if (hayFam) {
+      h += '<div class="info-box" style="margin-top:8px;font-size:12px">👨‍👩‍👧 El dinero se mueve <strong>entre familias</strong>. Dentro de una familia no hay nada que saldar.</div>';
+    }
+  } else {
+    h += '<div class="sec-lbl">💸 Pendiente de pago</div>';
+    h += '<div class="info-box">🎉 ¡Sin deudas pendientes!</div>';
   }
+
   if (paid.length) {
-    h += '<div class="sec-lbl" style="margin-top:14px">Pagos realizados</div>';
+    h += '<div class="sec-lbl" style="margin-top:16px">✅ Pagos realizados</div>';
     paid.forEach(function(t){ h += row(t, true); });
   }
-  if (!pending.length) {
-    h = '<div class="info-box" style="margin-bottom:12px">🎉 ¡Todas las deudas han sido pagadas!</div>' + h;
+
+  // ── DETALLE POR PERSONA — solo informa, NO se paga ──
+  // Solo tiene sentido si hay familias: sin ellas sería una copia de la lista
+  // de arriba. Y no lleva botones a propósito: si los llevara, alguien pagaría
+  // dos veces el mismo dinero.
+  if (hayFam) {
+    var ind = computeBalsRaw(g);
+    h += '<div class="sec-lbl" style="margin-top:18px">Detalle por persona</div>';
+    h += '<div class="card" style="padding:4px 13px">';
+    ind.forEach(function(b) {
+      var f = familyOf(b.name);
+      var enFam = f && esMiembro(g, b.name) &&
+                  (f.members || []).filter(function(x){ return esMiembro(g, x); }).length >= 2;
+      var col = Math.abs(b.net) < 0.005 ? 'var(--muted2)' : (b.net > 0 ? 'var(--acc)' : 'var(--acc3)');
+
+      var ultimo = (ind.indexOf(b) === ind.length - 1);
+      h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0' +
+           (ultimo ? '' : ';border-bottom:1px solid var(--border)') + '">';
+      h +=   '<div class="avatar" style="width:28px;height:28px;font-size:11px;background:' + avc(b.name) + '22;color:' + avc(b.name) + '">' + ini(b.name) + '</div>';
+      h +=   '<div style="flex:1;min-width:0;font-size:13px;color:var(--txt2)">' + esc(b.name);
+      h +=     '<span style="font-size:10px;color:var(--muted);margin-left:5px">· ' +
+               (enFam ? esc(f.name) : 'sin familia') + '</span>';
+      h +=   '</div>';
+      h +=   '<div style="font-family:var(--ff-head);font-weight:800;font-size:13.5px;color:' + col + '">' +
+             (b.net >= 0 ? '+' : '') + fmt(b.net) + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+    h += '<div class="info-box" style="margin-top:8px;font-size:12px">Quién ha puesto qué, <strong>persona a persona</strong>. Aquí no hay nada que pagar: el dinero se salda entre familias.</div>';
   }
-  h += '<div style="height:8px"></div>';
-  h += '<div class="info-box">💡 <strong>Pagos mínimos</strong> optimizados. Pulsa <strong>Pagar</strong> al transferir; el saldo se actualiza en toda la app. Si te equivocas, pulsa <strong>✓ Pagado</strong> para revertir.</div>';
+
   return h;
 }
 
@@ -3992,13 +4336,27 @@ function claimDebt(gid, key) {
   var tx = computeDebts(g).filter(function(t){ return t.key === key; })[0];
   if (!tx) { toast('⚠️ Esa deuda ya no está pendiente'); return; }
 
+  // Los plurales importan: si escribo "me debes" cuando en realidad es
+  // "nos debéis", el mensaje suena raro y no queda claro quién paga a quién.
+  var deudorEsFam = !!(tx.fromU && tx.fromU.isFam);
+  var yoSoyFam    = !!(tx.toU   && tx.toU.isFam);
+
+  var quien = yoSoyFam ? 'nos' : 'me';
+  var verbo = deudorEsFam ? 'debéis' : 'debes';
+  var pasa  = deudorEsFam ? '¿Nos lo pasáis cuando podáis?' : '¿Me lo pasas cuando puedas?';
+  if (yoSoyFam && deudorEsFam) pasa = '¿Nos lo pasáis cuando podáis?';
+  if (yoSoyFam && !deudorEsFam) pasa = '¿Nos lo pasas cuando puedas?';
+
   var texto =
     '💸 ¡Hola ' + tx.from + '!\n\n' +
-    'Te recuerdo que del grupo ' + (g.emoji ? g.emoji + ' ' : '') + '"' + g.name + '" ' +
-    'me debes ' + fmt(tx.amount) + '.\n\n' +
-    '¿Me lo pasas cuando puedas? 🙏\n\n' +
+    'Os recuerdo que del grupo ' + (g.emoji ? g.emoji + ' ' : '') + '"' + g.name + '" ' +
+    quien + ' ' + verbo + ' ' + fmt(tx.amount) + '.\n\n' +
+    pasa + ' 🙏\n\n' +
     'Un Lannister siempre paga sus deudas 😉\n' +
     APP_URL;
+
+  // "Os recuerdo" solo si el deudor es una familia; si es una persona, "Te recuerdo"
+  if (!deudorEsFam) texto = texto.replace('Os recuerdo', 'Te recuerdo');
 
   if (navigator.share) {
     navigator.share({ title: 'Deuda pendiente', text: texto }).catch(function(e){
@@ -4441,7 +4799,7 @@ function renderHomeAvanzada() {
 function bloqueCabecera() {
   var h = '<div class="home-hdr" style="display:flex;align-items:flex-start;justify-content:space-between">';
   h +=   '<div><h1>SplitGuasa 💸</h1><p>Un Lannister siempre paga sus deudas</p></div>';
-  h +=   '<span onclick="openModal(\'m-about\')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0">v1.5</span>';
+  h +=   '<span onclick="openModal(\'m-about\')" style="font-family:var(--ff-head);font-size:11px;font-weight:700;color:var(--muted);background:var(--s2);border:1px solid var(--border);padding:4px 10px;border-radius:8px;cursor:pointer;margin-top:4px;flex-shrink:0">v1.6</span>';
   h += '</div>';
   return h;
 }
@@ -4488,15 +4846,22 @@ function bloqueBanner(g, nGrupos, animar) {
 }
 
 // ── 2. Tu saldo: la razón por la que se abre la app ──
+// ¿Ver el saldo de mi familia o el mío individual?
+// Preferencia personal, guardada en el móvil. Arranca en FAMILIA porque es lo
+// que de verdad se transfiere; el individual queda a un toque.
+function saldoView() {
+  try { return localStorage.getItem('sg_saldo') === 'yo' ? 'yo' : 'familia'; }
+  catch (e) { return 'familia'; }
+}
+function toggleSaldoView() {
+  var v = (saldoView() === 'familia') ? 'yo' : 'familia';
+  try { localStorage.setItem('sg_saldo', v); } catch (e) {}
+  ultimoHtmlHome = '';    // forzar repintado
+  renderHome();
+}
+
 function bloqueSaldo(g) {
   var me = myName();
-  var pend = computeDebts(g);
-
-  var debo = pend.filter(function(t){ return isMe(t.from); });   // yo debo
-  var meDeben = pend.filter(function(t){ return isMe(t.to); });  // me deben
-
-  var totDebo = debo.reduce(function(a,t){ return a + t.amount; }, 0);
-  var totDeben = meDeben.reduce(function(a,t){ return a + t.amount; }, 0);
 
   var h = '<div class="hv-saldo">';
 
@@ -4508,29 +4873,80 @@ function bloqueSaldo(g) {
     return h;
   }
 
-  if (totDeben > 0.005) {
-    h += '<div class="hv-saldo-lbl">Te deben</div>';
-    h += '<div class="hv-saldo-num" style="color:var(--acc)">' + fmt(totDeben) + '</div>';
-    h += '<div class="hv-saldo-det">' +
-         meDeben.map(function(t){ return '<b>' + esc(t.from) + '</b> · ' + fmt(t.amount); }).join('<br>') +
-         '</div>';
-  } else if (totDebo > 0.005) {
-    h += '<div class="hv-saldo-lbl" style="color:var(--acc3)">Debes</div>';
-    h += '<div class="hv-saldo-num" style="color:var(--acc3)">' + fmt(totDebo) + '</div>';
-    h += '<div class="hv-saldo-det">' +
-         debo.map(function(t){ return 'A <b>' + esc(t.to) + '</b> · ' + fmt(t.amount); }).join('<br>') +
-         '</div>';
-  } else if ((g.members || []).indexOf(me) < 0) {
+  var miU = unitOf(g, me);
+  if (!miU) {
     h += '<div class="hv-saldo-lbl" style="color:var(--muted2)">No estás en este grupo</div>';
     h += '<div class="hv-saldo-num" style="color:var(--txt2);font-size:24px">Solo mirando</div>';
     h += '<div class="hv-saldo-det">Puedes consultarlo, pero no participas en los gastos.</div>';
-  } else {
-    h += '<div class="hv-saldo-lbl">Tu saldo</div>';
-    h += '<div class="hv-saldo-num" style="color:var(--txt)">Todo en paz 🎉</div>';
-    h += '<div class="hv-saldo-det">No debes nada y no te deben nada.</div>';
+    h += '<div class="hv-acts"><button class="hv-btn pri" onclick="openGroup(\'' + g.id + '\',\'gastos\')">Ver detalle</button></div>';
+    h += '</div>';
+    return h;
   }
 
-  // Un solo botón: añadir gasto se hace con el botón + de abajo a la derecha
+  var enFamilia = miU.isFam;
+  var vista = enFamilia ? saldoView() : 'yo';   // sin familia no hay nada que alternar
+
+  // El botón ⇄ solo aparece si estás en una familia EN ESTE grupo
+  if (enFamilia) {
+    h += '<button class="hv-swap" onclick="toggleSaldoView()" title="Cambiar entre tu saldo y el de tu familia">';
+    h +=   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+           '<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>' +
+           '<polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>';
+    h += '</button>';
+  }
+
+  if (vista === 'familia') {
+    // ── SALDO DE LA FAMILIA: lo que de verdad se transfiere ──
+    var pend = computeDebts(g);
+    var debo    = pend.filter(function(t){ return t.from === miU.name; });
+    var meDeben = pend.filter(function(t){ return t.to   === miU.name; });
+    var totDebo  = debo.reduce(function(a,t){ return a + t.amount; }, 0);
+    var totDeben = meDeben.reduce(function(a,t){ return a + t.amount; }, 0);
+
+    if (totDeben > 0.005) {
+      h += '<div class="hv-saldo-lbl">Os deben</div>';
+      h += '<div class="hv-saldo-num" style="color:var(--acc)">' + fmt(totDeben) + '</div>';
+      h += '<div class="hv-fam-tag">' + unitAvatars(miU, 22) + '<span>' + esc(miU.name) + '</span></div>';
+      h += '<div class="hv-saldo-det">' +
+           meDeben.map(function(t){ return '<b>' + esc(t.from) + '</b> · ' + fmt(t.amount); }).join('<br>') +
+           '</div>';
+    } else if (totDebo > 0.005) {
+      h += '<div class="hv-saldo-lbl" style="color:var(--acc3)">Debéis</div>';
+      h += '<div class="hv-saldo-num" style="color:var(--acc3)">' + fmt(totDebo) + '</div>';
+      h += '<div class="hv-fam-tag">' + unitAvatars(miU, 22) + '<span>' + esc(miU.name) + '</span></div>';
+      h += '<div class="hv-saldo-det">' +
+           debo.map(function(t){ return 'A <b>' + esc(t.to) + '</b> · ' + fmt(t.amount); }).join('<br>') +
+           '</div>';
+    } else {
+      h += '<div class="hv-saldo-lbl">Vuestro saldo</div>';
+      h += '<div class="hv-saldo-num" style="color:var(--txt)">Todo en paz 🎉</div>';
+      h += '<div class="hv-fam-tag">' + unitAvatars(miU, 22) + '<span>' + esc(miU.name) + '</span></div>';
+      h += '<div class="hv-saldo-det">No debéis nada y no os deben nada.</div>';
+    }
+
+  } else {
+    // ── MI SALDO INDIVIDUAL ──
+    // Cuánto he puesto de más (o de menos) respecto a lo que me tocaba.
+    var mio = computeBalsRaw(g).filter(function(b){ return isMe(b.name); })[0];
+    var net = mio ? mio.net : 0;
+
+    if (net > 0.005) {
+      h += '<div class="hv-saldo-lbl">Has puesto de más</div>';
+      h += '<div class="hv-saldo-num" style="color:var(--acc)">' + fmt(net) + '</div>';
+    } else if (net < -0.005) {
+      h += '<div class="hv-saldo-lbl" style="color:var(--acc3)">Has puesto de menos</div>';
+      h += '<div class="hv-saldo-num" style="color:var(--acc3)">' + fmt(Math.abs(net)) + '</div>';
+    } else {
+      h += '<div class="hv-saldo-lbl">Tu aportación</div>';
+      h += '<div class="hv-saldo-num" style="color:var(--txt)">Justa 🎯</div>';
+    }
+    h += '<div class="hv-fam-tag"><div class="u-avs"><div class="u-av" style="width:22px;height:22px;font-size:9px;background:' + avc(me) + '">' + ini(me) + '</div></div><span>' + esc(me) + ' · solo tú</span></div>';
+    if (enFamilia) {
+      h += '<div class="hv-saldo-det" style="color:var(--muted);font-size:12.5px">' +
+           'Se salda dentro de <b>' + esc(miU.name) + '</b>.<br>Toca ⇄ para ver lo que hay que transferir.</div>';
+    }
+  }
+
   h += '<div class="hv-acts">';
   h +=   '<button class="hv-btn pri" onclick="openGroup(\'' + g.id + '\',\'gastos\')">Ver detalle</button>';
   h += '</div>';
@@ -4925,30 +5341,36 @@ function isMe(name) {
 function renderBanner() {
   let deb=0, ted=0;
   const me = myName();
-  // Solo los grupos VISIBLES: si no, el banner contaría deudas de grupos
-  // ocultos que el usuario no ve en la lista (incoherente).
   const vis = visibleGroups();
+  var enFamilia = false;    // ¿el número que muestro es el de una familia?
   vis.forEach(g => {
+    // El saldo que cuenta es el de MI UNIDAD (mi familia, o yo solo).
+    // Es lo que de verdad se va a transferir.
+    var u = me ? unitOf(g, me) : null;
+    if (!u) return;
     computeBals(g).forEach(b => {
-      if (isMe(b.name)) {                      // comparación tolerante
-        if (b.net < -0.005) deb += Math.abs(b.net);
-        else if (b.net > 0.005) ted += b.net;
+      if (b.name === u.name) {
+        if (b.net < -0.005)      { deb += Math.abs(b.net); if (u.isFam) enFamilia = true; }
+        else if (b.net > 0.005)  { ted += b.net;           if (u.isFam) enFamilia = true; }
       }
     });
   });
   document.getElementById('b-deb').textContent = fmt(deb);
   document.getElementById('b-ted').textContent = fmt(ted);
   document.getElementById('b-grp').textContent = vis.length;
-  // Saludo personalizado
+
+  // Si la cifra es la de tu familia, el plural lo dice. Si no, quien lo lea
+  // pensaría que es solo suyo y estaría contando el dinero dos veces.
+  var lblD = document.getElementById('b-deb-lbl');
+  var lblT = document.getElementById('b-ted-lbl');
+  if (lblD) lblD.textContent = enFamilia ? 'Debéis'   : 'Debes';
+  if (lblT) lblT.textContent = enFamilia ? 'Os deben' : 'Te deben';
+
   const greetEl   = document.getElementById('greeting');
   const greetName = document.getElementById('greeting-name');
   if (greetEl && greetName) {
-    if (me) {
-      greetName.textContent = me;
-      greetEl.style.display = 'block';
-    } else {
-      greetEl.style.display = 'none';
-    }
+    if (me) { greetName.textContent = me; greetEl.style.display = 'block'; }
+    else    { greetEl.style.display = 'none'; }
   }
 }
 
@@ -5232,11 +5654,17 @@ function renderReport() {
            '</div>';
     }
 
-    h += '<div class="sec-lbl" style="margin-top:11px">Balances (' + bals.length + ' personas)</div>';
+    // Balances por UNIDAD (familia o persona suelta). Si el grupo no tiene
+    // familias, las unidades SON las personas y esto es idéntico a antes.
+    var gHayFam = hasFamilies(g);
+    var gMiU = me ? unitOf(g, me) : null;
+
+    h += '<div class="sec-lbl" style="margin-top:11px">Balances (' + bals.length + ' ' +
+         (gHayFam ? (bals.length === 1 ? 'unidad' : 'unidades')
+                  : (bals.length === 1 ? 'persona' : 'personas')) + ')</div>';
 
     bals.forEach(b => {
-      const col   = avc(b.name);
-      const isMeB = me && b.name.trim().toLowerCase() === me.trim().toLowerCase();
+      var esMioB = gMiU && b.name === gMiU.name;
       let tag;
       if (Math.abs(b.net) < 0.005) {
         tag = '<span class="tag tag-ok">✓</span>';
@@ -5246,9 +5674,9 @@ function renderReport() {
         tag = '<span style="color:var(--acc3);font-family:var(--ff-head);font-weight:700;font-size:13px">-' + fmt(Math.abs(b.net)) + '</span>';
       }
       h += '<div class="bal-row">';
-      h += '<div class="avatar" style="background:' + col + '22;color:' + col + '">' + ini(b.name) + '</div>';
-      h += '<div class="bal-info"><div class="bal-name">' + esc(b.name) + (isMeB ? ' (tú)' : '') + '</div>';
-      h += '<div class="bal-sub">Pagó ' + fmt(b.paid) + '</div></div>';
+      h += unitAvatars(b, 34);
+      h += '<div class="bal-info" style="margin-left:9px"><div class="bal-name">' + esc(b.name) + (esMioB ? ' (tú)' : '') + '</div>';
+      h += '<div class="bal-sub">' + (b.isFam ? esc(b.members.join(' · ')) + ' · pagó ' : 'Pagó ') + fmt(b.paid) + '</div></div>';
       h += tag + '</div>';
     });
 
@@ -5259,7 +5687,7 @@ function renderReport() {
       var totalDebt = pending.reduce(function(s, t){ return s + t.amount; }, 0);
       h += '<hr><div class="sec-lbl">Deudas pendientes</div>';
       pending.forEach(function(t){
-        var isMeD = me && t.from.trim().toLowerCase() === me.trim().toLowerCase();
+        var isMeD = gMiU && t.from === gMiU.name;      // lo debe MI unidad
         var borderCol = isMeD ? 'rgba(251,113,133,.25)' : 'var(--border)';
         h += '<div class="debt-row" style="border-color:' + borderCol + '">';
         h += '<span style="color:var(--acc2)">→</span>';
@@ -5812,7 +6240,177 @@ function confirmDelPerson() {
 }
 
 // Renderizar modal Amigos
+
+// ══════════════════════════════════════════════════
+// FAMILIAS — interfaz (pantalla Amigos)
+// ══════════════════════════════════════════════════
+
+var famEdit = '';        // id de la familia que se está editando ('' = nueva)
+var famSel  = [];        // miembros seleccionados en el modal
+
+function renderFamilias() {
+  var cont = document.getElementById('fam-list');
+  var add  = document.getElementById('fam-add');
+  var info = document.getElementById('fam-info');
+  if (!cont) return;
+
+  if (add) add.style.display = isAdmin() ? 'inline-block' : 'none';
+
+  var fams = families();
+  if (!fams.length) {
+    cont.innerHTML = '<div style="text-align:center;padding:14px 0;color:var(--muted);font-size:12.5px">' +
+      (isAdmin() ? 'Sin familias. Crea una si hay parejas en tus grupos.'
+                 : 'Sin familias todavía.') + '</div>';
+    if (info) info.style.display = fams.length ? 'none' : 'block';
+    return;
+  }
+  if (info) info.style.display = 'block';
+
+  var h = '';
+  fams.forEach(function(f) {
+    var miem = Array.isArray(f.members) ? f.members : [];
+    h += '<div class="fam-card"' + (isAdmin() ? ' onclick="openFamilia(\'' + f.id + '\')"' : '') + '>';
+    h +=   '<div class="fam-avs">';
+    miem.slice(0, 3).forEach(function(m) {
+      h += '<div class="fam-av" style="background:' + avc(m) + '">' + ini(m) + '</div>';
+    });
+    h +=   '</div>';
+    h +=   '<div style="flex:1;min-width:0">';
+    h +=     '<div class="fam-nom">' + esc(f.name) + '</div>';
+    h +=     '<div class="fam-sub">' + esc(miem.join(' · ')) + '</div>';
+    h +=   '</div>';
+    if (isAdmin()) {
+      h += '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+    }
+    h += '</div>';
+  });
+  cont.innerHTML = h;
+}
+
+// Abrir el modal (con id = editar, sin id = crear)
+function openFamilia(id) {
+  if (!isAdmin()) { toast('🔒 Solo el administrador'); return; }
+
+  famEdit = id || '';
+  var f = famEdit ? families().filter(function(x){ return x.id === famEdit; })[0] : null;
+
+  famSel = f ? (Array.isArray(f.members) ? f.members.slice() : []) : [];
+
+  document.getElementById('fam-title').textContent = f ? 'Editar familia' : 'Nueva familia';
+  document.getElementById('fam-name').value = f ? (f.name || '') : '';
+  document.getElementById('fam-del').style.display = f ? 'block' : 'none';
+
+  renderFamPeople();
+  openModal('m-familia');
+}
+
+// Las personas disponibles: todas menos las que ya están en OTRA familia
+function renderFamPeople() {
+  var cont = document.getElementById('fam-people');
+  if (!cont) return;
+
+  var h = '';
+  getFriends().forEach(function(n) {
+    var otra = familyOf(n);
+    var ocupada = otra && otra.id !== famEdit;      // ya está en otra familia
+    var on = famSel.some(function(x){ return x === n; });
+
+    if (ocupada) {
+      h += '<span class="chip-p off" title="Ya está en ' + esc(otra.name) + '">' +
+           '<span class="chip-dot" style="background:' + avc(n) + '"></span>' + esc(n) +
+           '<span style="font-size:9.5px;color:var(--muted);margin-left:4px">' + esc(otra.name) + '</span></span>';
+    } else {
+      h += '<span class="chip-p' + (on ? ' on' : '') + '" onclick="toggleFamPerson(\'' + esc(n).replace(/'/g, "\\'") + '\')">' +
+           '<span class="chip-dot" style="background:' + avc(n) + '"></span>' + esc(n) +
+           (on ? ' ✓' : '') + '</span>';
+    }
+  });
+  cont.innerHTML = h || '<span style="font-size:12.5px;color:var(--muted)">Crea amigos primero.</span>';
+
+  sugerirNombreFamilia();
+}
+
+function toggleFamPerson(n) {
+  var i = famSel.indexOf(n);
+  if (i >= 0) famSel.splice(i, 1);
+  else        famSel.push(n);
+  renderFamPeople();
+}
+
+// Sugerir un nombre a partir de los elegidos, pero SIN pisar lo que ya escribió
+function sugerirNombreFamilia() {
+  var inp  = document.getElementById('fam-name');
+  var hint = document.getElementById('fam-hint');
+  if (!inp || !hint) return;
+
+  if (famSel.length < 2) { hint.textContent = ''; return; }
+
+  var sug = famSel.slice(0, 2).join(' & ');
+  if (famSel.length > 2) sug += ' +' + (famSel.length - 2);
+
+  if (!inp.value.trim()) {
+    hint.innerHTML = 'Sugerido: <span style="color:var(--acc)">' + esc(sug) + '</span> · puedes cambiarlo';
+    inp.placeholder = sug;
+  } else {
+    hint.textContent = '';
+  }
+}
+
+function saveFamilia() {
+  if (!isAdmin()) return;
+
+  if (famSel.length < 2) { toast('⚠️ Una familia necesita 2 personas o más'); return; }
+
+  var inp = document.getElementById('fam-name');
+  var nombre = (inp.value || '').trim().replace(/\|/g, '');   // '|' separa las claves de pago
+  if (!nombre) nombre = famSel.slice(0, 2).join(' & ');       // el sugerido, si lo dejó vacío
+
+  // Que no se repita el nombre con otra familia
+  var choca = families().some(function(f) {
+    return f.id !== famEdit && String(f.name).trim().toLowerCase() === nombre.toLowerCase();
+  });
+  if (choca) { toast('⚠️ Ya hay una familia con ese nombre'); return; }
+
+  if (!Array.isArray(DB.families)) DB.families = [];
+
+  if (famEdit) {
+    var f = DB.families.filter(function(x){ return x.id === famEdit; })[0];
+    if (f) { f.name = nombre; f.members = famSel.slice(); }
+    logAction('friend', '👨‍👩‍👧', 'Editó la familia ' + nombre, null);
+  } else {
+    DB.families.push({ id: uid(), name: nombre, members: famSel.slice() });
+    logAction('friend', '👨‍👩‍👧', 'Creó la familia ' + nombre + ' (' + famSel.join(', ') + ')', null);
+  }
+
+  save();
+  closeModal('m-familia');
+  renderFamilias();
+  renderAll();                 // los saldos cambian en TODAS las vistas
+  toast('👨‍👩‍👧 Familia guardada');
+}
+
+function deleteFamilia() {
+  if (!isAdmin() || !famEdit) return;
+
+  var f = families().filter(function(x){ return x.id === famEdit; })[0];
+  if (!f) return;
+  if (!confirm('¿Deshacer la familia "' + f.name + '"?\n\nSus miembros volverán a liquidar por separado.')) return;
+
+  DB.families = families().filter(function(x){ return x.id !== famEdit; });
+  // Tombstone: si no, la fusión con el servidor la resucitaría
+  if (!Array.isArray(DB.deleted)) DB.deleted = [];
+  if (DB.deleted.indexOf('fam:' + famEdit) < 0) DB.deleted.push('fam:' + famEdit);
+  logAction('friend', '👨‍👩‍👧', 'Deshizo la familia ' + f.name, null);
+
+  save();
+  closeModal('m-familia');
+  renderFamilias();
+  renderAll();
+  toast('Familia deshecha');
+}
+
 function renderYoModal() {
+  renderFamilias();
   var list  = document.getElementById('yo-person-list');
   var empty = document.getElementById('yo-empty');
   if (!list) return;
