@@ -2042,7 +2042,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261302</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261336</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -3696,8 +3696,14 @@ function closeGroup() { goTab('home'); curGid=null; }
 // MODALS
 // ════════════════════════════════════════════
 function openModal(id) {
-  if (id === 'm-newgrp')       initNewGrp();
-  if (id === 'm-edit-members') initEditMembers();
+  // Si un init peta, el modal DEBE abrirse igual. Antes, un error aquí dejaba
+  // el botón muerto sin ninguna pista de por qué.
+  try {
+    if (id === 'm-newgrp')       initNewGrp();
+    if (id === 'm-edit-members') initEditMembers();
+  } catch (e) {
+    console.error('Error al preparar ' + id + ':', e);
+  }
   const el = document.getElementById(id);
   if (el) { el.classList.add('on'); document.body.style.overflow = 'hidden'; }
 }
@@ -6299,7 +6305,7 @@ var lnkEdit = '';    // id del vínculo que se edita ('' = nuevo)
 var lnkSel  = [];    // quiénes van dentro
 
 function grupoEnEdicion() {
-  return DB.groups.find(function(x){ return x.id === curGroup; });
+  return (typeof grp === 'function') ? grp() : null;   // grp() = el grupo abierto
 }
 
 function renderLinks() {
@@ -6884,8 +6890,10 @@ function renderEmBgGrid(currentBgUrl) {
 }
 
 function initEditMembers() {
-  renderLinks();
   const g = grp(); if (!g) return;
+  // Los vínculos, en un try: si algo fallara aquí, no debe impedir editar
+  // los miembros (openModal llama a esta función ANTES de abrir el modal).
+  try { renderLinks(); } catch (e) { console.error('renderLinks:', e); }
   emMembers = g.members.slice();
   const srch = document.getElementById('em-search');
   if (srch) srch.value = '';
