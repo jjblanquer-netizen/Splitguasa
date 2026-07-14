@@ -2047,7 +2047,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261722</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">140720261812</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -2515,7 +2515,7 @@ function mergeGroup(remote, local, deleted) {
   (Array.isArray(local.links) ? local.links : []).forEach(function(l) {
     if (l && l.id && !deleted['lnk:' + l.id]) lnkById[l.id] = l;
   });
-  out.links = Object.keys(lnkById).map(function(k){ return lnkById[k]; });
+  g.links = Object.keys(lnkById).map(function(k){ return lnkById[k]; });
 
   return g;
 }
@@ -7608,13 +7608,11 @@ init();
     ready();
     if (isStandalone() || recentlyDismissed()) return;
 
-    // Si estamos dentro de WhatsApp (o similar), el banner normal NO sirve:
-    // 'beforeinstallprompt' jamás se disparará y las instrucciones del menú ⋮
-    // de Chrome son inútiles porque no estamos en Chrome. Aviso propio.
-    if (esNavegadorEmbebido()) {
-      setTimeout(avisoNavegadorEmbebido, 1200);
-      return;
-    }
+    // El aviso de WhatsApp ya lo cubre el panel a pantalla completa
+    // (#m-install → panelEmbebido). Esta llamada apuntaba a una función
+    // BORRADA: era un ReferenceError esperando a que alguien abriera la app
+    // desde WhatsApp.
+    if (esNavegadorEmbebido()) return;
 
     if (isIos()) {
       // iPhone: instrucciones manuales tras 3s
