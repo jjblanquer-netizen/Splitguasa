@@ -2059,7 +2059,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">150720260041</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">150720260148</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -5186,18 +5186,23 @@ function bloquePodio(g) {
   if (ap.length < 2) return '';                   // con uno solo no hay comparación
 
   var total = ap.reduce(function(a,p){ return a + p.total; }, 0);
-  if (total < 0.01) return '';                    // nadie ha pagado nada aún
+
+  // Sin gastos aún: en vez de ocultar la tarjeta, se muestra SOLO la lista
+  // (todos a 0 €), para saber de un vistazo quién participa. El podio no tiene
+  // sentido si nadie ha puesto nada, así que se omite.
+  var sinGastos = total < 0.01;
 
   var h = '<div class="hv-sec">';
   h += '<div class="hv-sec-h"><div class="hv-sec-t">¿Cuánto ha aportado cada uno?</div>' +
-       '<div class="hv-sec-m">de ' + fmt(total) + '</div></div>';
+       (sinGastos ? '<div class="hv-sec-m">aún sin gastos</div>'
+                  : '<div class="hv-sec-m">de ' + fmt(total) + '</div>') + '</div>';
   h += '<div class="hv-podio">';
 
   // ── El podio: los tres primeros que HAYAN PAGADO algo ──
   // Las alturas de las gradas son PROPORCIONALES a lo aportado: el podio es el
   // dato, no un adorno.
   // El podio muestra a quien HAYA PAGADO: uno, dos o tres. Siempre aparece.
-  var top = ap.slice(0, 3).filter(function(p){ return p.total > 0.005; });
+  var top = sinGastos ? [] : ap.slice(0, 3).filter(function(p){ return p.total > 0.005; });
   var max = ap[0].total || 1;
 
   if (top.length) {
