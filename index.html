@@ -2064,7 +2064,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">150720260218</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">150720261308</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -5250,14 +5250,20 @@ function bloquePodio(g) {
     resto.forEach(function(p, idx) {
       var pct = total > 0 ? (p.total / max) * 100 : 0;
       var cero = p.total < 0.005;
+      // El avatar solo se apaga (gris) para señalar a QUIEN no pagó cuando
+      // otros SÍ lo hicieron. Si el grupo aún no tiene gastos, no hay a quién
+      // señalar: todos van a color normal, como en el resto de la app.
+      var apagar = cero && !sinGastos;
       h += '<div class="hv-lrow">';
       h +=   '<div class="hv-lpos">' + (top.length + idx + 1) + '</div>';
       h +=   '<div class="hv-cara" style="width:30px;height:30px;font-size:11px;margin:0;background:' +
-             (cero ? 'var(--s2)' : avc(p.name)) + (cero ? ';color:var(--muted)' : '') + '">' + ini(p.name) + '</div>';
+             (apagar ? 'var(--s2)' : avc(p.name)) + (apagar ? ';color:var(--muted)' : '') + '">' + ini(p.name) + '</div>';
       h +=   '<div class="hv-lnom">' + esc(p.name) + '</div>';
       h +=   '<div class="hv-lbar"><span style="width:' + pct.toFixed(1) + '%;background:' +
              (cero ? 'transparent' : avc(p.name)) + '"></span></div>';
-      h +=   '<div class="hv-leur"' + (cero ? ' style="color:var(--muted)"' : '') + '>' + fmt(p.total) + '</div>';
+      // El importe en gris suave solo cuando señalamos a alguien que no pagó.
+      // Sin gastos, el 0,00 € va en el gris normal de la lista (no atenuado).
+      h +=   '<div class="hv-leur"' + (apagar ? ' style="color:var(--muted)"' : '') + '>' + fmt(p.total) + '</div>';
       h += '</div>';
     });
     h += '</div>';
