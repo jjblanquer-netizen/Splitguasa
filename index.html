@@ -1442,6 +1442,11 @@ body.light .inst-marca {
 /* Un modal abierto DESDE otro modal tiene que ir por encima. Sin esto se abría
    por debajo de "Editar miembros" y solo aparecía al cerrar el de abajo. */
 .modal-bg.modal-top { z-index: 300; }
+
+/* Avatares con inicial: círculo de color sólido y letra oscura, en TODA la app.
+   Unifica el criterio (antes unos eran "tinte" — fondo suave y letra de color —
+   y otros "relleno"). Estas tres lo ponían inline; ahora lo fija el CSS. */
+.avatar, .person-av, .av-mini { color: #0a0b0f; }
 </style>
 <script>
 // Se ejecuta ANTES de dibujar nada: evita el destello oscuro→claro.
@@ -2059,7 +2064,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">150720260148</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">150720260218</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -3603,7 +3608,7 @@ function renderMeSelectorList() {
     var isMe = me && name.trim().toLowerCase() === me.trim().toLowerCase();
     var col = avc(name);
     h += '<div class="me-sel-row" data-name="' + esc(name) + '" style="display:flex;align-items:center;gap:12px;padding:12px 10px;border-radius:12px;cursor:pointer;margin-bottom:4px;' + (isMe ? 'background:rgba(94,234,212,.1)' : '') + '">';
-    h += '<div class="avatar" style="background:' + col + '22;color:' + col + ';width:40px;height:40px;flex-shrink:0">' + ini(name) + '</div>';
+    h += '<div class="avatar" style="background:' + col + ';width:40px;height:40px;flex-shrink:0">' + ini(name) + '</div>';
     h += '<div style="flex:1;font-weight:600;color:var(--txt)">' + esc(name) + '</div>';
     if (isMe) h += '<span style="color:var(--acc);font-size:18px;font-weight:700">✓</span>';
     h += '</div>';
@@ -4470,7 +4475,7 @@ function renderDebts(g) {
       var ultimo = (ind.indexOf(b) === ind.length - 1);
       h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 0' +
            (ultimo ? '' : ';border-bottom:1px solid var(--border)') + '">';
-      h +=   '<div class="avatar" style="width:28px;height:28px;font-size:11px;background:' + avc(b.name) + '22;color:' + avc(b.name) + '">' + ini(b.name) + '</div>';
+      h +=   '<div class="avatar" style="width:28px;height:28px;font-size:11px;background:' + avc(b.name) + '">' + ini(b.name) + '</div>';
       h +=   '<div style="flex:1;min-width:0;font-size:13px;color:var(--txt2)">' + esc(b.name);
       h +=     '<span style="font-size:10px;color:var(--muted);margin-left:5px">· ' +
                (enFam ? esc(f.name) : 'sin vínculo') + '</span>';
@@ -5467,7 +5472,7 @@ function renderHomeClasica() {
     var shown = members.slice(0, 3);
     shown.forEach(function(m) {
       var col = avc(m);
-      avHtml += '<div class="av-mini" style="background:' + col + '22;color:' + col + '">' + ini(m) + '</div>';
+      avHtml += '<div class="av-mini" style="background:' + col + '">' + ini(m) + '</div>';
     });
     var extra = members.length - shown.length;
     var namesTxt = members.length <= 3
@@ -6883,7 +6888,7 @@ function renderYoModal() {
     row.className = 'person-row' + (isMe ? ' me' : '');
     if (isMe) row.style.borderColor = 'var(--acc)';
     var h = '';
-    h += '<div class="person-av" style="background:' + col + '22;color:' + col + '">' + ini(name) + '</div>';
+    h += '<div class="person-av" style="background:' + col + '">' + ini(name) + '</div>';
     h += '<div style="flex:1;min-width:0">';
     h += '<div class="person-name">' + esc(name);
     if (isMe) h += ' <span style="font-size:11px;color:var(--acc);background:rgba(94,234,212,.12);padding:1px 7px;border-radius:10px;margin-left:4px">soy yo</span>';
@@ -7127,7 +7132,7 @@ function renderNgFriendList() {
     const col = avc(name);
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--rs);padding:10px 13px;cursor:pointer;transition:border-color .13s;';
-    row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-family:var(--ff-head);font-weight:700;font-size:12px;flex-shrink:0">${ini(name)}</div><span style="flex:1;font-size:14px;color:var(--txt2)">${esc(name)}</span><span style="color:var(--acc);font-size:18px">+</span>`;
+    row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-family:var(--ff-head);font-weight:700;font-size:12px;flex-shrink:0">${ini(name)}</div><span style="flex:1;font-size:14px;color:var(--txt2)">${esc(name)}</span><span style="color:var(--acc);font-size:18px">+</span>`;
     row.addEventListener('click', () => {
       if (!ngMem.includes(name)) ngMem.push(name);
       renderNgChips();
@@ -7258,7 +7263,7 @@ function renderEmFriendList() {
     const col = avc(name);
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--rs);padding:10px 13px;cursor:pointer;';
-    row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${col}22;color:${col};display:flex;align-items:center;justify-content:center;font-family:var(--ff-head);font-weight:700;font-size:12px;flex-shrink:0">${ini(name)}</div><span style="flex:1;font-size:14px;color:var(--txt2)">${esc(name)}</span><span style="color:var(--acc);font-size:18px">+</span>`;
+    row.innerHTML = `<div style="width:32px;height:32px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-family:var(--ff-head);font-weight:700;font-size:12px;flex-shrink:0">${ini(name)}</div><span style="flex:1;font-size:14px;color:var(--txt2)">${esc(name)}</span><span style="color:var(--acc);font-size:18px">+</span>`;
     row.addEventListener('click', () => {
       if (!emMembers.includes(name)) emMembers.push(name);
       renderEmChips();
