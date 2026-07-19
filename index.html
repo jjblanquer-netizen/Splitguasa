@@ -2064,7 +2064,7 @@ body.light .inst-marca {
       <!-- Sello de compilación: DDMMAAAAHHMM. Sirve para comprobar de un
            vistazo qué versión tiene instalada cada móvil (útil con las PWA,
            que se quedan pegadas a versiones viejas). -->
-      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">150720261308</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);opacity:.7;margin-bottom:20px" id="build-stamp">190720261412</div>
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px">
         <div style="font-size:15px;color:var(--txt2);line-height:1.7">
           Divide gastos con amigos<br>sin drama y sin excusas 💸
@@ -3808,7 +3808,17 @@ function catBadge(cid) {
 }
 function renderGastos(g) {
   if (!g.expenses.length) return '<div class="empty"><div class="empty-icon">💸</div><p>Sin gastos todavía.<br>Pulsa <strong>+</strong> para añadir uno.</p></div>';
-  const sorted=[...g.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  // Ordenar por fecha, y a igualdad de fecha (mismo día), por la hora exacta de
+  // creación (addedAt). Antes se ordenaba solo por 'date' (día sin hora), así
+  // que dos gastos del mismo día quedaban en orden indefinido.
+  const sorted=[...g.expenses].sort(function(a,b){
+    var fd = String(b.date||'').localeCompare(String(a.date||''));
+    if (fd !== 0) return fd;
+    // Mismo día: el más reciente primero, por addedAt (o editedAt como respaldo)
+    var ta = a.addedAt || a.editedAt || '';
+    var tb = b.addedAt || b.editedAt || '';
+    return String(tb).localeCompare(String(ta));
+  });
   const total=g.expenses.reduce((a,e)=>a+((gastoValido(e) && !e.isSettlement)?e.amount:0),0);
   const nMem = (Array.isArray(g.members)?g.members:[]).length || 1;
   let h = '<div class="stats-grid cols3">' +
